@@ -5,7 +5,7 @@ const IV_LENGTH = 16
 const AUTH_TAG_LENGTH = 16
 
 export function encryptToken(plaintext: string): string {
-  const key = Buffer.from(process.env.ENCRYPTION_KEY!, 'utf-8')
+  const key = Buffer.from(process.env.ENCRYPTION_KEY!, 'hex')
   const iv = crypto.randomBytes(IV_LENGTH)
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv)
 
@@ -19,7 +19,7 @@ export function encryptToken(plaintext: string): string {
 }
 
 export function decryptToken(ciphertext: string): string {
-  const key = Buffer.from(process.env.ENCRYPTION_KEY!, 'utf-8')
+  const key = Buffer.from(process.env.ENCRYPTION_KEY!, 'hex')
   const [ivHex, authTagHex, encrypted] = ciphertext.split(':')
 
   const iv = Buffer.from(ivHex, 'hex')
