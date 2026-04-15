@@ -133,8 +133,10 @@ export async function GET(request: Request) {
 
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard/accounts?connected=true`)
 
-  } catch (err) {
-    console.error('Meta OAuth error:', err)
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard/accounts?error=oauth_failed`)
+  } catch (err: any) {
+    console.error('Meta OAuth error:', err?.response?.data || err.message || err)
+    const errorCode = err?.response?.data?.error?.code || 'oauth_failed'
+    const errorMessage = err?.response?.data?.error?.message || ''
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard/accounts?error=${errorCode}&message=${encodeURIComponent(errorMessage)}`)
   }
 }

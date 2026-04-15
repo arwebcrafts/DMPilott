@@ -77,7 +77,9 @@ export default function AccountsPage() {
           <AlertCircle className="w-4 h-4" />
           {connectError === 'denied' ? 'Connection was cancelled.' :
            connectError === 'no_account' ? 'No Instagram Business or Facebook Page found. Make sure you have a Business/Creator account.' :
-           'Connection failed. Please try again.'}
+           connectError === 'invalid_request' ? 'Redirect URI mismatch. Please check your Meta app settings.' :
+           connectError === 'app_not_installed' ? 'App was not authorized. Please try connecting again.' :
+           `Connection failed: ${searchParams.get('message') || connectError}`}
         </div>
       )}
 
