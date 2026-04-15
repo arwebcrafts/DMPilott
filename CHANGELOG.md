@@ -3,6 +3,20 @@
 
 ---
 
+## Session Updates (April 16, 2026)
+
+### Bug Fixes
+- **Fixed encryption key encoding**: Changed `ENCRYPTION_KEY` reading from UTF-8 to hex encoding in `src/lib/encryption.ts`. AES-256-GCM requires a 32-byte key, but UTF-8 encoding of a 64-char hex string produces 64 bytes. Using `'hex'` encoding properly converts the 64-character hex string (e.g., `1f24ebf34db8f833d3c1dbe29a2cc0a33645d348926322898e78af955e2de5c4`) to 32 bytes.
+- **Fixed Instagram OAuth connection**: Instagram accounts require a linked Facebook Page to work with Meta's Graph API. Regular personal Facebook accounts or Instagram accounts without a connected Facebook Page will fail with `no_account` error. User must have Instagram Business/Creator account linked to a Facebook Page.
+
+### Infrastructure
+- **ENCRYPTION_KEY format**: Now expects a 64-character hex string (32 bytes when decoded), generated via `crypto.randomBytes(32).toString('hex')`. Update environment variable in Vercel.
+
+### New Features
+- **Instagram connection flow**: Successfully connects Instagram Business accounts linked to Facebook Pages. Fetches username, display name, profile picture, and follower count. Token is encrypted with AES-256-GCM before storage.
+
+---
+
 ## Session Updates (April 15, 2026)
 
 ### Bug Fixes

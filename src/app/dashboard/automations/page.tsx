@@ -24,14 +24,30 @@ export default function AutomationsPage() {
   const [automations, setAutomations] = useState<Automation[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
-  const { user, accounts } = useUserStore()
+  const { user } = useUserStore()
   const supabase = createClient()
+  const [accounts, setAccounts] = useState<any[]>([])
 
   const planLimits = user ? PLAN_LIMITS[user.plan] : PLAN_LIMITS.free
 
   useEffect(() => {
     fetchAutomations()
+    fetchAccounts()
   }, [])
+
+  async function fetchAccounts() {
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    if (!authUser) return
+
+    const { data } = await supabase
+      .from('connected_accounts')
+      .select('*')
+      .eq('user_id', authUser.id)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+
+    setAccounts(data || [])
+  }
 
   async function fetchAutomations() {
     const { data: { user: authUser } } = await supabase.auth.getUser()
