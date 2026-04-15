@@ -139,6 +139,27 @@ export default function LoginPage() {
             </Button>
           </form>
 
+          <Button
+            type="button"
+            variant="ghost"
+            className="w-full"
+            onClick={async () => {
+              setLoading(true)
+              setError(null)
+              const { error } = await supabase.auth.signInAnonymously()
+              if (error) {
+                setError(error.message)
+                setLoading(false)
+              } else {
+                router.push('/dashboard')
+                router.refresh()
+              }
+            }}
+            disabled={loading}
+          >
+            Continue as Guest
+          </Button>
+
           <p className="text-center text-sm text-[#65676B]">
             Don&apos;t have an account?{' '}
             <Link href="/signup" className="text-[#1877F2] hover:underline font-medium">

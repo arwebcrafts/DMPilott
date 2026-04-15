@@ -57,7 +57,7 @@ export default function SignupPage() {
       return
     }
 
-    router.push('/onboarding')
+    router.push('/dashboard')
   }
 
   async function handleGoogleSignup() {
