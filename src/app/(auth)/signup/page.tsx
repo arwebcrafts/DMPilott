@@ -40,19 +40,26 @@ export default function SignupPage() {
     setLoading(true)
     setError(null)
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
       options: {
         data: {
           full_name: data.fullName,
         },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
       },
     })
 
     if (error) {
       setError(error.message)
+      setLoading(false)
+      return
+    }
+
+    // If email confirmation is required, show message
+    if (data.user && !data.session) {
+      setError('Please check your email to confirm your account.')
       setLoading(false)
       return
     }

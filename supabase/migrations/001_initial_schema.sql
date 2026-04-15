@@ -248,7 +248,7 @@ begin
   new.updated_at = now();
   return new;
 end;
-$$ language plpgsql trigger;
+$$ language plpgsql;
 
 drop trigger if exists users_updated_at on public.users;
 create trigger users_updated_at

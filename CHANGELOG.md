@@ -3,6 +3,46 @@
 
 ---
 
+## Session Updates (April 15, 2026)
+
+### Bug Fixes
+- **Fixed redirect URL issue**: Changed signup redirect from `/onboarding` to `/dashboard` after signup
+- **Fixed auth callback**: Updated `/auth/callback` to ensure user record exists in `users` table before redirecting
+- **Fixed signup flow**: Signup now uses `emailRedirectTo` to properly go through callback, ensuring user profile is created
+- **Fixed SQL syntax error**: Removed erroneous "trigger" keyword from `handle_updated_at()` function declaration
+
+### New Features
+- **Guest/Anonymous Sign-in**: Added "Continue as Guest" button on login page using Supabase anonymous sign-in
+- **Settings Page**: Created `/dashboard/settings` page showing:
+  - User email and name
+  - User ID
+  - Current plan
+  - Email confirmation status
+  - Account creation date
+  - Sign out button
+
+### Configuration Updates Required
+**Vercel Environment Variables:**
+```
+META_APP_ID = <facebook_oauth_app_id>
+META_APP_SECRET = <facebook_oauth_app_secret>
+META_WEBHOOK_VERIFY_TOKEN = <random_verify_token>
+NEXT_PUBLIC_APP_URL = https://dmpilott.vercel.app
+SUPABASE_SERVICE_ROLE_KEY = <supabase_service_role_key>
+ENCRYPTION_KEY = <32_char_random_string>
+```
+
+**Meta App Setup:**
+- Facebook OAuth app with Facebook Login product enabled
+- OAuth redirect URI: `https://dmpilott.vercel.app/api/meta/callback`
+- Instagram API product configured with webhook callback URL: `https://dmpilott.vercel.app/api/webhooks/meta`
+
+---
+
+**Version:** 1.0.0 | **Date:** April 13, 2026 | **Status:** Build Complete
+
+---
+
 ## What Was Built
 
 A fully functional MVP of DMPilot — an Instagram & Facebook DM automation SaaS — was scaffolded directly in this session. It includes authentication, Meta OAuth, webhook event processing, a BullMQ job queue, dashboard UI, automation CRUD, and Stripe billing integration.
