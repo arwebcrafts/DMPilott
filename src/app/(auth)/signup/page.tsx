@@ -36,16 +36,16 @@ export default function SignupPage() {
     resolver: zodResolver(signupSchema),
   })
 
-  async function onSubmit(data: SignupForm) {
+  async function onSubmit(formData: SignupForm) {
     setLoading(true)
     setError(null)
 
     const { data, error } = await supabase.auth.signUp({
-      email: data.email,
-      password: data.password,
+      email: formData.email,
+      password: formData.password,
       options: {
         data: {
-          full_name: data.fullName,
+          full_name: formData.fullName,
         },
         emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
       },
