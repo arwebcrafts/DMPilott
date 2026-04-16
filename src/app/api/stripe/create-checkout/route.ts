@@ -2,17 +2,16 @@ import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import Stripe from 'stripe'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-03-25.dahlia' })
-
-const PRICE_IDS: Record<string, string> = {
-  creator_monthly: process.env.STRIPE_PRICE_CREATOR_MONTHLY || '',
-  creator_yearly: process.env.STRIPE_PRICE_CREATOR_YEARLY || '',
-  pro_monthly: process.env.STRIPE_PRICE_PRO_MONTHLY || '',
-  pro_yearly: process.env.STRIPE_PRICE_PRO_YEARLY || '',
-}
-
 export async function POST(request: Request) {
   try {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-03-25.dahlia' })
+
+    const PRICE_IDS: Record<string, string> = {
+      creator_monthly: process.env.STRIPE_PRICE_CREATOR_MONTHLY || '',
+      creator_yearly: process.env.STRIPE_PRICE_CREATOR_YEARLY || '',
+      pro_monthly: process.env.STRIPE_PRICE_PRO_MONTHLY || '',
+      pro_yearly: process.env.STRIPE_PRICE_PRO_YEARLY || '',
+    }
     const { planId, userId } = await request.json()
 
     if (!planId || !userId) {
