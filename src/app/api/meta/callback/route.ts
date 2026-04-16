@@ -131,6 +131,37 @@ export async function GET(request: Request) {
       console.error('Failed to save account:', upsertError)
     }
 
+    // Subscribe this account to Meta webhook events so comment/DM events are delivered
+    if (platformAccountId) {
+      const subscribeFields = stateData.platform === 'instagram'
+        ? 'comments,messages'
+        : 'feed,messages'
+
+      try {
+        await axios.post(
+          `https://graph.facebook.com/v21.0/${platformAccountId}/subscribed_apps`,
+          null,
+          {
+            params: {
+              subscribed_fields: subscribeFields,
+              access_token: accessToken,
+            },
+          }
+        )
+        console.log('[Callback] ✓ Subscribed account to webhook fields:', subscribeFields)
+
+        await supabase
+          .from('connected_accounts')
+          .update({ webhook_subscribed: true })
+          .eq('user_id', stateData.userId)
+          .eq('platform', stateData.platform)
+          .eq('platform_account_id', platformAccountId)
+      } catch (subErr: any) {
+        // Non-fatal: account is connected but webhook may need manual setup
+        console.error('[Callback] Webhook subscription failed:', subErr?.response?.data || subErr.message)
+      }
+    }
+
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard/accounts?connected=true`)
 
   } catch (err: any) {

@@ -1,3 +1,9 @@
+// DEPRECATED: Use /api/workers/send-dm instead.
+// BullMQ workers cannot run on Vercel serverless — jobs would pile up in Redis
+// and never be processed. This file is kept for local development reference only.
+// The active architecture uses QStash (Upstash) to enqueue jobs from the
+// webhook handler and deliver them to the /api/workers/send-dm route.
+
 /**
  * DMPilot DM Worker
  * Run separately: npx tsx src/workers/dmWorker.ts

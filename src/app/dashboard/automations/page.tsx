@@ -235,6 +235,8 @@ function CreateAutomationModal({
   const [keywords, setKeywords] = useState<string[]>([])
   const [keywordInput, setKeywordInput] = useState('')
   const [dmMessage, setDmMessage] = useState('')
+  const [commentReplyEnabled, setCommentReplyEnabled] = useState(true)
+  const [commentReplyText, setCommentReplyText] = useState('Check your DMs! 📩')
   const [loading, setLoading] = useState(false)
   const [accountId, setAccountId] = useState('')
   const supabase = createClient()
@@ -274,6 +276,8 @@ function CreateAutomationModal({
         trigger_type: triggerType,
         keywords: triggerType === 'comment_keyword' ? keywords : [],
         dm_message: dmMessage,
+        comment_reply_enabled: commentReplyEnabled,
+        comment_reply_text: commentReplyEnabled ? commentReplyText : null,
       })
       .select('*, connected_accounts(username)')
       .single()
@@ -411,6 +415,38 @@ function CreateAutomationModal({
               </p>
               <span className="text-xs text-[#65676B]">{dmMessage.length}/1000</span>
             </div>
+          </div>
+
+          {/* Auto-reply on comment */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-[#1C1E21]">
+                Auto-reply on comment
+              </label>
+              <button
+                type="button"
+                onClick={() => setCommentReplyEnabled(prev => !prev)}
+                className="text-[#65676B] hover:text-[#1C1E21]"
+              >
+                {commentReplyEnabled
+                  ? <ToggleRight className="w-6 h-6 text-[#31A24C]" />
+                  : <ToggleLeft className="w-6 h-6" />
+                }
+              </button>
+            </div>
+            {commentReplyEnabled && (
+              <input
+                type="text"
+                value={commentReplyText}
+                onChange={e => setCommentReplyText(e.target.value)}
+                placeholder="Check your DMs! 📩"
+                maxLength={200}
+                className="w-full px-3 py-2 border border-[#CED0D4] rounded-lg text-sm focus:ring-2 focus:ring-[#1877F2]"
+              />
+            )}
+            <p className="text-xs text-[#65676B] mt-1">
+              Public reply posted on the comment after DM is sent
+            </p>
           </div>
 
           {/* Actions */}
