@@ -62,7 +62,7 @@ const worker = new Worker<DMJob>(
     }
 
     // Personalize message
-    let personalizedMessage = dmMessage
+    const personalizedMessage = dmMessage
       .replace(/{name}/g, commenterUsername || 'there')
       .replace(/{username}/g, `@${commenterUsername || 'user'}`)
 
