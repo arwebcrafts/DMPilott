@@ -39,6 +39,7 @@ export async function POST(request: Request) {
   console.log('[Webhook] Body length:', rawBody.length)
   console.log('[Webhook] Body preview:', rawBody.substring(0, 200))
   console.log('[Webhook] META_APP_SECRET set:', !!process.env.META_APP_SECRET)
+  console.log('[Webhook] META_APP_SECRET value:', process.env.META_APP_SECRET)
   console.log('[Webhook] META_APP_SECRET length:', process.env.META_APP_SECRET?.length)
 
   // Compute expected signature for debugging
@@ -76,16 +77,76 @@ export async function POST(request: Request) {
         if (change.field === 'comments') {
           const value = change.value
           const pageId = entry.id
+          
+          console.log('[Webhook] IG Comment received from:', value.from?.username, 'text:', value.text)
+          console.log('[Webhook] Webhook Page ID:', pageId)
 
-          // Find connected account
-          const { data: account } = await supabase
+          // For Instagram, entry.id is the PAGE ID, but we stored IG Business Account ID
+          // We need to find the IG account connected to this page
+          let account = null
+          
+          // First try: direct match on platform_account_id (if user connected with Page ID)
+          const { data: directMatch } = await supabase
             .from('connected_accounts')
-            .select('*, users!inner(id, plan, dms_used_this_month)')
+            .select('*')
             .eq('platform_account_id', pageId)
             .eq('is_active', true)
+            .eq('platform', 'instagram')
             .single()
-
-          if (!account) continue
+          
+          if (directMatch) {
+            account = directMatch
+            console.log('[Webhook] Found account by direct Page ID match:', account.username)
+          } else {
+            // Need to query Facebook API to get IG Account ID from Page ID
+            // Get the access token for this page
+            const { data: accounts } = await supabase
+              .from('connected_accounts')
+              .select('*')
+              .eq('is_active', true)
+              .eq('platform', 'instagram')
+            
+            console.log('[Webhook] No direct match. Searching', accounts?.length || 0, 'IG accounts...')
+            
+            for (const acc of accounts || []) {
+              try {
+                const accessToken = decryptToken(acc.access_token_encrypted)
+                // Get page info to check if this IG account's page matches our webhook pageId
+                const pageRes = await axios.get(`https://graph.facebook.com/v21.0/me`, {
+                  params: { 
+                    fields: 'instagram_business_account',
+                    access_token: accessToken 
+                  }
+                })
+                
+                if (pageRes.data.instagram_business_account?.id) {
+                  const igAccountId = pageRes.data.instagram_business_account.id
+                  console.log('[Webhook] Checking IG Account:', igAccountId)
+                  
+                  // Get the page ID for this IG account
+                  const pagesRes = await axios.get(`https://graph.facebook.com/v21.0/${igAccountId}`, {
+                    params: { 
+                      fields: 'instagram_business_account,page_id',
+                      access_token: accessToken 
+                    }
+                  })
+                  
+                  if (pagesRes.data.page_id == pageId) {
+                    account = acc
+                    console.log('[Webhook] Found account by page ID match:', account.username)
+                    break
+                  }
+                }
+              } catch (err) {
+                console.log('[Webhook] Error checking account:', err instanceof Error ? err.message : String(err))
+              }
+            }
+          }
+          
+          if (!account) {
+            console.log('[Webhook] No matching IG account found for Page ID:', pageId)
+            continue
+          }
 
           // Find matching automation
           const { data: automations } = await supabase
@@ -115,7 +176,12 @@ export async function POST(request: Request) {
             }
           }
 
-          if (!matchedAutomation) continue
+          if (!matchedAutomation) {
+            console.log('[Webhook] No matching automation found')
+            continue
+          }
+
+          console.log('[Webhook] Matched automation:', matchedAutomation.name)
 
           // Check duplicate
           const { data: existingLog } = await supabase
@@ -127,7 +193,10 @@ export async function POST(request: Request) {
             .eq('status', 'sent')
             .single()
 
-          if (existingLog) continue
+          if (existingLog) {
+            console.log('[Webhook] Duplicate - already sent DM to this comment')
+            continue
+          }
 
           // Queue DM job
           await dmQueue.add('send-dm', {
@@ -161,6 +230,8 @@ export async function POST(request: Request) {
             dm_message_sent: matchedAutomation.dm_message,
             status: 'queued',
           })
+
+          console.log('[Webhook] DM job queued for', value.from?.username)
         }
       }
     }
