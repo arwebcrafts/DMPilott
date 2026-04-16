@@ -37,7 +37,7 @@ export async function POST(request: Request) {
   console.log('[Webhook] === NEW WEBHOOK EVENT ===')
   console.log('[Webhook] Signature header:', signature)
   console.log('[Webhook] Body length:', rawBody.length)
-  console.log('[Webhook] Body preview:', rawBody.substring(0, 200))
+  console.log('[Webhook] Body FULL:', rawBody)
   console.log('[Webhook] META_APP_SECRET set:', !!process.env.META_APP_SECRET)
   console.log('[Webhook] META_APP_SECRET value:', process.env.META_APP_SECRET)
   console.log('[Webhook] META_APP_SECRET length:', process.env.META_APP_SECRET?.length)
