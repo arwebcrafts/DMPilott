@@ -34,11 +34,34 @@ export async function POST(request: Request) {
   const rawBody = await request.text()
   const signature = request.headers.get('x-hub-signature-256') || ''
 
+  console.log('[Webhook] === NEW WEBHOOK EVENT ===')
+  console.log('[Webhook] Signature header:', signature)
+  console.log('[Webhook] Body length:', rawBody.length)
+  console.log('[Webhook] Body preview:', rawBody.substring(0, 200))
+  console.log('[Webhook] META_APP_SECRET set:', !!process.env.META_APP_SECRET)
+  console.log('[Webhook] META_APP_SECRET length:', process.env.META_APP_SECRET?.length)
+
+  // Compute expected signature for debugging
+  if (process.env.META_APP_SECRET) {
+    const expected = crypto
+      .createHmac('sha256', process.env.META_APP_SECRET)
+      .update(rawBody)
+      .digest('hex')
+    const expectedWithPrefix = `sha256=${expected}`
+    console.log('[Webhook] Expected signature:', expectedWithPrefix)
+    console.log('[Webhook] Signatures match:', expectedWithPrefix === signature)
+  }
+
   if (!verifySignature(rawBody, signature)) {
+    console.log('[Webhook] ❌ Signature verification FAILED')
     return new NextResponse('Invalid signature', { status: 403 })
   }
 
-  const payload = JSON.parse(rawBody)
+  console.log('[Webhook] ✓ Signature verified')
+  console.log('[Webhook] Payload object:', payload.object)
+  console.log('[Webhook] Entry IDs:', payload.entry?.map((e: any) => e.id))
+  console.log('[Webhook] Entry changes fields:', payload.entry?.map((e: any) => e.changes?.map((c: any) => c.field)))
+
   const supabase = createServiceClient()
 
   // Get Redis connection
