@@ -18,22 +18,29 @@ export async function GET(request: Request) {
 
   const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/meta/callback`
 
-  const scopes: Record<string, string> = {
-    instagram: 'instagram_basic,instagram_manage_messages,instagram_manage_comments,pages_show_list,pages_read_engagement',
-    facebook: 'pages_messaging,pages_read_engagement,pages_manage_metadata',
-  }
-
   const state = Buffer.from(JSON.stringify({
     userId: user.id,
     platform,
     nonce: Math.random().toString(36).substring(7),
   })).toString('base64')
 
+  if (platform === 'instagram') {
+    // Instagram Business Login — does NOT require a Facebook Page
+    // Uses the new Instagram API (api.instagram.com)
+    const authUrl = new URL('https://api.instagram.com/oauth/authorize')
+    authUrl.searchParams.set('client_id', process.env.META_APP_ID!)
+    authUrl.searchParams.set('redirect_uri', redirectUri)
+    authUrl.searchParams.set('scope', 'instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments')
+    authUrl.searchParams.set('response_type', 'code')
+    authUrl.searchParams.set('state', state)
+    return NextResponse.redirect(authUrl.toString())
+  }
+
+  // Facebook Login — for Facebook Pages (unchanged)
   const authUrl = new URL('https://www.facebook.com/v21.0/dialog/oauth')
   authUrl.searchParams.set('client_id', process.env.META_APP_ID!)
   authUrl.searchParams.set('redirect_uri', redirectUri)
-  authUrl.searchParams.set('scope', scopes[platform])
+  authUrl.searchParams.set('scope', 'pages_messaging,pages_read_engagement,pages_manage_metadata,pages_show_list')
   authUrl.searchParams.set('state', state)
-
   return NextResponse.redirect(authUrl.toString())
 }
