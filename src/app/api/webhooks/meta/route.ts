@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { createServiceClient } from '@/lib/supabase/server'
-import { encryptToken, decryptToken } from '@/lib/encryption'
-import { Queue } from 'bullmq'
-import IORedis from 'ioredis'
+import { decryptToken } from '@/lib/encryption'
 import axios from 'axios'
 
 // Verify Meta webhook signature
@@ -65,10 +63,6 @@ export async function POST(request: Request) {
   console.log('[Webhook] Entry changes fields:', payload.entry?.map((e: any) => e.changes?.map((c: any) => c.field)))
 
   const supabase = createServiceClient()
-
-  // Get Redis connection
-  const redis = new IORedis(process.env.REDIS_URL!, { maxRetriesPerRequest: null })
-  const dmQueue = new Queue('dm-jobs', { connection: redis })
 
   // Process Instagram events
   if (payload.object === 'instagram') {
@@ -198,40 +192,61 @@ export async function POST(request: Request) {
             continue
           }
 
-          // Queue DM job
-          await dmQueue.add('send-dm', {
-            automationId: matchedAutomation.id,
-            userId: account.user_id,
-            accountId: account.id,
-            platform: 'instagram',
-            postId: value.media?.id,
-            commentId: value.id,
-            commenterPlatformId: value.from?.id,
-            commenterUsername: value.from?.username,
-            keywordMatched: matchedKeyword,
-            dmMessage: matchedAutomation.dm_message,
-            sendDelaySeconds: matchedAutomation.send_delay_seconds || 0,
-          }, {
-            delay: (matchedAutomation.send_delay_seconds || 0) * 1000,
-            attempts: 3,
-            backoff: { type: 'exponential', delay: 5000 },
-          })
+          // Send DM directly (bypassing Redis/BullMQ for testing)
+          console.log('[Webhook] Sending DM directly to', value.from?.username)
+          
+          try {
+            const accessToken = decryptToken(account.access_token_encrypted)
+            const personalizedMessage = matchedAutomation.dm_message
+              .replace(/{name}/g, value.from?.username || 'there')
+              .replace(/{username}/g, `@${value.from?.username || 'user'}`)
 
-          // Log as queued
-          await supabase.from('dm_logs').insert({
-            automation_id: matchedAutomation.id,
-            user_id: account.user_id,
-            account_id: account.id,
-            platform: 'instagram',
-            post_id: value.media?.id,
-            commenter_platform_id: value.from?.id,
-            commenter_username: value.from?.username,
-            keyword_matched: matchedKeyword,
-            dm_message_sent: matchedAutomation.dm_message,
-            status: 'queued',
-          })
+            await axios.post(
+              `https://graph.facebook.com/v21.0/me/messages`,
+              {
+                recipient: { id: value.from?.id },
+                message: { text: personalizedMessage },
+              },
+              {
+                params: { access_token: accessToken },
+                headers: { 'Content-Type': 'application/json' },
+              }
+            )
 
-          console.log('[Webhook] DM job queued for', value.from?.username)
+            // Log as sent
+            await supabase.from('dm_logs').insert({
+              automation_id: matchedAutomation.id,
+              user_id: account.user_id,
+              account_id: account.id,
+              platform: 'instagram',
+              post_id: value.media?.id,
+              commenter_platform_id: value.from?.id,
+              commenter_username: value.from?.username,
+              keyword_matched: matchedKeyword,
+              dm_message_sent: matchedAutomation.dm_message,
+              status: 'sent',
+              sent_at: new Date().toISOString(),
+            })
+
+            console.log('[Webhook] ✅ DM sent successfully to', value.from?.username)
+          } catch (err: any) {
+            console.log('[Webhook] ❌ Failed to send DM:', err.response?.data?.error?.message || err.message)
+            
+            // Log as failed
+            await supabase.from('dm_logs').insert({
+              automation_id: matchedAutomation.id,
+              user_id: account.user_id,
+              account_id: account.id,
+              platform: 'instagram',
+              post_id: value.media?.id,
+              commenter_platform_id: value.from?.id,
+              commenter_username: value.from?.username,
+              keyword_matched: matchedKeyword,
+              dm_message_sent: matchedAutomation.dm_message,
+              status: 'failed',
+              error_message: err.response?.data?.error?.message || err.message,
+            })
+          }
         }
       }
     }
@@ -293,41 +308,48 @@ export async function POST(request: Request) {
 
           if (existingLog) continue
 
-          await dmQueue.add('send-dm', {
-            automationId: matchedAutomation.id,
-            userId: account.user_id,
-            accountId: account.id,
-            platform: 'facebook',
-            postId: change.value.post_id,
-            commentId: change.value.comment_id,
-            commenterPlatformId: change.value.from?.id,
-            commenterUsername: change.value.from?.name,
-            keywordMatched: matchedKeyword,
-            dmMessage: matchedAutomation.dm_message,
-            sendDelaySeconds: matchedAutomation.send_delay_seconds || 0,
-          }, {
-            delay: (matchedAutomation.send_delay_seconds || 0) * 1000,
-            attempts: 3,
-            backoff: { type: 'exponential', delay: 5000 },
-          })
+          // Send DM directly
+          try {
+            const accessToken = decryptToken(account.access_token_encrypted)
+            const personalizedMessage = matchedAutomation.dm_message
+              .replace(/{name}/g, change.value.from?.name || 'there')
+              .replace(/{username}/g, `@${change.value.from?.name || 'user'}`)
 
-          await supabase.from('dm_logs').insert({
-            automation_id: matchedAutomation.id,
-            user_id: account.user_id,
-            account_id: account.id,
-            platform: 'facebook',
-            post_id: change.value.post_id,
-            commenter_platform_id: change.value.from?.id,
-            commenter_username: change.value.from?.name,
-            keyword_matched: matchedKeyword,
-            dm_message_sent: matchedAutomation.dm_message,
-            status: 'queued',
-          })
+            await axios.post(
+              `https://graph.facebook.com/v21.0/me/messages`,
+              {
+                recipient: { id: change.value.from?.id },
+                message: { text: personalizedMessage },
+                messaging_type: 'RESPONSE',
+              },
+              {
+                params: { access_token: accessToken },
+                headers: { 'Content-Type': 'application/json' },
+              }
+            )
+
+            await supabase.from('dm_logs').insert({
+              automation_id: matchedAutomation.id,
+              user_id: account.user_id,
+              account_id: account.id,
+              platform: 'facebook',
+              post_id: change.value.post_id,
+              commenter_platform_id: change.value.from?.id,
+              commenter_username: change.value.from?.name,
+              keyword_matched: matchedKeyword,
+              dm_message_sent: matchedAutomation.dm_message,
+              status: 'sent',
+              sent_at: new Date().toISOString(),
+            })
+
+            console.log('[Webhook] ✅ DM sent to', change.value.from?.name)
+          } catch (err: any) {
+            console.log('[Webhook] ❌ Failed to send DM:', err.response?.data?.error?.message || err.message)
+          }
         }
       }
     }
   }
 
-  await redis.quit()
   return new NextResponse('OK', { status: 200 })
 }
