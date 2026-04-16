@@ -58,6 +58,7 @@ export async function POST(request: Request) {
   }
 
   console.log('[Webhook] ✓ Signature verified')
+  const payload = JSON.parse(rawBody)
   console.log('[Webhook] Payload object:', payload.object)
   console.log('[Webhook] Entry IDs:', payload.entry?.map((e: any) => e.id))
   console.log('[Webhook] Entry changes fields:', payload.entry?.map((e: any) => e.changes?.map((c: any) => c.field)))
