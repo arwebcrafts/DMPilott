@@ -39,19 +39,20 @@ export async function GET(request: Request) {
     let subscribeBase = 'https://graph.facebook.com/v21.0'
 
     if (stateData.platform === 'instagram') {
-      // ── Instagram Business Login (new API — no Facebook Page required) ───────
+      // ── Instagram Business Login via Facebook OAuth ─────────────────────────
+      // Instagram tokens are now managed through Facebook's Graph API
 
-      // Step 1: short-lived token from api.instagram.com
-      const shortRes = await axios.post(
-        'https://api.instagram.com/oauth/access_token',
-        new URLSearchParams({
-          client_id: process.env.META_APP_ID!,
-          client_secret: process.env.INSTAGRAM_APP_SECRET ?? process.env.META_APP_SECRET!,
-          grant_type: 'authorization_code',
-          redirect_uri: redirectUri,
-          code,
-        }).toString(),
-        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+      // Step 1: exchange code for short-lived token via Facebook Graph API
+      const shortRes = await axios.get(
+        'https://graph.facebook.com/v21.0/oauth/access_token',
+        {
+          params: {
+            client_id: process.env.META_APP_ID!,
+            client_secret: process.env.META_APP_SECRET!,
+            redirect_uri: redirectUri,
+            code,
+          },
+        }
       )
 
       const shortLivedToken: string = shortRes.data.access_token

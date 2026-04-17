@@ -25,12 +25,12 @@ export async function GET(request: Request) {
   })).toString('base64')
 
   if (platform === 'instagram') {
-    // Instagram Business Login — does NOT require a Facebook Page
-    // Uses the new Instagram API (api.instagram.com)
-    const authUrl = new URL('https://api.instagram.com/oauth/authorize')
+    // Instagram Business Login — uses Facebook's OAuth flow with Instagram permissions
+    // (api.instagram.com endpoints are deprecated; Meta migrated to Facebook OAuth)
+    const authUrl = new URL('https://www.facebook.com/v21.0/dialog/oauth')
     authUrl.searchParams.set('client_id', process.env.META_APP_ID!)
     authUrl.searchParams.set('redirect_uri', redirectUri)
-    authUrl.searchParams.set('scope', 'instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments')
+    authUrl.searchParams.set('scope', 'instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments,instagram_business_content_metadata_read')
     authUrl.searchParams.set('response_type', 'code')
     authUrl.searchParams.set('state', state)
     return NextResponse.redirect(authUrl.toString())
