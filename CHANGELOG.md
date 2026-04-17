@@ -8,12 +8,52 @@
 ### Bug Fixes
 - **Fixed encryption key encoding**: Changed `ENCRYPTION_KEY` reading from UTF-8 to hex encoding in `src/lib/encryption.ts`. AES-256-GCM requires a 32-byte key, but UTF-8 encoding of a 64-char hex string produces 64 bytes. Using `'hex'` encoding properly converts the 64-character hex string (e.g., `1f24ebf34db8f833d3c1dbe29a2cc0a33645d348926322898e78af955e2de5c4`) to 32 bytes.
 - **Fixed Instagram OAuth connection**: Instagram accounts require a linked Facebook Page to work with Meta's Graph API. Regular personal Facebook accounts or Instagram accounts without a connected Facebook Page will fail with `no_account` error. User must have Instagram Business/Creator account linked to a Facebook Page.
+- **Fixed webhook signature verification**: Meta sends webhook signatures using the **Instagram App Secret** (from Instagram app `1456392982696450`), NOT the Facebook App Secret. Updated `META_APP_SECRET` env var to use Instagram app's secret. Signature verification was failing because wrong secret was used.
+- **Fixed webhook body modification**: Added `/api/webhooks/` to proxy.ts matcher exclusion. The Supabase session middleware was intercepting and potentially modifying webhook requests before signature verification, causing signature mismatches.
+- **Fixed Instagram Page ID vs IG Account ID mismatch**: Webhook sends Page ID (`17841430541631416`) but OAuth stores Instagram Business Account ID. Added logic to iterate through connected IG accounts and query Facebook API to find which account's page matches the webhook's Page ID.
 
 ### Infrastructure
 - **ENCRYPTION_KEY format**: Now expects a 64-character hex string (32 bytes when decoded), generated via `crypto.randomBytes(32).toString('hex')`. Update environment variable in Vercel.
+- **META_APP_SECRET**: Must use Instagram app's secret (`381cbb8fcb900d95562210736be819b5`) from app ID `1456392982696450`, NOT the Facebook app secret. The Instagram app secret is 34 characters.
 
 ### New Features
 - **Instagram connection flow**: Successfully connects Instagram Business accounts linked to Facebook Pages. Fetches username, display name, profile picture, and follower count. Token is encrypted with AES-256-GCM before storage.
+- **Direct DM sending without Redis**: Webhook now sends DMs directly (synchronously) without requiring BullMQ/Redis. This enables testing without Upstash Redis. DMs are sent inline when webhook is triggered.
+- **Webhook debugging utilities**: Added detailed logging for signature verification including:
+  - Full body output
+  - Expected vs actual signature comparison
+  - Secret value and length
+  - Account matching debug logs
+- **Test scripts**: Created `scripts/test-webhook-signature.js` and `scripts/verify-sig.js` for local HMAC signature verification testing.
+
+### Webhook Flow (Instagram)
+1. Webhook receives comment event with Page ID
+2. Signature verified using Instagram App Secret
+3. Account lookup by Page ID (or iterate IG accounts to find matching page)
+4. Find automation by account_id + trigger type + keyword
+5. Check for duplicate (same automation + post + commenter)
+6. Send DM directly via Graph API `/me/messages`
+7. Log result to `dm_logs` table
+
+### Debug Endpoints
+- `GET /api/debug/secret` - Shows current META_APP_SECRET value being used (for troubleshooting env var mismatch)
+
+### Known Limitations
+- **Redis still required for production**: Direct DM sending is for testing only. Production should use BullMQ worker for resilience, retries, and rate limiting.
+- **Access token refresh**: Long-lived tokens (60 days) may need refresh. Error code 190 indicates expired token.
+
+---
+
+## Configuration Updates (April 16)
+
+**Vercel Environment Variables:**
+```
+META_APP_ID = 4552936261602709          # Facebook OAuth app (keep same)
+META_APP_SECRET = 381cbb8fcb900d95562210736be819b5  # Instagram app's secret (34 chars)
+META_WEBHOOK_VERIFY_TOKEN = your_random_verify_token
+```
+
+**Important**: Instagram webhooks use the Instagram app's credentials, not the Facebook app's.
 
 ---
 
