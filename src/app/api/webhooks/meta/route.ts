@@ -383,18 +383,35 @@ async function findIgAccount(igAccountId: string, supabase: any) {
   return null
 }
 
+// Get user ID from access token (to use as fallback for messaging API)
+async function getTokenUserId(token: string): Promise<string | null> {
+  try {
+    const response = await axios.get('https://graph.instagram.com/me', {
+      params: { fields: 'id,username,account_type', access_token: token } },
+      { timeout: 5000 }
+    )
+    console.log('[Token] Token user info:', JSON.stringify(response.data))
+    return response.data.id || null
+  } catch (err: any) {
+    console.log('[Token] Failed to get user ID:', err.message)
+    return null
+  }
+}
+
 async function sendIgMessage(account: any, recipientId: string, message: string, commentId?: string) {
   // Use env token if available (for testing), otherwise use account token
   const accessToken = process.env.IG_ACCESS_TOKEN || decryptToken(account.access_token_encrypted)
   const igBusinessAccountId = account.platform_account_id
 
-  // Use env IG_BUSINESS_ACCOUNT_ID if available (for testing)
-  const targetAccountId = process.env.IG_BUSINESS_ACCOUNT_ID || igBusinessAccountId
+  // Use env IG_BUSINESS_ACCOUNT_ID if available, otherwise try token user ID
+  // Note: IG_scoped_id (17841430541631416) from webhooks != API account ID
+  let targetAccountId = process.env.IG_BUSINESS_ACCOUNT_ID || igBusinessAccountId
 
   console.log('[DM] IG_ACCESS_TOKEN env var:', process.env.IG_ACCESS_TOKEN ? 'SET' : 'NOT SET')
   console.log('[DM] account.access_token_encrypted:', account.access_token_encrypted ? 'HAS VALUE' : 'EMPTY')
   console.log('[DM] Using token prefix:', accessToken ? accessToken.substring(0, 20) + '...' : 'EMPTY!')
   console.log('[DM] Target account ID:', targetAccountId)
+  console.log('[DM] igBusinessAccountId (from account):', igBusinessAccountId)
   console.log('[DM] Recipient ID:', recipientId)
   console.log('[DM] Comment ID:', commentId || 'NONE')
   console.log('[DM] Message:', message)
@@ -408,28 +425,49 @@ async function sendIgMessage(account: any, recipientId: string, message: string,
     requestBody = { recipient: { id: recipientId }, message: { text: message } }
   }
 
-  const endpoint = `https://graph.instagram.com/v26.0/${targetAccountId}/messages`
+  // Get token user ID to try as fallback
+  const tokenUserId = await getTokenUserId(accessToken)
+  console.log('[DM] Token user ID (fallback):', tokenUserId)
 
-  try {
-    const response = await axios.post(endpoint, requestBody, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
-      },
-    })
-    
-    console.log('[DM] ✓ Response received:', response.status, response.statusText)
-    console.log('[DM] Response data:', JSON.stringify(response.data))
-    console.log('[DM] === SEND DM SUCCESS ===')
-  } catch (err: any) {
-    console.log('[DM] ❌ Request failed')
-    console.log('[DM] Error message:', err.message)
-    console.log('[DM] Error code:', err.code)
-    console.log('[DM] Response data:', err.response?.data ? JSON.stringify(err.response.data) : 'none')
-    console.log('[DM] Response status:', err.response?.status)
-    console.log('[DM] === SEND DM FAILED ===')
-    throw err
+  // Try IG scoped ID first, then token user ID if that fails
+  const accountIdsToTry = [targetAccountId, tokenUserId].filter(id => id && id !== targetAccountId)
+  console.log('[DM] Account IDs to try:', [targetAccountId, ...accountIdsToTry])
+
+  let lastError: any = null
+  for (const accountId of [targetAccountId, ...accountIdsToTry]) {
+    if (!accountId) continue
+    const endpoint = `https://graph.instagram.com/v26.0/${accountId}/messages`
+    console.log('[DM] Trying endpoint:', endpoint)
+
+    try {
+      const response = await axios.post(endpoint, requestBody, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        timeout: 10000,
+      })
+      
+      console.log('[DM] ✓ Response received:', response.status, response.statusText)
+      console.log('[DM] Response data:', JSON.stringify(response.data))
+      console.log('[DM] === SEND DM SUCCESS ===')
+      console.log('[DM] ✅ Successfully sent using account ID:', accountId)
+      return // Exit on success
+    } catch (err: any) {
+      console.log('[DM] ✗ Failed with account ID:', accountId)
+      console.log('[DM] Error:', err.response?.data?.error?.message || err.message)
+      lastError = err
+      // Continue to next ID
+    }
   }
+
+  // All IDs failed - throw the last error
+  console.log('[DM] ❌ All account IDs failed')
+  console.log('[DM] Error code:', lastError?.code)
+  console.log('[DM] Response data:', lastError?.response?.data ? JSON.stringify(lastError.response.data) : 'none')
+  console.log('[DM] Response status:', lastError?.response?.status)
+  console.log('[DM] === SEND DM FAILED ===')
+  throw lastError
 }
 
 async function handleFacebookComment(pageId: string, value: any, supabase: any) {
