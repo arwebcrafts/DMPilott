@@ -387,9 +387,9 @@ async function findIgAccount(igAccountId: string, supabase: any) {
 async function getTokenUserId(token: string): Promise<string | null> {
   try {
     const response = await axios.get('https://graph.instagram.com/me', {
-      params: { fields: 'id,username,account_type', access_token: token } },
-      { timeout: 5000 }
-    )
+      params: { fields: 'id,username,account_type', access_token: token },
+      timeout: 5000,
+    })
     console.log('[Token] Token user info:', JSON.stringify(response.data))
     return response.data.id || null
   } catch (err: any) {

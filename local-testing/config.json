@@ -1,0 +1,66 @@
+{
+  "project": "DMpilot Webhook Server",
+  "created": "2026-05-04",
+  "version": "1.0.0",
+  "app_id": "4552936261602709",
+  "app_name": "DM Automation SaaS",
+
+  "webhook_server": {
+    "file": "meta-webhook-server.js",
+    "port": 3000,
+    "status": "running"
+  },
+
+  "ngrok": {
+    "url": "https://c014-2400-adcc-1903-f600-80cb-d589-da76-974d.ngrok-free.app",
+    "status": "running"
+  },
+
+  "config": {
+    "verify_token": "dmpilot_webhook_verify_token_2024",
+    "app_secret": "806f1664dce31b23731d7bcc7e01f665",
+    "ig_business_account_id": "17841430541631416"
+  },
+
+  "instagram_accounts": [
+    {
+      "username": "m_waqarsikandar",
+      "ig_account_id": "17841452020342196",
+      "api_user_id": "848067418322071"
+    },
+    {
+      "username": "armantesting14",
+      "ig_account_id": "17841430541631416",
+      "api_user_id": "34831588833123223"
+    }
+  ],
+
+  "webhook_fields_subscribed": [
+    "comments",
+    "live_comments",
+    "message_edit",
+    "message_reactions",
+    "messages",
+    "messaging_handover",
+    "messaging_optins",
+    "messaging_postbacks",
+    "messaging_referral",
+    "messaging_seen",
+    "standby"
+  ],
+
+  "bug_fixes": [
+    {
+      "issue": "Invalid OAuth access token",
+      "fix": "Changed API endpoint from graph.facebook.com to graph.instagram.com"
+    }
+  ],
+
+  "test_results": {
+    "health_check": "pass",
+    "webhook_verification": "pass",
+    "test_webhook_post": "pass",
+    "token_validity": "pass",
+    "dm_sending": "pass"
+  }
+}
