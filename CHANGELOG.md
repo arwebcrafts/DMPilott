@@ -4,6 +4,56 @@ All notable changes to DMPilot will be documented in this file.
 
 ---
 
+## [2026-05-06] - Private Replies API & Account ID Fallback
+
+### Status: IN PROGRESS
+
+**Webhook now supports Meta Private Replies API and automatic account ID fallback.**
+
+### Bug Fixes
+
+#### 1. Private Replies API (comment_id)
+- **Problem**: Standard messaging API returned "Unknown path components: /messages"
+- **Root Cause**: Instagram-scoped ID (17841430541631416) from webhooks != API account ID
+- **Fix**: Use `recipient: { comment_id: "<COMMENT_ID>" }` for comment-triggered DMs
+- **Per Meta docs**: Comment-triggered welcome DMs require comment_id recipient format
+
+#### 2. Account ID Fallback
+- **Problem**: IG scoped ID from webhook doesn't work for messaging API
+- **Fix**: Added automatic fallback to token user ID discovered via `/me` endpoint
+- **Flow**: Try IG scoped ID first → if fails, try token user ID → log which ID succeeded
+
+### Code Changes
+
+- `src/app/api/webhooks/meta/route.ts`:
+  - Added `getTokenUserId()` function to discover token's user ID
+  - `sendIgMessage()` now tries multiple account IDs (fallback logic)
+  - Added comprehensive logging for account ID discovery
+  - Enhanced error logging showing all tried IDs and failures
+
+### Logging Added
+
+```
+[DM] IG scoped ID: 17841430541631416 (from webhook entry.id)
+[Token] Token user info: { id, username, account_type }
+[DM] Account IDs to try: [ig_scoped_id, token_user_id]
+[DM] Trying endpoint: https://graph.instagram.com/v26.0/{id}/messages
+[DM] ✅ Successfully sent using account ID: {id}
+```
+
+### Environment Variables
+
+- `IG_ACCESS_TOKEN` - Instagram User access token (for testing)
+- `IG_BUSINESS_ACCOUNT_ID` - Override account ID (optional)
+
+### Next Steps
+
+- [ ] Verify token user ID is correct API account ID
+- [ ] Update Vercel environment with correct IG_BUSINESS_ACCOUNT_ID
+- [ ] Test full comment → DM flow end-to-end
+
+---
+
 ## [2026-05-04] - Webhook Server & Messaging Features
 
 ### Status: COMPLETE
