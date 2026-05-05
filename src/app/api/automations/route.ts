@@ -46,6 +46,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
 
+  const validTriggerTypes = ['any_comment', 'comment_keyword', 'dm_received', 'story_mention']
+  if (!validTriggerTypes.includes(triggerType)) {
+    return NextResponse.json({ error: 'Invalid trigger type' }, { status: 400 })
+  }
+
   if (triggerType === 'comment_keyword' && (!keywords || keywords.length === 0)) {
     return NextResponse.json({ error: 'At least one keyword is required' }, { status: 400 })
   }
