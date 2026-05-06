@@ -186,11 +186,18 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
   const message = messaging.message
   const senderId = messaging.sender?.id
 
-  console.log('[Message] From:', senderId, 'Text:', message?.text)
-  console.log('[Message] is_echo:', message?.is_echo)
+  // Log full messaging structure for debugging
+  console.log('[Message] Full messaging object:', JSON.stringify(messaging, null, 2))
+  
+  // Extract message text - handle different possible structures
+  const messageText = message?.text || message?.content?.text || message?.message?.text
+  const isEcho = message?.is_echo || message?.content?.is_echo || false
+
+  console.log('[Message] From:', senderId, 'Text:', messageText)
+  console.log('[Message] is_echo:', isEcho)
 
   // Skip echo messages (our own sent messages coming back)
-  if (message?.is_echo) {
+  if (isEcho) {
     console.log('[Message] Skipping echo message - no response needed')
     return
   }

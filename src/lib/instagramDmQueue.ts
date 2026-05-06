@@ -51,7 +51,8 @@ async function sendWithHostAndIdFallback(
   account: ConnectedAccount,
   requestBody: Record<string, unknown>
 ) {
-  const accessToken = process.env.IG_ACCESS_TOKEN || decryptToken(account.access_token_encrypted)
+  // Instagram messaging API requires Facebook Page access token, not Instagram access token
+  const accessToken = process.env.FACEBOOK_PAGE_ACCESS_TOKEN || decryptToken(account.access_token_encrypted)
   const configuredAccountId = process.env.IG_BUSINESS_ACCOUNT_ID || account.platform_account_id
   const tokenUserId = await getTokenUserId(accessToken)
   const accountIdsToTry = [configuredAccountId, tokenUserId].filter(id => id && id !== configuredAccountId)
@@ -117,7 +118,8 @@ async function sendInstagramCommentReply(params: {
   replyText: string
 }) {
   const { account, commentId, replyText } = params
-  const accessToken = process.env.IG_ACCESS_TOKEN || decryptToken(account.access_token_encrypted)
+  // Instagram comment replies also require Facebook Page access token
+  const accessToken = process.env.FACEBOOK_PAGE_ACCESS_TOKEN || decryptToken(account.access_token_encrypted)
 
   let lastError: any = null
   for (const host of INSTAGRAM_MESSAGING_HOSTS) {
@@ -148,6 +150,8 @@ export async function processQueuedInstagramDmsForAccount(
   supabase: any,
   accountId: string
 ) {
+  console.log('[Queue] Processing queue for account:', accountId)
+  
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
   const { count: sentInLastHour } = await supabase
     .from('dm_logs')
@@ -158,7 +162,10 @@ export async function processQueuedInstagramDmsForAccount(
     .gte('sent_at', oneHourAgo)
 
   const remainingQuota = Math.max(0, INSTAGRAM_COMMENTS_PER_HOUR_LIMIT - (sentInLastHour || 0))
+  console.log('[Queue] Sent in last hour:', sentInLastHour, 'Remaining quota:', remainingQuota)
+  
   if (remainingQuota <= 0) {
+    console.log('[Queue] No quota remaining')
     return { processed: 0, remainingQuota: 0 }
   }
 
@@ -171,9 +178,11 @@ export async function processQueuedInstagramDmsForAccount(
     .single()
 
   if (!account) {
+    console.log('[Queue] No account found for:', accountId)
     return { processed: 0, remainingQuota }
   }
   const resolvedAccount = account as ConnectedAccount
+  console.log('[Queue] Found account:', resolvedAccount.username)
 
   const { data: queuedLogs } = await supabase
     .from('dm_logs')
@@ -184,11 +193,14 @@ export async function processQueuedInstagramDmsForAccount(
     .order('created_at', { ascending: true })
     .limit(remainingQuota)
 
+  console.log('[Queue] Found queued logs:', queuedLogs?.length || 0)
+
   const automationCache = new Map<string, Automation | null>()
   let processed = 0
 
   for (const rawLog of (queuedLogs || [])) {
     const log = rawLog as DmLogRow
+    console.log('[Queue] Processing log:', log.id, 'for commenter:', log.commenter_username)
 
     const { data: claimed } = await supabase
       .from('dm_logs')
@@ -198,7 +210,11 @@ export async function processQueuedInstagramDmsForAccount(
       .select('id')
       .single()
 
-    if (!claimed) continue
+    if (!claimed) {
+      console.log('[Queue] Failed to claim log:', log.id)
+      continue
+    }
+    console.log('[Queue] Successfully claimed log:', log.id)
 
     if (!log.automation_id) {
       await supabase
@@ -227,6 +243,7 @@ export async function processQueuedInstagramDmsForAccount(
     }
 
     const messageToSend = log.dm_message_sent || automation.dm_message
+    console.log('[Queue] Sending DM to:', log.commenter_platform_id, 'message:', messageToSend)
     try {
       await sendInstagramDm({
         account: resolvedAccount,
@@ -235,6 +252,7 @@ export async function processQueuedInstagramDmsForAccount(
         message: messageToSend,
         videoUrl: automation.dm_video_url,
       })
+      console.log('[Queue] ✓ DM sent successfully to:', log.commenter_platform_id)
 
       await supabase
         .from('dm_logs')
@@ -270,6 +288,8 @@ export async function processQueuedInstagramDmsForAccount(
     } catch (err: any) {
       const errorCode = err?.response?.data?.error?.code
       const errorMessage = err?.response?.data?.error?.message || err.message
+      console.log('[Queue] ❌ DM send failed:', errorCode, errorMessage)
+      console.log('[Queue] Full error:', err)
 
       // 368 = temporary block/rate limit. Keep queued so future cron runs can retry.
       if (errorCode === 368 || errorCode === 4 || errorCode === 613) {
@@ -295,6 +315,7 @@ export async function processQueuedInstagramDmsForAccount(
     }
   }
 
+  console.log('[Queue] Processing complete. Processed:', processed, 'Remaining quota:', remainingQuota)
   return { processed, remainingQuota }
 }
 

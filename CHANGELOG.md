@@ -4,6 +4,71 @@ All notable changes to DMPilot will be documented in this file.
 
 ---
 
+## [2026-05-06] - OAuth & DM Token Fixes
+
+### Status: COMPLETE
+
+**Fixed Instagram OAuth redirect URI validation and DM sending access token issues.**
+
+### Bug Fixes
+
+#### Issue #1: Instagram OAuth Redirect URI Validation (FIXED)
+- **Problem**: OAuth token exchange failing with "Error validating verification code. Please make sure your redirect_uri is identical"
+- **Root Cause**: Instagram app secret mismatch between environment variable and Meta App Dashboard
+- **Fix**: 
+  - Verified redirect URI configuration in Meta Dashboard: `https://dmpilott.vercel.app/api/instagram/callback` (correct)
+  - Updated `INSTAGRAM_APP_SECRET` environment variable to match dashboard value: `be1e75b308cdeebf68d18b2e6c39324c`
+  - Redeployed application
+
+#### Issue #2: DM Sending Access Token Invalid (FIXED)
+- **Problem**: DM sending failing with "190 Invalid OAuth access token - Cannot parse access token"
+- **Root Cause**: Using Instagram access token (IGAAU...) for Instagram Messaging API, which requires Facebook Page access token
+- **Fix**:
+  - Updated `src/lib/instagramDmQueue.ts` to use `FACEBOOK_PAGE_ACCESS_TOKEN` instead of `IG_ACCESS_TOKEN`
+  - Updated both `sendWithHostAndIdFallback` and `sendInstagramCommentReply` functions
+  - Added `FACEBOOK_PAGE_ACCESS_TOKEN` to Vercel environment variables
+
+#### Issue #3: Message Text Extraction Undefined (FIXED)
+- **Problem**: Messaging webhook showing `Text: undefined` for incoming messages
+- **Root Cause**: Message structure in webhook payload differs from expected path
+- **Fix**:
+  - Updated `src/app/api/webhooks/meta/route.ts` to handle multiple possible message text paths
+  - Added fallback extraction: `message?.text || message?.content?.text || message?.message?.text`
+  - Added full messaging object logging for debugging
+  - Fixed echo detection to use extracted `isEcho` variable
+
+#### Issue #4: Queue Processor Debugging (IMPROVED)
+- **Problem**: No visibility into why queue processor wasn't sending DMs
+- **Fix**: Added extensive logging to `src/lib/instagramDmQueue.ts`:
+  - Queue processing start and account details
+  - Number of queued logs found
+  - Log claiming success/failure
+  - DM sending attempts and results
+  - Detailed error messages on failure
+
+### Validation Results
+
+| Event | Result |
+|-------|--------|
+| Comment webhook received | ✅ Working |
+| DM queued successfully | ✅ Working |
+| DM sent via API | ✅ Working (processed: 1, remainingQuota: 200) |
+| Echo message detection | ✅ Working (correctly skipped) |
+| Message text extraction | ✅ Working (no longer undefined) |
+| Quota tracking | ✅ Working (200 → 199 after send) |
+
+### Files Modified
+
+- `src/lib/instagramDmQueue.ts` - Updated to use FACEBOOK_PAGE_ACCESS_TOKEN, added detailed logging
+- `src/app/api/webhooks/meta/route.ts` - Fixed message text extraction, added debugging logs
+
+### Environment Variables Updated
+
+- `INSTAGRAM_APP_SECRET` - Updated to correct value from Meta Dashboard
+- `FACEBOOK_PAGE_ACCESS_TOKEN` - Added for Instagram Messaging API (required for DM sending)
+
+---
+
 ## [2026-05-06] - Private Replies API & Account ID Fallback
 
 ### Status: COMPLETE
