@@ -39,16 +39,21 @@ export async function GET(request: Request) {
     let subscribeBase = 'https://graph.facebook.com/v21.0'
 
     if (stateData.platform === 'instagram') {
-      // ── Instagram Business Login via Facebook OAuth ─────────────────────────
-      // Instagram tokens are now managed through Facebook's Graph API
-
-      // Step 1: exchange code for short-lived token via Facebook Graph API
-      const shortRes = await axios.get(
-        'https://graph.facebook.com/v21.0/oauth/access_token',
+      // ── Instagram Business Login via Instagram OAuth ────────────────────────
+      // Instagram requires its own app ID and uses api.instagram.com for token exchange
+      
+      // Step 1: exchange code for short-lived token via Instagram OAuth
+      const igAppId = process.env.INSTAGRAM_APP_ID || process.env.META_APP_ID
+      const igAppSecret = process.env.INSTAGRAM_APP_SECRET || process.env.META_APP_SECRET
+      
+      const shortRes = await axios.post(
+        'https://api.instagram.com/oauth/access_token',
+        null,
         {
           params: {
-            client_id: process.env.META_APP_ID!,
-            client_secret: process.env.META_APP_SECRET!,
+            client_id: igAppId,
+            client_secret: igAppSecret,
+            grant_type: 'authorization_code',
             redirect_uri: redirectUri,
             code,
           },
@@ -57,11 +62,11 @@ export async function GET(request: Request) {
 
       const shortLivedToken: string = shortRes.data.access_token
 
-      // Step 2: exchange for long-lived token (60 days) via graph.instagram.com
+      // Step 2: exchange for long-lived token via graph.instagram.com
       const longRes = await axios.get('https://graph.instagram.com/access_token', {
         params: {
           grant_type: 'ig_exchange_token',
-          client_secret: process.env.INSTAGRAM_APP_SECRET ?? process.env.META_APP_SECRET!,
+          client_secret: igAppSecret,
           access_token: shortLivedToken,
         },
       })
@@ -69,15 +74,15 @@ export async function GET(request: Request) {
       accessToken = longRes.data.access_token
       tokenExpiresAt = new Date(Date.now() + longRes.data.expires_in * 1000).toISOString()
 
-      // Step 3: get account details
+      // Step 3: get account details using user_id (IG professional account ID)
       const meRes = await axios.get('https://graph.instagram.com/me', {
         params: {
-          fields: 'id,username,name,profile_picture_url,followers_count,account_type',
+          fields: 'id,user_id,username,name,profile_picture_url,followers_count,account_type',
           access_token: accessToken,
         },
       })
 
-      platformAccountId = meRes.data.id
+      platformAccountId = meRes.data.user_id || meRes.data.id
       username = meRes.data.username
       displayName = meRes.data.name || meRes.data.username
       profilePictureUrl = meRes.data.profile_picture_url ?? null

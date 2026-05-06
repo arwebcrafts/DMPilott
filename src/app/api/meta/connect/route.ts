@@ -25,11 +25,12 @@ export async function GET(request: Request) {
   })).toString('base64')
 
   if (platform === 'instagram') {
-    // Instagram Business Login — use Instagram's OAuth endpoint
-    // NOT Facebook's dialog/oauth (Instagram permissions don't work there)
-    const authUrl = new URL('https://api.instagram.com/oauth/authorize')
-    authUrl.searchParams.set('client_id', process.env.META_APP_ID!)
-    authUrl.searchParams.set('redirect_uri', redirectUri)
+    // Instagram Business Login — requires Instagram App ID (not Facebook App ID)
+    // Get Instagram App ID from Instagram API Setup page in Meta Developer Console
+    const instagramAppId = process.env.INSTAGRAM_APP_ID || process.env.META_APP_ID
+    const authUrl = new URL('https://www.instagram.com/oauth/authorize')
+    authUrl.searchParams.set('client_id', instagramAppId!)
+    authUrl.searchParams.set('redirect_uri', `${process.env.NEXT_PUBLIC_APP_URL}/api/instagram/callback`)
     authUrl.searchParams.set('scope', 'instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments')
     authUrl.searchParams.set('response_type', 'code')
     authUrl.searchParams.set('state', state)
