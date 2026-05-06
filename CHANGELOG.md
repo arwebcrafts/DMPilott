@@ -4,6 +4,94 @@ All notable changes to DMPilot will be documented in this file.
 
 ---
 
+## [2026-05-07] - Facebook Comment Reply & Permissions
+
+### Status: DM WORKING, COMMENT REPLY REQUIRES TECH PROVIDER STATUS
+
+**Facebook DM automation is fully functional. Comment reply fallback requires Tech Provider verification for production use.**
+
+### New Features
+
+#### 1. Facebook Comment Reply Fallback
+- Added fallback to public comment reply when Facebook DMs are blocked (error 551)
+- Platform-specific comment reply functions for Facebook and Instagram
+- Automatic fallback triggers when user hasn't messaged page first
+
+#### 2. Facebook Webhook Handling
+- Added Facebook comment event processing
+- Facebook Page connected accounts support
+- Facebook DM queue processing with rate limits (200/hour)
+- Duplicate event prevention for Facebook comments
+
+### Bug Fixes
+
+#### Issue #1: Facebook Comment Reply Using Wrong API (FIXED)
+- **Problem**: Comment reply failing with "Unsupported post request" error
+- **Root Cause**: Code was calling `sendInstagramCommentReply` for Facebook platform
+- **Fix**: Added platform-specific logic to call `sendFacebookCommentReply` for Facebook
+
+#### Issue #2: Missing Facebook Permissions (PARTIALLY RESOLVED)
+- **Problem**: Comment reply failing with "Permissions error"
+- **Root Cause**: Missing `pages_manage_engagement` and `pages_read_user_content` permissions
+- **Fix**:
+  - Added "Manage everything on your Page" (Pages API) use case to app
+  - Added `pages_manage_engagement` permission to Pages API use case
+  - Added `pages_read_user_content` permission to Pages API use case
+  - Reconnected Facebook account to refresh access token with new permissions
+- **Current Status**: Permissions are "Ready for testing" (test users only)
+- **Production Use**: Requires Tech Provider status for App Review approval
+
+### Files Modified
+
+- `src/lib/instagramDmQueue.ts` - Added Facebook DM support, platform-specific comment reply functions, fallback logic
+- `src/app/api/webhooks/meta/route.ts` - Added Facebook comment event handling, Facebook account lookup
+- `src/app/api/meta/connect/route.ts` - Added Facebook OAuth support
+- `src/app/api/meta/callback/route.ts` - Added Facebook OAuth callback handling, Page webhook subscription
+
+### Meta Developer Dashboard Configuration
+
+**Use Cases Added:**
+- Manage messaging & content on Instagram
+- Engage with customers on Messenger from Meta
+- Manage everything on your Page (Pages API)
+
+**Permissions Added to Pages API:**
+- `pages_manage_engagement` - Create, edit and delete comments on the Page
+- `pages_read_user_content` - Read user-generated content on the Page
+
+### Current Limitations
+
+#### Tech Provider Requirement for Production
+- **Issue**: Permissions are "Ready for testing" (test users only)
+- **Cause**: Meta requires Tech Provider status to submit these permissions for App Review
+- **Requirements for Tech Provider Status**:
+  1. Business verification - Verify business as a business entity
+  2. Access verification - Verify business can access another business portfolio's data
+  3. App Review - Complete data usage, handling, and protection questions
+- **Impact**: Comment reply fallback only works for test users, not production users
+- **Workaround**: DM automation is fully functional for all users
+
+### Validation Results
+
+| Event | Result |
+|-------|--------|
+| Facebook comment webhook received | ✅ Working |
+| Facebook account lookup | ✅ Working |
+| Facebook DM sent | ✅ Working |
+| Facebook DM error 551 detection | ✅ Working |
+| Facebook comment reply fallback | ⚠️ Requires Tech Provider status |
+| Instagram comment reply | ✅ Working |
+
+### Next Steps for Production Comment Reply
+
+1. Complete business verification in Meta Business Manager
+2. Complete access verification
+3. Complete App Review data usage questions
+4. Submit for App Review as a Tech Provider
+5. Reconnect Facebook account after approval
+
+---
+
 ## [2026-05-06] - OAuth & DM Token Fixes
 
 ### Status: COMPLETE
