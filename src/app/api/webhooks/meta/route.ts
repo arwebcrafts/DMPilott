@@ -3,7 +3,7 @@ import crypto from 'crypto'
 import { createServiceClient } from '@/lib/supabase/server'
 import { decryptToken } from '@/lib/encryption'
 import axios from 'axios'
-import { processQueuedInstagramDmsForAccount, sendInstagramDm } from '@/lib/instagramDmQueue'
+import { processQueuedInstagramDmsForAccount, sendInstagramDm, sendFacebookDm } from '@/lib/instagramDmQueue'
 
 console.log('[INIT] Webhook route module loaded')
 
@@ -169,9 +169,23 @@ async function processWebhookAsync(payload: any) {
   } else if (payload.object === 'page') {
     console.log('[ASYNC] Processing Facebook Page events')
     for (const entry of payload.entry || []) {
+      const pageId = entry.id
+      console.log('[ASYNC] Page ID:', pageId)
+
+      // Handle messaging events
+      if (entry.messaging && entry.messaging.length > 0) {
+        console.log('[ASYNC] Entry has', entry.messaging.length, 'messaging events')
+        for (const messaging of entry.messaging) {
+          console.log('[ASYNC] Processing Facebook messaging event')
+          await handleFacebookMessage(pageId, messaging, supabase)
+        }
+      }
+
+      // Handle feed changes (comments)
       for (const change of entry.changes || []) {
         if (change.field === 'feed' && change.value?.item === 'comment') {
-          await handleFacebookComment(entry.id, change.value, supabase)
+          console.log('[ASYNC] Processing Facebook comment event')
+          await handleFacebookComment(pageId, change.value, supabase)
         }
       }
     }
@@ -304,21 +318,6 @@ async function handleInstagramComment(igAccountId: string, value: any, supabase:
 
   console.log('[Comment] Matched automation:', matchedAutomation.name)
 
-  // Check duplicate in database
-  const { data: existingLog } = await supabase
-    .from('dm_logs')
-    .select('id')
-    .eq('automation_id', matchedAutomation.id)
-    .eq('post_id', mediaId)
-    .eq('commenter_platform_id', commenterId)
-    .in('status', ['queued', 'pending', 'sent'])
-    .limit(1)
-
-  if (existingLog && existingLog.length > 0) {
-    console.log('[Comment] Already sent DM to this commenter - skipping')
-    return
-  }
-
   // Queue DM job and let queue processor enforce 200/hour.
   console.log('[Comment] Queueing DM for @' + commenterUsername)
   const personalizedMessage = matchedAutomation.dm_message
@@ -379,21 +378,53 @@ async function findIgAccount(igAccountId: string, supabase: any) {
 }
 
 async function handleFacebookComment(pageId: string, value: any, supabase: any) {
+  // Log full value object to debug structure
+  console.log('[Facebook Comment] Full value object:', JSON.stringify(value, null, 2))
+
+  const commentId = value.comment_id || value.id
+  const commentText = value.message || ''
+  const commenterId = value.from?.id
+  const commenterName = value.from?.name
+  const postId = value.post_id
+
+  console.log('[Facebook Comment] New comment event:', {
+    commentId,
+    commenterName,
+    commentText,
+    postId,
+  })
+
+  // Check duplicate
+  if (isProcessed(commentId)) {
+    console.log('[Facebook Comment] Already processed this comment - skipping')
+    return
+  }
+  markProcessed(commentId)
+
+  // Find the connected account
   const { data: account } = await supabase
     .from('connected_accounts')
-    .select('*, users!inner(id, plan, dms_used_this_month)')
+    .select('*')
     .eq('platform_account_id', pageId)
+    .eq('platform', 'facebook')
     .eq('is_active', true)
     .single()
 
-  if (!account) return
+  if (!account) {
+    console.log('[Facebook Comment] No matching Facebook account found for:', pageId)
+    return
+  }
 
+  console.log('[Facebook Comment] ✓ Found account:', account.username, 'account ID:', account.id)
+
+  // Find automations for this account
   const { data: automations } = await supabase
     .from('automations')
     .select('*')
     .eq('account_id', account.id)
     .eq('is_active', true)
-    .eq('platform', 'facebook')
+
+  console.log('[Facebook Comment] Found automations:', automations?.length || 0)
 
   let matchedAutomation = null
   let matchedKeyword: string | null = null
@@ -405,8 +436,8 @@ async function handleFacebookComment(pageId: string, value: any, supabase: any) 
     }
     if (auto.trigger_type === 'comment_keyword') {
       const keywords: string[] = auto.keywords || []
-      const commentText = (value.message || '').toLowerCase().trim()
-      const found = keywords.find(kw => commentText.includes(kw.toLowerCase()))
+      const commentLower = commentText.toLowerCase().trim()
+      const found = keywords.find(kw => commentLower.includes(kw.toLowerCase()))
       if (found) {
         matchedAutomation = auto
         matchedKeyword = found
@@ -415,54 +446,107 @@ async function handleFacebookComment(pageId: string, value: any, supabase: any) 
     }
   }
 
-  if (!matchedAutomation) return
+  if (!matchedAutomation) {
+    console.log('[Facebook Comment] No matching automation found')
+    return
+  }
 
-  const { data: existingLog } = await supabase
-    .from('dm_logs')
-    .select('id')
-    .eq('automation_id', matchedAutomation.id)
-    .eq('post_id', value.post_id)
-    .eq('commenter_platform_id', value.from?.id)
-    .eq('status', 'sent')
+  console.log('[Facebook Comment] Matched automation:', matchedAutomation.name)
+
+  // Queue DM job
+  console.log('[Facebook Comment] Queueing DM for', commenterName)
+  const personalizedMessage = matchedAutomation.dm_message
+    .replace(/{name}/g, commenterName || 'there')
+    .replace(/{username}/g, commenterName || 'user')
+
+  console.log('[Facebook Comment] DM message:', personalizedMessage)
+  console.log('[Facebook Comment] Comment ID:', commentId)
+
+  const { error: insertError } = await supabase.from('dm_logs').insert({
+    automation_id: matchedAutomation.id,
+    user_id: account.user_id,
+    account_id: account.id,
+    platform: 'facebook',
+    post_id: postId,
+    commenter_platform_id: commenterId,
+    commenter_username: commenterName,
+    keyword_matched: matchedKeyword,
+    comment_id: commentId,
+    dm_message_sent: personalizedMessage,
+    status: 'queued',
+  })
+
+  if (insertError) {
+    console.log('[Facebook Comment] ❌ Failed to enqueue DM:', insertError.message)
+    return
+  }
+
+  const queueResult = await processQueuedInstagramDmsForAccount(supabase, account.id)
+  console.log('[Facebook Comment] Queue processor result:', queueResult)
+}
+
+async function handleFacebookMessage(pageId: string, messaging: any, supabase: any) {
+  const message = messaging.message
+  const senderId = messaging.sender?.id
+
+  // Log full messaging structure for debugging
+  console.log('[Facebook Message] Full messaging object:', JSON.stringify(messaging, null, 2))
+
+  // Extract message text
+  const messageText = message?.text || message?.content?.text || ''
+  const isEcho = message?.is_echo || false
+
+  console.log('[Facebook Message] From:', senderId, 'Text:', messageText)
+  console.log('[Facebook Message] is_echo:', isEcho)
+
+  // Skip echo messages
+  if (isEcho) {
+    console.log('[Facebook Message] Skipping echo message - no response needed')
+    return
+  }
+
+  // Skip if sender is the page itself
+  if (senderId === pageId) {
+    console.log('[Facebook Message] Skipping message from self')
+    return
+  }
+
+  // Find the connected account
+  const { data: account } = await supabase
+    .from('connected_accounts')
+    .select('*')
+    .eq('platform_account_id', pageId)
+    .eq('platform', 'facebook')
+    .eq('is_active', true)
     .single()
 
-  if (existingLog) return
-
-  try {
-    const accessToken = decryptToken(account.access_token_encrypted)
-    const personalizedMessage = matchedAutomation.dm_message
-      .replace(/{name}/g, value.from?.name || 'there')
-      .replace(/{username}/g, '@' + (value.from?.name || 'user'))
-
-    await axios.post(
-      `https://graph.facebook.com/v26.0/me/messages`,
-      {
-        recipient: { id: value.from?.id },
-        message: { text: personalizedMessage },
-        messaging_type: 'RESPONSE',
-      },
-      {
-        params: { access_token: accessToken },
-        headers: { 'Content-Type': 'application/json' },
-      }
-    )
-
-    await supabase.from('dm_logs').insert({
-      automation_id: matchedAutomation.id,
-      user_id: account.user_id,
-      account_id: account.id,
-      platform: 'facebook',
-      post_id: value.post_id,
-      commenter_platform_id: value.from?.id,
-      commenter_username: value.from?.name,
-      keyword_matched: matchedKeyword,
-      dm_message_sent: matchedAutomation.dm_message,
-      status: 'sent',
-      sent_at: new Date().toISOString(),
-    })
-
-    console.log('[Facebook Comment] ✅ DM sent to', value.from?.name)
-  } catch (err: any) {
-    console.log('[Facebook Comment] ❌ Failed to send DM:', err.response?.data?.error?.message || err.message)
+  if (!account) {
+    console.log('[Facebook Message] No matching Facebook account found for:', pageId)
+    return
   }
+
+  // Find automations for this account
+  const { data: automations } = await supabase
+    .from('automations')
+    .select('*')
+    .eq('account_id', account.id)
+    .eq('is_active', true)
+    .eq('trigger_type', 'dm_received')
+
+  if (!automations || automations.length === 0) {
+    console.log('[Facebook Message] No auto-reply automations found for this account')
+    return
+  }
+
+  const automation = automations[0]
+  console.log('[Facebook Message] Found auto-reply automation:', automation.name)
+
+  // Send auto-reply
+  const autoReply = automation.dm_message || "Thanks for your message! We'll get back to you soon. 👋"
+  await sendFacebookDm({
+    account,
+    recipientId: senderId,
+    message: autoReply,
+    videoUrl: automation.dm_video_url,
+  })
 }
