@@ -42,19 +42,18 @@ export async function GET(request: Request) {
     const igAppId = process.env.INSTAGRAM_APP_ID || process.env.META_APP_ID
     const igAppSecret = process.env.INSTAGRAM_APP_SECRET || process.env.META_APP_SECRET
     
-    // Step 1: exchange code for short-lived token
+    // Step 1: exchange code for short-lived token (use URL-encoded form data)
+    const params = new URLSearchParams()
+    params.append('client_id', igAppId!)
+    params.append('client_secret', igAppSecret!)
+    params.append('grant_type', 'authorization_code')
+    params.append('redirect_uri', redirectUri)
+    params.append('code', code)
+    
     const shortRes = await axios.post(
       'https://api.instagram.com/oauth/access_token',
-      null,
-      {
-        params: {
-          client_id: igAppId,
-          client_secret: igAppSecret,
-          grant_type: 'authorization_code',
-          redirect_uri: redirectUri,
-          code,
-        },
-      }
+      params.toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     )
 
     const shortLivedToken: string = shortRes.data.access_token
