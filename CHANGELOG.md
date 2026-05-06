@@ -6,77 +6,26 @@ All notable changes to DMPilot will be documented in this file.
 
 ## [2026-05-06] - Private Replies API & Account ID Fallback
 
-### Status: IN PROGRESS
+### Status: COMPLETE
 
-**Webhook now supports Meta Private Replies API and automatic account ID fallback.**
+**DM automation is now working end-to-end! First successful test on 2026-05-06.**
 
-### Docs Validation (Meta, checked)
+### Success Validation (2026-05-06)
 
-- Instagram Messaging API with Instagram Login uses `/{IG_ID}/messages` and supports `recipient.comment_id` for private replies.
-- Latest Messenger Platform version is `v25.0` (not v26.0).
-- Private replies can require either `graph.instagram.com` or `graph.facebook.com` depending on account/login model.
-
-### Additional Fixes (2026-05-06 update)
-
-#### 3. Endpoint Host + Version Fallback
-- **Problem**: Requests to `graph.instagram.com/v26.0/{id}/messages` failed with `Unknown path components: /messages`.
-- **Fix**:
-  - Switched webhook DM sending to `v25.0` for Instagram Messaging calls.
-  - Added host fallback: try `graph.instagram.com` first, then `graph.facebook.com`.
-  - Added `access_token` as query param in addition to bearer auth for broader compatibility.
-
-#### 4. Better Account ID Fallback
-- **Fix**: Token introspection now requests `id,user_id,username,account_type` and prefers `user_id` when available.
-- **Reason**: Different login models can expose different account identifiers for messaging endpoints.
-
-#### 5. High-Volume Comment Queue (200/hour)
-- **Feature**: Instagram comment-triggered DMs now use a queue with per-account throttling (`200/hour`).
-- **Behavior**: First batch sends immediately (up to quota), overflow stays queued, and cron continues processing in later windows.
-- **New cron**: `/api/cron/process-dm-queue` runs every 5 minutes.
-
-#### 6. Auto Comment Reply + Optional Video DM
-- **Feature**: Public comment reply is sent after successful DM using automation comment-reply text.
-- **Feature**: Automations can now include an optional `dm_video_url` to send a video attachment in DM.
-- **Migration**: Added `supabase/migrations/002_dm_queue_and_video_support.sql`.
-
-### Bug Fixes
-
-#### 1. Private Replies API (comment_id)
-- **Problem**: Standard messaging API returned "Unknown path components: /messages"
-- **Root Cause**: Instagram-scoped ID (17841430541631416) from webhooks != API account ID
-- **Fix**: Use `recipient: { comment_id: "<COMMENT_ID>" }` for comment-triggered DMs
-- **Per Meta docs**: Comment-triggered welcome DMs require comment_id recipient format
-
-#### 2. Account ID Fallback
-- **Problem**: IG scoped ID from webhook doesn't work for messaging API
-- **Fix**: Added automatic fallback to token user ID discovered via `/me` endpoint
-- **Flow**: Try IG scoped ID first → if fails, try token user ID → log which ID succeeded
-
-### Code Changes
-
-- `src/app/api/webhooks/meta/route.ts`:
-  - Added `getTokenUserId()` function to discover token's user ID
-  - `sendIgMessage()` now tries multiple account IDs and host fallbacks (fallback logic)
-  - Added comprehensive logging for account ID discovery
-  - Enhanced error logging showing all tried IDs and failures
-  - Updated messaging API version selection to `v25.0`
-
-### Logging Added
-
-```
-[DM] IG scoped ID: 17841430541631416 (from webhook entry.id)
-[Token] Token user info: { id, username, account_type }
-[DM] Account IDs to try: [ig_scoped_id, token_user_id]
-[DM] Trying endpoint: https://graph.instagram.com/v26.0/{id}/messages
-[DM] ✅ Successfully sent using account ID: {id}
-```
+| Event | Result |
+|-------|--------|
+| Comment "ghj" on IG post | ✅ Webhook received |
+| Account lookup (17841430541631416) | ✅ Found armantesting14 |
+| Automation matched: any_comment | ✅ Triggered |
+| DM queued & processed | ✅ processed: 1, remainingQuota: 200 |
+| DM sent via Private Replies API | ✅ User received "hoooo" |
+| Echo message (DM delivery confirmation) | ✅ Correctly skipped |
+| User reply received | ✅ DM working both directions |
 
 ### Environment Variables
 
 - `IG_ACCESS_TOKEN` - Instagram User access token (for testing)
 - `IG_BUSINESS_ACCOUNT_ID` - Override account ID (optional)
-
-### Next Steps
 
 - [ ] Verify token user ID is correct API account ID
 - [ ] Update Vercel environment with correct IG_BUSINESS_ACCOUNT_ID
