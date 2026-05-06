@@ -14,6 +14,7 @@ interface Automation {
   trigger_type: string
   keywords: string[]
   dm_message: string
+  dm_video_url?: string | null
   is_active: boolean
   total_dms_sent: number
   created_at: string
@@ -235,6 +236,7 @@ function CreateAutomationModal({
   const [keywords, setKeywords] = useState<string[]>([])
   const [keywordInput, setKeywordInput] = useState('')
   const [dmMessage, setDmMessage] = useState('')
+  const [dmVideoUrl, setDmVideoUrl] = useState('')
   const [commentReplyEnabled, setCommentReplyEnabled] = useState(true)
   const [commentReplyText, setCommentReplyText] = useState('Check your DMs! 📩')
   const [loading, setLoading] = useState(false)
@@ -276,6 +278,7 @@ function CreateAutomationModal({
         trigger_type: triggerType,
         keywords: triggerType === 'comment_keyword' ? keywords : [],
         dm_message: dmMessage,
+        dm_video_url: dmVideoUrl.trim() ? dmVideoUrl.trim() : null,
         comment_reply_enabled: commentReplyEnabled,
         comment_reply_text: commentReplyEnabled ? commentReplyText : null,
       })
@@ -415,6 +418,23 @@ function CreateAutomationModal({
               </p>
               <span className="text-xs text-[#65676B]">{dmMessage.length}/1000</span>
             </div>
+          </div>
+
+          {/* Optional video attachment */}
+          <div>
+            <label className="block text-sm font-medium text-[#1C1E21] mb-2">
+              DM Video URL <span className="text-[#65676B]">(optional)</span>
+            </label>
+            <input
+              type="url"
+              value={dmVideoUrl}
+              onChange={e => setDmVideoUrl(e.target.value)}
+              placeholder="https://cdn.example.com/video.mp4"
+              className="w-full px-3 py-2 border border-[#CED0D4] rounded-lg text-sm focus:ring-2 focus:ring-[#1877F2]"
+            />
+            <p className="text-xs text-[#65676B] mt-1">
+              If set, Instagram will send this video in DM for each matched comment.
+            </p>
           </div>
 
           {/* Auto-reply on comment */}

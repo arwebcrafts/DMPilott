@@ -10,6 +10,35 @@ All notable changes to DMPilot will be documented in this file.
 
 **Webhook now supports Meta Private Replies API and automatic account ID fallback.**
 
+### Docs Validation (Meta, checked)
+
+- Instagram Messaging API with Instagram Login uses `/{IG_ID}/messages` and supports `recipient.comment_id` for private replies.
+- Latest Messenger Platform version is `v25.0` (not v26.0).
+- Private replies can require either `graph.instagram.com` or `graph.facebook.com` depending on account/login model.
+
+### Additional Fixes (2026-05-06 update)
+
+#### 3. Endpoint Host + Version Fallback
+- **Problem**: Requests to `graph.instagram.com/v26.0/{id}/messages` failed with `Unknown path components: /messages`.
+- **Fix**:
+  - Switched webhook DM sending to `v25.0` for Instagram Messaging calls.
+  - Added host fallback: try `graph.instagram.com` first, then `graph.facebook.com`.
+  - Added `access_token` as query param in addition to bearer auth for broader compatibility.
+
+#### 4. Better Account ID Fallback
+- **Fix**: Token introspection now requests `id,user_id,username,account_type` and prefers `user_id` when available.
+- **Reason**: Different login models can expose different account identifiers for messaging endpoints.
+
+#### 5. High-Volume Comment Queue (200/hour)
+- **Feature**: Instagram comment-triggered DMs now use a queue with per-account throttling (`200/hour`).
+- **Behavior**: First batch sends immediately (up to quota), overflow stays queued, and cron continues processing in later windows.
+- **New cron**: `/api/cron/process-dm-queue` runs every 5 minutes.
+
+#### 6. Auto Comment Reply + Optional Video DM
+- **Feature**: Public comment reply is sent after successful DM using automation comment-reply text.
+- **Feature**: Automations can now include an optional `dm_video_url` to send a video attachment in DM.
+- **Migration**: Added `supabase/migrations/002_dm_queue_and_video_support.sql`.
+
 ### Bug Fixes
 
 #### 1. Private Replies API (comment_id)
@@ -27,9 +56,10 @@ All notable changes to DMPilot will be documented in this file.
 
 - `src/app/api/webhooks/meta/route.ts`:
   - Added `getTokenUserId()` function to discover token's user ID
-  - `sendIgMessage()` now tries multiple account IDs (fallback logic)
+  - `sendIgMessage()` now tries multiple account IDs and host fallbacks (fallback logic)
   - Added comprehensive logging for account ID discovery
   - Enhanced error logging showing all tried IDs and failures
+  - Updated messaging API version selection to `v25.0`
 
 ### Logging Added
 

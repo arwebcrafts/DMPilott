@@ -3,6 +3,7 @@ import crypto from 'crypto'
 import { createServiceClient } from '@/lib/supabase/server'
 import { decryptToken } from '@/lib/encryption'
 import axios from 'axios'
+import { processQueuedInstagramDmsForAccount, sendInstagramDm } from '@/lib/instagramDmQueue'
 
 console.log('[INIT] Webhook route module loaded')
 
@@ -184,7 +185,6 @@ async function processWebhookAsync(payload: any) {
 async function handleInstagramMessage(igAccountId: string, messaging: any, supabase: any) {
   const message = messaging.message
   const senderId = messaging.sender?.id
-  const recipientId = messaging.recipient?.id
 
   console.log('[Message] From:', senderId, 'Text:', message?.text)
   console.log('[Message] is_echo:', message?.is_echo)
@@ -226,7 +226,12 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
 
   // Send auto-reply
   const autoReply = automation.dm_message || "Thanks for your message! We'll get back to you soon. 👋"
-  await sendIgMessage(account, senderId, autoReply)
+  await sendInstagramDm({
+    account,
+    recipientId: senderId,
+    message: autoReply,
+    videoUrl: automation.dm_video_url,
+  })
 }
 
 async function handleInstagramComment(igAccountId: string, value: any, supabase: any) {
@@ -299,16 +304,16 @@ async function handleInstagramComment(igAccountId: string, value: any, supabase:
     .eq('automation_id', matchedAutomation.id)
     .eq('post_id', mediaId)
     .eq('commenter_platform_id', commenterId)
-    .eq('status', 'sent')
-    .single()
+    .in('status', ['queued', 'pending', 'sent'])
+    .limit(1)
 
-  if (existingLog) {
+  if (existingLog && existingLog.length > 0) {
     console.log('[Comment] Already sent DM to this commenter - skipping')
     return
   }
 
-  // Send DM - use comment_id for private replies (per Meta docs)
-  console.log('[Comment] Sending DM to @' + commenterUsername)
+  // Queue DM job and let queue processor enforce 200/hour.
+  console.log('[Comment] Queueing DM for @' + commenterUsername)
   const personalizedMessage = matchedAutomation.dm_message
     .replace(/{name}/g, commenterUsername || 'there')
     .replace(/{username}/g, '@' + (commenterUsername || 'user'))
@@ -316,44 +321,27 @@ async function handleInstagramComment(igAccountId: string, value: any, supabase:
   console.log('[Comment] DM message:', personalizedMessage)
   console.log('[Comment] Comment ID for private reply:', commentId)
 
-  try {
-    // Use comment_id recipient per Meta Private Replies API docs
-    await sendIgMessage(account, commenterId, personalizedMessage, commentId)
+  const { error: insertError } = await supabase.from('dm_logs').insert({
+    automation_id: matchedAutomation.id,
+    user_id: account.user_id,
+    account_id: account.id,
+    platform: 'instagram',
+    post_id: mediaId,
+    commenter_platform_id: commenterId,
+    commenter_username: commenterUsername,
+    keyword_matched: matchedKeyword,
+    comment_id: commentId,
+    dm_message_sent: personalizedMessage,
+    status: 'queued',
+  })
 
-    // Log as sent
-    await supabase.from('dm_logs').insert({
-      automation_id: matchedAutomation.id,
-      user_id: account.user_id,
-      account_id: account.id,
-      platform: 'instagram',
-      post_id: mediaId,
-      commenter_platform_id: commenterId,
-      commenter_username: commenterUsername,
-      keyword_matched: matchedKeyword,
-      dm_message_sent: personalizedMessage,
-      status: 'sent',
-      sent_at: new Date().toISOString(),
-    })
-
-    console.log('[Comment] ✅ DM sent successfully to @' + commenterUsername)
-  } catch (err: any) {
-    const errorMsg = err.response?.data?.error?.message || err.message
-    console.log('[Comment] ❌ Failed to send DM:', errorMsg)
-
-    await supabase.from('dm_logs').insert({
-      automation_id: matchedAutomation.id,
-      user_id: account.user_id,
-      account_id: account.id,
-      platform: 'instagram',
-      post_id: mediaId,
-      commenter_platform_id: commenterId,
-      commenter_username: commenterUsername,
-      keyword_matched: matchedKeyword,
-      dm_message_sent: personalizedMessage,
-      status: 'failed',
-      error_message: errorMsg,
-    })
+  if (insertError) {
+    console.log('[Comment] ❌ Failed to enqueue DM:', insertError.message)
+    return
   }
+
+  const queueResult = await processQueuedInstagramDmsForAccount(supabase, account.id)
+  console.log('[Comment] Queue processor result:', queueResult)
 }
 
 async function findIgAccount(igAccountId: string, supabase: any) {
@@ -381,93 +369,6 @@ async function findIgAccount(igAccountId: string, supabase: any) {
   
   console.log('[Account] No matching account found')
   return null
-}
-
-// Get user ID from access token (to use as fallback for messaging API)
-async function getTokenUserId(token: string): Promise<string | null> {
-  try {
-    const response = await axios.get('https://graph.instagram.com/me', {
-      params: { fields: 'id,username,account_type', access_token: token },
-      timeout: 5000,
-    })
-    console.log('[Token] Token user info:', JSON.stringify(response.data))
-    return response.data.id || null
-  } catch (err: any) {
-    console.log('[Token] Failed to get user ID:', err.message)
-    return null
-  }
-}
-
-async function sendIgMessage(account: any, recipientId: string, message: string, commentId?: string) {
-  // Use env token if available (for testing), otherwise use account token
-  const accessToken = process.env.IG_ACCESS_TOKEN || decryptToken(account.access_token_encrypted)
-  const igBusinessAccountId = account.platform_account_id
-
-  // Use env IG_BUSINESS_ACCOUNT_ID if available, otherwise try token user ID
-  // Note: IG_scoped_id (17841430541631416) from webhooks != API account ID
-  let targetAccountId = process.env.IG_BUSINESS_ACCOUNT_ID || igBusinessAccountId
-
-  console.log('[DM] IG_ACCESS_TOKEN env var:', process.env.IG_ACCESS_TOKEN ? 'SET' : 'NOT SET')
-  console.log('[DM] account.access_token_encrypted:', account.access_token_encrypted ? 'HAS VALUE' : 'EMPTY')
-  console.log('[DM] Using token prefix:', accessToken ? accessToken.substring(0, 20) + '...' : 'EMPTY!')
-  console.log('[DM] Target account ID:', targetAccountId)
-  console.log('[DM] igBusinessAccountId (from account):', igBusinessAccountId)
-  console.log('[DM] Recipient ID:', recipientId)
-  console.log('[DM] Comment ID:', commentId || 'NONE')
-  console.log('[DM] Message:', message)
-  
-  // Per Meta Private Replies docs: use comment_id for comment-triggered DMs
-  let requestBody: any
-  if (commentId) {
-    console.log('[DM] Using Private Replies API (comment_id)')
-    requestBody = { recipient: { comment_id: commentId }, message: { text: message } }
-  } else {
-    requestBody = { recipient: { id: recipientId }, message: { text: message } }
-  }
-
-  // Get token user ID to try as fallback
-  const tokenUserId = await getTokenUserId(accessToken)
-  console.log('[DM] Token user ID (fallback):', tokenUserId)
-
-  // Try IG scoped ID first, then token user ID if that fails
-  const accountIdsToTry = [targetAccountId, tokenUserId].filter(id => id && id !== targetAccountId)
-  console.log('[DM] Account IDs to try:', [targetAccountId, ...accountIdsToTry])
-
-  let lastError: any = null
-  for (const accountId of [targetAccountId, ...accountIdsToTry]) {
-    if (!accountId) continue
-    const endpoint = `https://graph.instagram.com/v26.0/${accountId}/messages`
-    console.log('[DM] Trying endpoint:', endpoint)
-
-    try {
-      const response = await axios.post(endpoint, requestBody, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        timeout: 10000,
-      })
-      
-      console.log('[DM] ✓ Response received:', response.status, response.statusText)
-      console.log('[DM] Response data:', JSON.stringify(response.data))
-      console.log('[DM] === SEND DM SUCCESS ===')
-      console.log('[DM] ✅ Successfully sent using account ID:', accountId)
-      return // Exit on success
-    } catch (err: any) {
-      console.log('[DM] ✗ Failed with account ID:', accountId)
-      console.log('[DM] Error:', err.response?.data?.error?.message || err.message)
-      lastError = err
-      // Continue to next ID
-    }
-  }
-
-  // All IDs failed - throw the last error
-  console.log('[DM] ❌ All account IDs failed')
-  console.log('[DM] Error code:', lastError?.code)
-  console.log('[DM] Response data:', lastError?.response?.data ? JSON.stringify(lastError.response.data) : 'none')
-  console.log('[DM] Response status:', lastError?.response?.status)
-  console.log('[DM] === SEND DM FAILED ===')
-  throw lastError
 }
 
 async function handleFacebookComment(pageId: string, value: any, supabase: any) {
