@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { animate } from 'framer-motion'
+import { animate, motion } from 'framer-motion'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer,
@@ -34,8 +34,8 @@ function AnimatedNumber({ value }: { value: number }) {
 function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-white border border-[#E4E6EA] rounded-xl shadow-md p-3 text-xs">
-      <p className="text-[#65676B] font-medium mb-2">{label}</p>
+    <div className="glass-card rounded-xl shadow-md p-3 text-xs border border-white/10">
+      <p className="text-[#8a8a9a] font-medium mb-2">{label}</p>
       {payload.map((entry: any) => (
         <p key={entry.dataKey} className="font-semibold" style={{ color: entry.color }}>
           {entry.dataKey === 'instagram' ? 'Instagram' : 'Facebook'}: {entry.value}
@@ -64,14 +64,14 @@ function DMsChart({ data }: { data: ChartPoint[] }) {
   }, [data, tab])
 
   return (
-    <div className="bg-white rounded-xl border border-[#E4E6EA] shadow-sm p-5 h-full">
+    <div className="glass-card rounded-xl border border-white/10 shadow-sm p-5 h-full">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="font-semibold text-[#1C1E21]">DMs Over Time</h2>
-          <p className="text-xs text-[#65676B] mt-0.5">Instagram + Facebook combined</p>
+          <h2 className="font-semibold text-white">DMs Over Time</h2>
+          <p className="text-xs text-[#8a8a9a] mt-0.5">Instagram + Facebook combined</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-3 text-xs text-[#65676B]">
+          <div className="flex items-center gap-3 text-xs text-[#8a8a9a]">
             <span className="flex items-center gap-1">
               <span className="w-2.5 h-2.5 rounded-full bg-[#E1306C]" /> IG
             </span>
@@ -79,15 +79,15 @@ function DMsChart({ data }: { data: ChartPoint[] }) {
               <span className="w-2.5 h-2.5 rounded-full bg-[#1877F2]" /> FB
             </span>
           </div>
-          <div className="flex rounded-lg overflow-hidden border border-[#E4E6EA]">
+          <div className="flex rounded-lg overflow-hidden border border-white/10">
             {(['7D', '30D', '90D'] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
                 className={`px-3 py-1 text-xs font-medium transition-colors ${
                   tab === t
-                    ? 'bg-[#1877F2] text-white'
-                    : 'bg-white text-[#65676B] hover:bg-[#F0F2F5]'
+                    ? 'bg-gradient-to-r from-[#F58529] to-[#DD2A7B] text-white'
+                    : 'bg-transparent text-[#8a8a9a] hover:bg-white/10'
                 }`}
               >
                 {t}
@@ -110,16 +110,16 @@ function DMsChart({ data }: { data: ChartPoint[] }) {
                 <stop offset="95%" stopColor="#1877F2" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#F0F2F5" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#22223a" vertical={false} />
             <XAxis
               dataKey="label"
-              tick={{ fontSize: 10, fill: '#65676B' }}
+              tick={{ fontSize: 10, fill: '#8a8a9a' }}
               axisLine={false}
               tickLine={false}
               interval={tab === '90D' ? 14 : tab === '30D' ? 6 : 0}
             />
             <YAxis
-              tick={{ fontSize: 10, fill: '#65676B' }}
+              tick={{ fontSize: 10, fill: '#8a8a9a' }}
               axisLine={false}
               tickLine={false}
               allowDecimals={false}
@@ -150,8 +150,8 @@ function DMsChart({ data }: { data: ChartPoint[] }) {
           </AreaChart>
         </ResponsiveContainer>
       ) : (
-        <div className="h-[220px] flex flex-col items-center justify-center text-[#65676B] text-sm gap-2">
-          <BarChart2 className="w-10 h-10 text-[#CED0D4]" />
+        <div className="h-[220px] flex flex-col items-center justify-center text-[#8a8a9a] text-sm gap-2">
+          <BarChart2 className="w-10 h-10 text-[#5a5a6e]" />
           <p>No DM data for this period yet</p>
         </div>
       )}
@@ -163,13 +163,13 @@ function DMsChart({ data }: { data: ChartPoint[] }) {
 
 function TopPosts({ posts }: { posts: TopPost[] }) {
   return (
-    <div className="bg-white rounded-xl border border-[#E4E6EA] shadow-sm p-5 h-full">
-      <h2 className="font-semibold text-[#1C1E21] mb-4">Top Performing Posts</h2>
+    <div className="glass-card rounded-xl border border-white/10 shadow-sm p-5 h-full">
+      <h2 className="font-semibold text-white mb-4">Top Performing Posts</h2>
       {posts.length > 0 ? (
         <div className="space-y-3">
           {posts.map((post, i) => (
             <div key={post.post_id} className="flex items-center gap-3">
-              <span className="text-xs font-bold text-[#65676B] w-4">{i + 1}</span>
+              <span className="text-xs font-bold text-[#8a8a9a] w-4">{i + 1}</span>
               <div
                 className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0 ${
                   post.platform === 'instagram'
@@ -180,10 +180,10 @@ function TopPosts({ posts }: { posts: TopPost[] }) {
                 {post.platform === 'instagram' ? 'IG' : 'FB'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-[#1C1E21] truncate font-mono">
+                <p className="text-xs font-medium text-white truncate font-mono">
                   {post.post_id.slice(0, 16)}…
                 </p>
-                <p className="text-[10px] text-[#65676B] capitalize">{post.platform}</p>
+                <p className="text-[10px] text-[#8a8a9a] capitalize">{post.platform}</p>
               </div>
               <span
                 className={`text-xs font-semibold px-2 py-0.5 rounded-full text-white flex-shrink-0 ${
@@ -198,8 +198,8 @@ function TopPosts({ posts }: { posts: TopPost[] }) {
           ))}
         </div>
       ) : (
-        <div className="h-32 flex flex-col items-center justify-center text-[#65676B] text-xs gap-2">
-          <TrendingUp className="w-8 h-8 text-[#CED0D4]" />
+        <div className="h-32 flex flex-col items-center justify-center text-[#8a8a9a] text-xs gap-2">
+          <TrendingUp className="w-8 h-8 text-[#5a5a6e]" />
           <p>No post data yet</p>
         </div>
       )}
@@ -217,9 +217,9 @@ function RecentActivity({ items }: { items: ActivityItem[] }) {
   const pageItems = items.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
   return (
-    <div className="bg-white rounded-xl border border-[#E4E6EA] shadow-sm overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-[#F0F2F5]">
-        <h2 className="font-semibold text-[#1C1E21]">Recent DM Activity</h2>
+    <div className="glass-card rounded-xl border border-white/10 shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+        <h2 className="font-semibold text-white">Recent DM Activity</h2>
         <a href="/dashboard/analytics" className="text-xs text-[#1877F2] hover:underline">
           View All →
         </a>
@@ -230,18 +230,18 @@ function RecentActivity({ items }: { items: ActivityItem[] }) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-[#F7F8FA]">
-                  <th className="text-left px-5 py-2.5 text-xs font-medium text-[#65676B]">Platform</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-[#65676B]">Post</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-[#65676B]">Commenter</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-[#65676B]">Keyword</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-[#65676B]">Status</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-[#65676B]">When</th>
+                <tr className="bg-[#1a1a2e]">
+                  <th className="text-left px-5 py-2.5 text-xs font-medium text-[#8a8a9a]">Platform</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-[#8a8a9a]">Post</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-[#8a8a9a]">Commenter</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-[#8a8a9a]">Keyword</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-[#8a8a9a]">Status</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-[#8a8a9a]">When</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#F0F2F5]">
+              <tbody className="divide-y divide-[#22223a]">
                 {pageItems.map((dm) => (
-                  <tr key={dm.id} className="hover:bg-[#F9FAFB] transition-colors">
+                  <tr key={dm.id} className="hover:bg-white/5 transition-colors">
                     <td className="px-5 py-3">
                       <div
                         className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${
@@ -253,29 +253,29 @@ function RecentActivity({ items }: { items: ActivityItem[] }) {
                         {dm.platform === 'instagram' ? 'IG' : 'FB'}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-[#65676B] font-mono text-xs">
+                    <td className="px-4 py-3 text-[#8a8a9a] font-mono text-xs">
                       {dm.post_id ? `${dm.post_id.slice(0, 12)}…` : '—'}
                     </td>
-                    <td className="px-4 py-3 font-medium text-[#1C1E21]">
+                    <td className="px-4 py-3 font-medium text-white">
                       @{dm.commenter_username || 'unknown'}
                     </td>
                     <td className="px-4 py-3">
                       {dm.keyword_matched ? (
-                        <span className="text-xs bg-[#FDE8F0] text-[#E1306C] px-2 py-0.5 rounded-full font-medium">
+                        <span className="text-xs bg-[#DD2A7B]/20 text-[#DD2A7B] border border-[#DD2A7B]/30 px-2 py-0.5 rounded-full font-medium">
                           {dm.keyword_matched}
                         </span>
                       ) : (
-                        <span className="text-[#65676B] text-xs">any</span>
+                        <span className="text-[#8a8a9a] text-xs">any</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
                       <span
                         className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${
                           dm.status === 'sent'
-                            ? 'bg-[#E8F5E9] text-[#31A24C]'
+                            ? 'bg-[#22c55e]/20 text-[#22c55e] border border-[#22c55e]/30'
                             : dm.status === 'queued'
-                            ? 'bg-[#FEF9E7] text-[#F7B928]'
-                            : 'bg-[#FDECEA] text-[#FA3E3E]'
+                            ? 'bg-[#F7B928]/20 text-[#F7B928] border border-[#F7B928]/30'
+                            : 'bg-[#FA3E3E]/20 text-[#FA3E3E] border border-[#FA3E3E]/30'
                         }`}
                       >
                         {dm.status === 'sent' ? (
@@ -288,7 +288,7 @@ function RecentActivity({ items }: { items: ActivityItem[] }) {
                         {dm.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-xs text-[#65676B] whitespace-nowrap">
+                    <td className="px-4 py-3 text-xs text-[#8a8a9a] whitespace-nowrap">
                       {formatDistanceToNow(new Date(dm.created_at), { addSuffix: true })}
                     </td>
                   </tr>
@@ -298,22 +298,22 @@ function RecentActivity({ items }: { items: ActivityItem[] }) {
           </div>
 
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-5 py-3 border-t border-[#F0F2F5]">
-              <span className="text-xs text-[#65676B]">
+            <div className="flex items-center justify-between px-5 py-3 border-t border-white/10">
+              <span className="text-xs text-[#8a8a9a]">
                 Page {page + 1} of {totalPages}
               </span>
               <div className="flex gap-2">
                 <button
                   onClick={() => setPage((p) => Math.max(0, p - 1))}
                   disabled={page === 0}
-                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium border border-[#CED0D4] rounded-lg text-[#1C1E21] hover:bg-[#F0F2F5] disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium border border-white/10 rounded-lg text-white hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <ChevronLeft className="w-3.5 h-3.5" /> Prev
                 </button>
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                   disabled={page >= totalPages - 1}
-                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium border border-[#CED0D4] rounded-lg text-[#1C1E21] hover:bg-[#F0F2F5] disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium border border-white/10 rounded-lg text-white hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Next <ChevronRight className="w-3.5 h-3.5" />
                 </button>
@@ -322,7 +322,7 @@ function RecentActivity({ items }: { items: ActivityItem[] }) {
           )}
         </>
       ) : (
-        <div className="p-10 text-center text-[#65676B] text-sm">
+        <div className="p-10 text-center text-[#8a8a9a] text-sm">
           No DM activity yet. Connect an account and create an automation to get started.
         </div>
       )}
@@ -334,9 +334,9 @@ function RecentActivity({ items }: { items: ActivityItem[] }) {
 
 function ActiveAutomations({ automations }: { automations: AutomationItem[] }) {
   return (
-    <div className="bg-white rounded-xl border border-[#E4E6EA] shadow-sm p-5 h-full">
+    <div className="glass-card rounded-xl border border-white/10 shadow-sm p-5 h-full">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-semibold text-[#1C1E21]">Top Automations</h2>
+        <h2 className="font-semibold text-white">Top Automations</h2>
         <a href="/dashboard/automations" className="text-xs text-[#1877F2] hover:underline">
           Manage all →
         </a>
@@ -346,7 +346,7 @@ function ActiveAutomations({ automations }: { automations: AutomationItem[] }) {
           {automations.map((auto) => (
             <div
               key={auto.id}
-              className="flex items-center gap-3 p-3 bg-[#F7F8FA] rounded-xl"
+              className="flex items-center gap-3 p-3 bg-[#1a1a2e] rounded-xl hover:bg-[#22223a] transition-colors"
             >
               <div
                 className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0 ${
@@ -358,36 +358,36 @@ function ActiveAutomations({ automations }: { automations: AutomationItem[] }) {
                 {auto.platform === 'instagram' ? 'IG' : 'FB'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-[#1C1E21] truncate">{auto.name}</p>
+                <p className="text-sm font-medium text-white truncate">{auto.name}</p>
                 <div className="flex items-center gap-1 mt-0.5">
                   {auto.keywords.slice(0, 2).map((kw) => (
                     <span
                       key={kw}
-                      className="text-[10px] bg-[#FDE8F0] text-[#E1306C] px-1.5 py-0.5 rounded-full"
+                      className="text-[10px] bg-[#DD2A7B]/20 text-[#DD2A7B] border border-[#DD2A7B]/30 px-1.5 py-0.5 rounded-full"
                     >
                       {kw}
                     </span>
                   ))}
                   {auto.keywords.length > 2 && (
-                    <span className="text-[10px] text-[#65676B]">+{auto.keywords.length - 2}</span>
+                    <span className="text-[10px] text-[#8a8a9a]">+{auto.keywords.length - 2}</span>
                   )}
                 </div>
               </div>
               <div className="text-right flex-shrink-0">
-                <p className="text-sm font-bold text-[#1C1E21]">{auto.total_dms_sent}</p>
-                <p className="text-[10px] text-[#65676B]">DMs</p>
+                <p className="text-sm font-bold text-white">{auto.total_dms_sent}</p>
+                <p className="text-[10px] text-[#8a8a9a]">DMs</p>
               </div>
               {auto.is_active ? (
-                <ToggleRight className="w-5 h-5 text-[#31A24C] flex-shrink-0" />
+                <ToggleRight className="w-5 h-5 text-[#22c55e] flex-shrink-0" />
               ) : (
-                <ToggleLeft className="w-5 h-5 text-[#CED0D4] flex-shrink-0" />
+                <ToggleLeft className="w-5 h-5 text-[#5a5a6e] flex-shrink-0" />
               )}
             </div>
           ))}
         </div>
       ) : (
-        <div className="h-32 flex flex-col items-center justify-center text-[#65676B] text-xs gap-2">
-          <Zap className="w-8 h-8 text-[#CED0D4]" />
+        <div className="h-32 flex flex-col items-center justify-center text-[#8a8a9a] text-xs gap-2">
+          <Zap className="w-8 h-8 text-[#5a5a6e]" />
           <p>No active automations</p>
           <a href="/dashboard/automations" className="text-[#1877F2] hover:underline">
             Create one →
@@ -406,41 +406,43 @@ function QuickActions() {
       href: '/dashboard/automations',
       icon: <Plus className="w-5 h-5" />,
       label: 'New Automation',
-      className: 'bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white',
+      className: 'shimmer-btn text-white',
     },
     {
       href: '/dashboard/giveaways',
-      icon: <Gift className="w-5 h-5 text-[#31A24C]" />,
+      icon: <Gift className="w-5 h-5 text-[#22c55e]" />,
       label: 'Create Giveaway',
-      className: 'bg-[#E8F5E9] text-[#31A24C] hover:bg-[#d4edda]',
+      className: 'glass-card text-[#22c55e] border border-[#22c55e]/30 hover:bg-[#22c55e]/10',
     },
     {
       href: '/dashboard/analytics',
       icon: <BarChart3 className="w-5 h-5 text-[#1877F2]" />,
       label: 'View Analytics',
-      className: 'bg-[#E7F0FD] text-[#1877F2] hover:bg-[#d4e5f7]',
+      className: 'glass-card text-[#1877F2] border border-[#1877F2]/30 hover:bg-[#1877F2]/10',
     },
     {
       href: '/dashboard/accounts',
-      icon: <UserPlus className="w-5 h-5 text-[#65676B]" />,
+      icon: <UserPlus className="w-5 h-5 text-[#8a8a9a]" />,
       label: 'Add Account',
-      className: 'bg-[#F0F2F5] text-[#65676B] hover:bg-[#E4E6EA]',
+      className: 'glass-card text-[#8a8a9a] border border-white/10 hover:bg-white/10',
     },
   ]
 
   return (
-    <div className="bg-white rounded-xl border border-[#E4E6EA] shadow-sm p-5 h-full">
-      <h2 className="font-semibold text-[#1C1E21] mb-4">Quick Actions</h2>
+    <div className="glass-card rounded-xl border border-white/10 shadow-sm p-5 h-full">
+      <h2 className="font-semibold text-white mb-4">Quick Actions</h2>
       <div className="grid grid-cols-2 gap-3">
         {actions.map((action) => (
-          <a
+          <motion.a
             key={action.href}
             href={action.href}
-            className={`flex flex-col items-center gap-2 p-4 rounded-xl text-center transition-opacity hover:opacity-90 ${action.className}`}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className={`flex flex-col items-center gap-2 p-4 rounded-xl text-center transition-opacity ${action.className}`}
           >
             {action.icon}
             <span className="text-xs font-medium">{action.label}</span>
-          </a>
+          </motion.a>
         ))}
       </div>
     </div>
@@ -488,46 +490,58 @@ export default function DashboardClient({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1C1E21]">
+          <h1 className="text-2xl font-bold text-white">
             Welcome back, {firstName} 👋
           </h1>
-          <p className="text-[#65676B] text-sm mt-0.5">
+          <p className="text-[#8a8a9a] text-sm mt-0.5">
             Here&apos;s what&apos;s happening with your automations
           </p>
         </div>
-        <a
+        <motion.a
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           href="/dashboard/accounts"
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-[#CED0D4] rounded-lg text-sm font-medium text-[#1C1E21] hover:bg-[#F0F2F5] transition-colors"
+          className="flex items-center gap-2 px-4 py-2 glass-card border border-white/10 rounded-lg text-sm font-medium text-white hover:bg-white/10 transition-colors"
         >
           <Users className="w-4 h-4" />
           Connect Account
-        </a>
+        </motion.a>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total DMs */}
-        <div className="bg-white rounded-xl p-5 border border-[#E4E6EA] shadow-sm">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="glass-card rounded-xl p-5 border border-white/10 shadow-sm"
+        >
           <div className="flex items-center justify-between mb-3">
-            <div className="p-2 bg-[#FDE8F0] rounded-lg">
-              <Zap className="w-5 h-5 text-[#E1306C]" />
+            <div className="p-2 bg-[#DD2A7B]/20 rounded-lg">
+              <Zap className="w-5 h-5 text-[#DD2A7B]" />
             </div>
             {totalDmsSent > 0 && (
-              <span className="text-xs text-[#31A24C] font-medium flex items-center gap-1">
+              <span className="text-xs text-[#22c55e] font-medium flex items-center gap-1">
                 <TrendingUp className="w-3 h-3" /> Active
               </span>
             )}
           </div>
-          <div className="text-3xl font-bold text-[#1C1E21]">
+          <div className="text-3xl font-bold text-white">
             <AnimatedNumber value={totalDmsSent} />
           </div>
-          <div className="text-sm text-[#65676B] mt-1">Total DMs Sent</div>
-        </div>
+          <div className="text-sm text-[#8a8a9a] mt-1">Total DMs Sent</div>
+        </motion.div>
 
         {/* DMs This Month */}
-        <div className="bg-white rounded-xl p-5 border border-[#E4E6EA] shadow-sm">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="glass-card rounded-xl p-5 border border-white/10 shadow-sm"
+        >
           <div className="flex items-center justify-between mb-3">
-            <div className="p-2 bg-[#E7F0FD] rounded-lg">
+            <div className="p-2 bg-[#1877F2]/20 rounded-lg">
               <Clock className="w-5 h-5 text-[#1877F2]" />
             </div>
             {!isUnlimited && (
@@ -537,28 +551,28 @@ export default function DashboardClient({
                     ? 'text-[#FA3E3E]'
                     : dmsPercent > 80
                     ? 'text-[#F7B928]'
-                    : 'text-[#65676B]'
+                    : 'text-[#8a8a9a]'
                 }`}
               >
                 {dmsPercent.toFixed(0)}% used
               </span>
             )}
             {isUnlimited && (
-              <span className="text-xs font-medium text-[#31A24C]">Unlimited</span>
+              <span className="text-xs font-medium text-[#22c55e]">Unlimited</span>
             )}
           </div>
-          <div className="text-3xl font-bold text-[#1C1E21]">
+          <div className="text-3xl font-bold text-white">
             <AnimatedNumber value={dmsUsed} />
             {!isUnlimited && (
-              <span className="text-base text-[#65676B] font-normal">
+              <span className="text-base text-[#8a8a9a] font-normal">
                 /{dmsLimit.toLocaleString()}
               </span>
             )}
           </div>
-          <div className="text-sm text-[#65676B] mt-1">DMs This Month</div>
+          <div className="text-sm text-[#8a8a9a] mt-1">DMs This Month</div>
           {!isUnlimited && (
-            <div className="mt-2 h-1.5 bg-[#F0F2F5] rounded-full overflow-hidden">
-              <div
+            <div className="mt-2 h-1.5 bg-[#22223a] rounded-full overflow-hidden">
+              <motion.div
                 className={`h-full rounded-full transition-all duration-700 ${
                   dmsPercent > 95
                     ? 'bg-[#FA3E3E]'
@@ -566,50 +580,62 @@ export default function DashboardClient({
                     ? 'bg-[#F7B928]'
                     : 'bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF]'
                 }`}
-                style={{ width: `${dmsPercent}%` }}
+                initial={{ width: 0 }}
+                animate={{ width: `${dmsPercent}%` }}
+                transition={{ duration: 0.7 }}
               />
             </div>
           )}
-        </div>
+        </motion.div>
 
         {/* Active Automations */}
-        <div className="bg-white rounded-xl p-5 border border-[#E4E6EA] shadow-sm">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="glass-card rounded-xl p-5 border border-white/10 shadow-sm"
+        >
           <div className="flex items-center justify-between mb-3">
-            <div className="p-2 bg-[#E8F5E9] rounded-lg">
-              <BarChart3 className="w-5 h-5 text-[#31A24C]" />
+            <div className="p-2 bg-[#22c55e]/20 rounded-lg">
+              <BarChart3 className="w-5 h-5 text-[#22c55e]" />
             </div>
-            <span className="text-xs text-[#65676B] capitalize">{plan} plan</span>
+            <span className="text-xs text-[#8a8a9a] capitalize">{plan} plan</span>
           </div>
-          <div className="text-3xl font-bold text-[#1C1E21]">
+          <div className="text-3xl font-bold text-white">
             <AnimatedNumber value={activeAutomations} />
           </div>
-          <div className="text-sm text-[#65676B] mt-1">Active Automations</div>
-        </div>
+          <div className="text-sm text-[#8a8a9a] mt-1">Active Automations</div>
+        </motion.div>
 
         {/* Accounts */}
-        <div className="bg-white rounded-xl p-5 border border-[#E4E6EA] shadow-sm">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="glass-card rounded-xl p-5 border border-white/10 shadow-sm"
+        >
           <div className="flex items-center justify-between mb-3">
-            <div className="p-2 bg-[#F0F2F5] rounded-lg">
-              <Users className="w-5 h-5 text-[#65676B]" />
+            <div className="p-2 bg-white/10 rounded-lg">
+              <Users className="w-5 h-5 text-[#8a8a9a]" />
             </div>
           </div>
-          <div className="text-3xl font-bold text-[#1C1E21]">
+          <div className="text-3xl font-bold text-white">
             <AnimatedNumber value={igAccounts + fbAccounts} />
           </div>
-          <div className="text-sm text-[#65676B] mt-1 flex items-center gap-2 flex-wrap">
+          <div className="text-sm text-[#8a8a9a] mt-1 flex items-center gap-2 flex-wrap">
             {igAccounts > 0 && (
-              <span className="text-xs bg-[#FDE8F0] text-[#E1306C] px-2 py-0.5 rounded-full">
+              <span className="text-xs bg-[#DD2A7B]/20 text-[#DD2A7B] border border-[#DD2A7B]/30 px-2 py-0.5 rounded-full">
                 IG ×{igAccounts}
               </span>
             )}
             {fbAccounts > 0 && (
-              <span className="text-xs bg-[#E7F0FD] text-[#1877F2] px-2 py-0.5 rounded-full">
+              <span className="text-xs bg-[#1877F2]/20 text-[#1877F2] border border-[#1877F2]/30 px-2 py-0.5 rounded-full">
                 FB ×{fbAccounts}
               </span>
             )}
             {igAccounts + fbAccounts === 0 && 'No accounts yet'}
           </div>
-        </div>
+        </motion.div>
       </div>
 
       {/* Chart (65%) + Top Posts (35%) */}

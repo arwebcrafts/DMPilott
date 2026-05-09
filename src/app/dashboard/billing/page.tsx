@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useUserStore } from '@/stores/userStore'
 import { PLAN_LIMITS } from '@/lib/planGating'
 import { Check, CreditCard, Download, Loader2 } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 const PLANS = [
   {
@@ -109,61 +110,69 @@ export default function BillingPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-[#1C1E21]">Billing & Plans</h1>
-        <p className="text-[#65676B] text-sm">Manage your subscription and billing</p>
+        <h1 className="text-2xl font-bold text-white">Billing & Plans</h1>
+        <p className="text-[#8a8a9a] text-sm">Manage your subscription and billing</p>
       </div>
 
       {/* Current plan */}
-      <div className="bg-white rounded-xl border border-[#E4E6EA] p-5">
+      <div className="glass-card rounded-xl border border-white/10 p-5">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-sm text-[#65676B] mb-1">Current Plan</div>
-            <div className="text-2xl font-bold text-[#1C1E21] capitalize">{currentPlan}</div>
+            <div className="text-sm text-[#8a8a9a] mb-1">Current Plan</div>
+            <div className="text-2xl font-bold text-white capitalize">{currentPlan}</div>
           </div>
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={openPortal}
             disabled={portalLoading}
-            className="flex items-center gap-2 px-4 py-2 border border-[#CED0D4] rounded-lg text-sm font-medium text-[#1C1E21] hover:bg-[#F0F2F5] disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 glass-card border border-white/10 rounded-lg text-sm font-medium text-white hover:bg-white/10 disabled:opacity-50"
           >
             {portalLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
             Manage Subscription
-          </button>
+          </motion.button>
         </div>
       </div>
 
       {/* Billing toggle */}
       <div className="flex items-center justify-center gap-4">
-        <span className={`text-sm font-medium ${billingInterval === 'monthly' ? 'text-[#1C1E21]' : 'text-[#65676B]'}`}>
+        <span className={`text-sm font-medium ${billingInterval === 'monthly' ? 'text-white' : 'text-[#8a8a9a]'}`}>
           Monthly
         </span>
-        <button
+        <motion.button
+          whileTap={{ scale: 0.95 }}
           onClick={() => setBillingInterval(billingInterval === 'monthly' ? 'yearly' : 'monthly')}
           className={`relative w-12 h-6 rounded-full transition-colors ${
-            billingInterval === 'yearly' ? 'bg-[#31A24C]' : 'bg-[#CED0D4]'
+            billingInterval === 'yearly' ? 'bg-[#22c55e]' : 'bg-[#22223a]'
           }`}
         >
-          <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
-            billingInterval === 'yearly' ? 'translate-x-7' : 'translate-x-1'
-          }`} />
-        </button>
-        <span className={`text-sm font-medium ${billingInterval === 'yearly' ? 'text-[#1C1E21]' : 'text-[#65676B]'}`}>
-          Yearly <span className="text-[#31A24C] text-xs">(-20%)</span>
+          <motion.span
+            className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
+              billingInterval === 'yearly' ? 'translate-x-7' : 'translate-x-1'
+            }`}
+          />
+        </motion.button>
+        <span className={`text-sm font-medium ${billingInterval === 'yearly' ? 'text-white' : 'text-[#8a8a9a]'}`}>
+          Yearly <span className="text-[#22c55e] text-xs">(-20%)</span>
         </span>
       </div>
 
       {/* Plan cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {PLANS.map((plan) => {
+        {PLANS.map((plan, index) => {
           const price = billingInterval === 'yearly' ? plan.yearlyPrice : plan.price
           const isCurrent = plan.id === currentPlan
 
           return (
-            <div
+            <motion.div
               key={plan.id}
-              className={`bg-white rounded-xl border-2 ${
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className={`glass-card rounded-xl border-2 ${
                 plan.popular ? 'border-[#DD2A7B] shadow-lg' :
-                isCurrent ? 'border-[#31A24C]' :
-                'border-[#E4E6EA]'
+                isCurrent ? 'border-[#22c55e]' :
+                'border-white/10'
               } relative overflow-hidden`}
             >
               {plan.popular && (
@@ -172,32 +181,32 @@ export default function BillingPage() {
                 </div>
               )}
               {isCurrent && (
-                <div className="bg-[#E8F5E9] text-[#31A24C] text-xs font-medium text-center py-1">
+                <div className="bg-[#22c55e]/20 text-[#22c55e] border border-[#22c55e]/30 text-xs font-medium text-center py-1">
                   CURRENT PLAN
                 </div>
               )}
 
               <div className="p-5">
-                <h3 className="text-lg font-bold text-[#1C1E21]">{plan.name}</h3>
-                <p className="text-sm text-[#65676B] mb-3">{plan.description}</p>
+                <h3 className="text-lg font-bold text-white">{plan.name}</h3>
+                <p className="text-sm text-[#8a8a9a] mb-3">{plan.description}</p>
 
                 <div className="mb-4">
-                  <span className="text-3xl font-bold text-[#1C1E21]">
+                  <span className="text-3xl font-bold text-white">
                     ${price !== undefined ? price : plan.price}
                   </span>
                   {price !== undefined && price > 0 && (
-                    <span className="text-[#65676B] text-sm">/{billingInterval === 'yearly' ? 'mo (billed yearly)' : 'month'}</span>
+                    <span className="text-[#8a8a9a] text-sm">/{billingInterval === 'yearly' ? 'mo (billed yearly)' : 'month'}</span>
                   )}
                 </div>
 
                 <ul className="space-y-2 mb-5">
                   {plan.features.map((f, i) => (
-                    <li key={i} className="flex items-center gap-2 text-sm text-[#1C1E21]">
-                      <Check className="w-4 h-4 text-[#31A24C]" /> {f}
+                    <li key={i} className="flex items-center gap-2 text-sm text-white">
+                      <Check className="w-4 h-4 text-[#22c55e]" /> {f}
                     </li>
                   ))}
                   {plan.limitations.map((f, i) => (
-                    <li key={i} className="flex items-center gap-2 text-sm text-[#65676B]">
+                    <li key={i} className="flex items-center gap-2 text-sm text-[#8a8a9a]">
                       <span className="w-4 h-4 text-center">–</span> {f}
                     </li>
                   ))}
@@ -206,34 +215,36 @@ export default function BillingPage() {
                 {isCurrent ? (
                   <button
                     disabled
-                    className="w-full py-2.5 bg-[#E8F5E9] text-[#31A24C] rounded-lg text-sm font-medium cursor-default"
+                    className="w-full py-2.5 glass-card border border-[#22c55e]/30 text-[#22c55e] rounded-lg text-sm font-medium cursor-default"
                   >
                     Current Plan
                   </button>
                 ) : plan.id === 'free' ? (
-                  <button disabled className="w-full py-2.5 bg-[#F0F2F5] text-[#65676B] rounded-lg text-sm font-medium cursor-not-allowed">
+                  <button disabled className="w-full py-2.5 glass-card border border-white/10 text-[#8a8a9a] rounded-lg text-sm font-medium cursor-not-allowed">
                     Free Forever
                   </button>
                 ) : (
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => handleUpgrade(plan.id)}
                     disabled={loading}
                     className={`w-full py-2.5 rounded-lg text-sm font-medium transition-colors ${
                       plan.popular
-                        ? 'bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white hover:opacity-90'
+                        ? 'shimmer-btn text-white'
                         : 'bg-[#1877F2] text-white hover:bg-[#166FE5]'
                     } disabled:opacity-50`}
                   >
                     {loading ? <Loader2 className="w-4 h-4 animate-spin inline" /> : `Upgrade to ${plan.name}`}
-                  </button>
+                  </motion.button>
                 )}
               </div>
-            </div>
+            </motion.div>
           )
         })}
       </div>
 
-      <p className="text-center text-xs text-[#65676B]">
+      <p className="text-center text-xs text-[#8a8a9a]">
         All paid plans include a 7-day free trial. Cancel anytime.
       </p>
     </div>

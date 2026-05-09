@@ -6,6 +6,7 @@ import { useUserStore } from '@/stores/userStore'
 import { PLAN_LIMITS } from '@/lib/planGating'
 import { Plus, Edit2, Trash2, MoreHorizontal, Zap, MessageSquare, ToggleLeft, ToggleRight } from 'lucide-react'
 import { InstagramIcon, FacebookIcon } from '@/components/ui/brand-icons'
+import { motion } from 'framer-motion'
 
 interface Automation {
   id: string
@@ -91,46 +92,53 @@ export default function AutomationsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1C1E21]">Automations</h1>
-          <p className="text-[#65676B] text-sm">Manage your DM automations for Instagram & Facebook</p>
+          <h1 className="text-2xl font-bold text-white">Automations</h1>
+          <p className="text-[#8a8a9a] text-sm">Manage your DM automations for Instagram & Facebook</p>
         </div>
-        <button
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white rounded-lg font-medium text-sm hover:opacity-90 transition-opacity"
+          className="flex items-center gap-2 px-4 py-2 shimmer-btn text-white rounded-lg font-medium text-sm"
         >
           <Plus className="w-4 h-4" /> New Automation
-        </button>
+        </motion.button>
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-[#65676B]">Loading...</div>
+        <div className="text-center py-12 text-[#8a8a9a]">Loading...</div>
       ) : automations.length === 0 ? (
-        <div className="bg-white rounded-xl border border-[#E4E6EA] p-12 text-center">
+        <div className="glass-card rounded-xl border border-white/10 p-12 text-center">
           <div className="text-5xl mb-4">⚡</div>
-          <h3 className="text-lg font-semibold text-[#1C1E21] mb-2">No automations yet</h3>
-          <p className="text-[#65676B] text-sm mb-4">
+          <h3 className="text-lg font-semibold text-white mb-2">No automations yet</h3>
+          <p className="text-[#8a8a9a] text-sm mb-4">
             Create your first automation to start sending automatic DMs
           </p>
           {accounts.length === 0 ? (
-            <p className="text-sm text-[#65676B]">
+            <p className="text-sm text-[#8a8a9a]">
               <a href="/dashboard/accounts" className="text-[#1877F2] hover:underline">Connect an account</a> first
             </p>
           ) : (
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => setShowCreate(true)}
-              className="px-4 py-2 bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white rounded-lg font-medium text-sm"
+              className="px-4 py-2 shimmer-btn text-white rounded-lg font-medium text-sm"
             >
               Create Automation
-            </button>
+            </motion.button>
           )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {automations.map((auto) => (
-            <div
+          {automations.map((auto, index) => (
+            <motion.div
               key={auto.id}
-              className={`bg-white rounded-xl border overflow-hidden ${
-                auto.is_active ? 'border-[#E4E6EA]' : 'border-[#CED0D4] opacity-75'
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className={`glass-card rounded-xl border overflow-hidden ${
+                auto.is_active ? 'border-white/10' : 'border-white/5 opacity-75'
               }`}
             >
               {/* Header strip */}
@@ -146,58 +154,58 @@ export default function AutomationsPage() {
                       ? <InstagramIcon className="w-4 h-4 text-[#E1306C]" />
                       : <FacebookIcon className="w-4 h-4 text-[#1877F2]" />
                     }
-                    <span className="text-xs bg-[#F0F2F5] text-[#65676B] px-2 py-0.5 rounded-full capitalize">
+                    <span className="text-xs bg-[#22223a] text-[#8a8a9a] px-2 py-0.5 rounded-full capitalize">
                       {auto.trigger_type.replace('_', ' ')}
                     </span>
                   </div>
                   <button
                     onClick={() => toggleAutomation(auto.id, auto.is_active)}
-                    className="text-[#65676B] hover:text-[#1C1E21]"
+                    className="text-[#8a8a9a] hover:text-white"
                   >
                     {auto.is_active
-                      ? <ToggleRight className="w-6 h-6 text-[#31A24C]" />
+                      ? <ToggleRight className="w-6 h-6 text-[#22c55e]" />
                       : <ToggleLeft className="w-6 h-6" />
                     }
                   </button>
                 </div>
 
-                <h3 className="font-semibold text-[#1C1E21] mb-1">{auto.name}</h3>
-                <p className="text-xs text-[#65676B] mb-3">
+                <h3 className="font-semibold text-white mb-1">{auto.name}</h3>
+                <p className="text-xs text-[#8a8a9a] mb-3">
                   @{auto.connected_accounts?.username || 'account'}
                 </p>
 
                 {/* Keywords */}
                 <div className="flex flex-wrap gap-1 mb-3">
                   {auto.keywords.slice(0, 5).map((kw, i) => (
-                    <span key={i} className="text-xs bg-[#FDE8F0] text-[#E1306C] px-2 py-0.5 rounded-full">
+                    <span key={i} className="text-xs bg-[#DD2A7B]/20 text-[#DD2A7B] border border-[#DD2A7B]/30 px-2 py-0.5 rounded-full">
                       {kw}
                     </span>
                   ))}
                   {auto.keywords.length > 5 && (
-                    <span className="text-xs text-[#65676B]">+{auto.keywords.length - 5} more</span>
+                    <span className="text-xs text-[#8a8a9a]">+{auto.keywords.length - 5} more</span>
                   )}
                 </div>
 
                 {/* Stats */}
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-[#65676B]">
+                  <span className="text-[#8a8a9a]">
                     <MessageSquare className="w-3.5 h-3.5 inline mr-1" />
                     {auto.total_dms_sent} DMs sent
                   </span>
                   <div className="flex items-center gap-2">
-                    <button className="p-1 hover:bg-[#F0F2F5] rounded">
-                      <Edit2 className="w-4 h-4 text-[#65676B]" />
+                    <button className="p-1 hover:bg-white/10 rounded">
+                      <Edit2 className="w-4 h-4 text-[#8a8a9a]" />
                     </button>
                     <button
                       onClick={() => deleteAutomation(auto.id)}
-                      className="p-1 hover:bg-[#FDECEA] rounded"
+                      className="p-1 hover:bg-[#FA3E3E]/10 rounded"
                     >
                       <Trash2 className="w-4 h-4 text-[#FA3E3E]" />
                     </button>
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       )}
@@ -292,24 +300,28 @@ function CreateAutomationModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-[#F0F2F5]">
-          <h2 className="text-lg font-bold text-[#1C1E21]">Create Automation</h2>
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="glass-card rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-white/10"
+      >
+        <div className="p-6 border-b border-white/10">
+          <h2 className="text-lg font-bold text-white">Create Automation</h2>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Platform */}
           <div>
-            <label className="block text-sm font-medium text-[#1C1E21] mb-2">Platform</label>
+            <label className="block text-sm font-medium text-white mb-2">Platform</label>
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => { setPlatform('instagram'); setAccountId('') }}
                 className={`flex-1 py-3 rounded-lg border-2 font-medium text-sm transition-colors ${
                   platform === 'instagram'
-                    ? 'border-[#E1306C] bg-[#FDE8F0] text-[#E1306C]'
-                    : 'border-[#CED0D4] text-[#65676B]'
+                    ? 'border-[#E1306C] bg-[#DD2A7B]/20 text-[#DD2A7B]'
+                    : 'border-white/10 text-[#8a8a9a] hover:border-white/20'
                 }`}
               >
                 <InstagramIcon className="w-4 h-4 inline mr-2" /> Instagram
@@ -319,8 +331,8 @@ function CreateAutomationModal({
                 onClick={() => { setPlatform('facebook'); setAccountId('') }}
                 className={`flex-1 py-3 rounded-lg border-2 font-medium text-sm transition-colors ${
                   platform === 'facebook'
-                    ? 'border-[#1877F2] bg-[#E7F0FD] text-[#1877F2]'
-                    : 'border-[#CED0D4] text-[#65676B]'
+                    ? 'border-[#1877F2] bg-[#1877F2]/20 text-[#1877F2]'
+                    : 'border-white/10 text-[#8a8a9a] hover:border-white/20'
                 }`}
               >
                 <FacebookIcon className="w-4 h-4 inline mr-2" /> Facebook
@@ -331,11 +343,11 @@ function CreateAutomationModal({
           {/* Account */}
           {availableAccounts.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-[#1C1E21] mb-2">Account</label>
+              <label className="block text-sm font-medium text-white mb-2">Account</label>
               <select
                 value={accountId}
                 onChange={e => setAccountId(e.target.value)}
-                className="w-full px-3 py-2 border border-[#CED0D4] rounded-lg text-sm focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
+                className="w-full px-3 py-2 glass-card border border-white/10 rounded-lg text-sm text-white focus:ring-2 focus:ring-[#DD2A7B]/50 bg-transparent"
               >
                 {availableAccounts.map(acc => (
                   <option key={acc.id} value={acc.id}>@{acc.username}</option>
@@ -346,7 +358,7 @@ function CreateAutomationModal({
 
           {/* Trigger Type */}
           <div>
-            <label className="block text-sm font-medium text-[#1C1E21] mb-2">Trigger Type</label>
+            <label className="block text-sm font-medium text-white mb-2">Trigger Type</label>
             <div className="grid grid-cols-3 gap-2">
               {[
                 { value: 'comment_keyword', label: 'Keyword', icon: '💬' },
@@ -359,8 +371,8 @@ function CreateAutomationModal({
                   onClick={() => setTriggerType(opt.value)}
                   className={`py-3 rounded-lg border-2 text-center text-sm transition-colors ${
                     triggerType === opt.value
-                      ? 'border-[#1877F2] bg-[#E7F0FD] text-[#1877F2]'
-                      : 'border-[#CED0D4] text-[#65676B] hover:border-[#999]'
+                      ? 'border-[#1877F2] bg-[#1877F2]/20 text-[#1877F2]'
+                      : 'border-white/10 text-[#8a8a9a] hover:border-white/20'
                   }`}
                 >
                   <div className="text-lg mb-1">{opt.icon}</div>
@@ -373,7 +385,7 @@ function CreateAutomationModal({
           {/* Keywords (only for comment_keyword) */}
           {triggerType === 'comment_keyword' && (
             <div>
-              <label className="block text-sm font-medium text-[#1C1E21] mb-2">Keywords</label>
+              <label className="block text-sm font-medium text-white mb-2">Keywords</label>
               <div className="flex gap-2 mb-2">
                 <input
                   type="text"
@@ -381,27 +393,27 @@ function CreateAutomationModal({
                   onChange={e => setKeywordInput(e.target.value.toUpperCase())}
                   onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addKeyword())}
                   placeholder="e.g. LINK, INFO, FREE"
-                  className="flex-1 px-3 py-2 border border-[#CED0D4] rounded-lg text-sm uppercase focus:ring-2 focus:ring-[#1877F2]"
+                  className="flex-1 px-3 py-2 glass-card border border-white/10 rounded-lg text-sm text-white uppercase focus:ring-2 focus:ring-[#DD2A7B]/50 bg-transparent placeholder:text-[#5a5a6e]"
                 />
-                <button type="button" onClick={addKeyword} className="px-3 py-2 bg-[#F0F2F5] rounded-lg text-sm font-medium">
+                <button type="button" onClick={addKeyword} className="px-3 py-2 glass-card border border-white/10 rounded-lg text-sm font-medium text-white hover:bg-white/10">
                   Add
                 </button>
               </div>
               <div className="flex flex-wrap gap-1">
                 {keywords.map((kw, i) => (
-                  <span key={i} className="text-xs bg-[#FDE8F0] text-[#E1306C] px-2 py-1 rounded-full flex items-center gap-1">
+                  <span key={i} className="text-xs bg-[#DD2A7B]/20 text-[#DD2A7B] border border-[#DD2A7B]/30 px-2 py-1 rounded-full flex items-center gap-1">
                     {kw}
                     <button type="button" onClick={() => setKeywords(prev => prev.filter((_, j) => j !== i))}>×</button>
                   </span>
                 ))}
               </div>
-              <p className="text-xs text-[#65676B] mt-1">Followers type these keywords in comments to trigger your DM</p>
+              <p className="text-xs text-[#8a8a9a] mt-1">Followers type these keywords in comments to trigger your DM</p>
             </div>
           )}
 
           {/* DM Message */}
           <div>
-            <label className="block text-sm font-medium text-[#1C1E21] mb-2">
+            <label className="block text-sm font-medium text-white mb-2">
               DM Message <span className="text-[#FA3E3E]">*</span>
             </label>
             <textarea
@@ -410,29 +422,29 @@ function CreateAutomationModal({
               placeholder="Hey {name}! 👋 Here's the link you asked for: ..."
               rows={4}
               maxLength={1000}
-              className="w-full px-3 py-2 border border-[#CED0D4] rounded-lg text-sm focus:ring-2 focus:ring-[#1877F2] resize-none"
+              className="w-full px-3 py-2 glass-card border border-white/10 rounded-lg text-sm text-white focus:ring-2 focus:ring-[#DD2A7B]/50 resize-none bg-transparent placeholder:text-[#5a5a6e]"
             />
             <div className="flex justify-between mt-1">
-              <p className="text-xs text-[#65676B]">
+              <p className="text-xs text-[#8a8a9a]">
                 Use {'{name}'} for their name, {'{username}'} for @handle
               </p>
-              <span className="text-xs text-[#65676B]">{dmMessage.length}/1000</span>
+              <span className="text-xs text-[#8a8a9a]">{dmMessage.length}/1000</span>
             </div>
           </div>
 
           {/* Optional video attachment */}
           <div>
-            <label className="block text-sm font-medium text-[#1C1E21] mb-2">
-              DM Video URL <span className="text-[#65676B]">(optional)</span>
+            <label className="block text-sm font-medium text-white mb-2">
+              DM Video URL <span className="text-[#8a8a9a]">(optional)</span>
             </label>
             <input
               type="url"
               value={dmVideoUrl}
               onChange={e => setDmVideoUrl(e.target.value)}
               placeholder="https://cdn.example.com/video.mp4"
-              className="w-full px-3 py-2 border border-[#CED0D4] rounded-lg text-sm focus:ring-2 focus:ring-[#1877F2]"
+              className="w-full px-3 py-2 glass-card border border-white/10 rounded-lg text-sm text-white focus:ring-2 focus:ring-[#DD2A7B]/50 bg-transparent placeholder:text-[#5a5a6e]"
             />
-            <p className="text-xs text-[#65676B] mt-1">
+            <p className="text-xs text-[#8a8a9a] mt-1">
               If set, Instagram will send this video in DM for each matched comment.
             </p>
           </div>
@@ -440,16 +452,16 @@ function CreateAutomationModal({
           {/* Auto-reply on comment */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-[#1C1E21]">
+              <label className="block text-sm font-medium text-white">
                 Auto-reply on comment
               </label>
               <button
                 type="button"
                 onClick={() => setCommentReplyEnabled(prev => !prev)}
-                className="text-[#65676B] hover:text-[#1C1E21]"
+                className="text-[#8a8a9a] hover:text-white"
               >
                 {commentReplyEnabled
-                  ? <ToggleRight className="w-6 h-6 text-[#31A24C]" />
+                  ? <ToggleRight className="w-6 h-6 text-[#22c55e]" />
                   : <ToggleLeft className="w-6 h-6" />
                 }
               </button>
@@ -461,10 +473,10 @@ function CreateAutomationModal({
                 onChange={e => setCommentReplyText(e.target.value)}
                 placeholder="Check your DMs! 📩"
                 maxLength={200}
-                className="w-full px-3 py-2 border border-[#CED0D4] rounded-lg text-sm focus:ring-2 focus:ring-[#1877F2]"
+                className="w-full px-3 py-2 glass-card border border-white/10 rounded-lg text-sm text-white focus:ring-2 focus:ring-[#DD2A7B]/50 bg-transparent placeholder:text-[#5a5a6e]"
               />
             )}
-            <p className="text-xs text-[#65676B] mt-1">
+            <p className="text-xs text-[#8a8a9a] mt-1">
               Public reply posted on the comment after DM is sent
             </p>
           </div>
@@ -474,20 +486,20 @@ function CreateAutomationModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 border border-[#CED0D4] rounded-lg text-sm font-medium text-[#65676B] hover:bg-[#F0F2F5]"
+              className="flex-1 py-2.5 glass-card border border-white/10 rounded-lg text-sm font-medium text-[#8a8a9a] hover:bg-white/10"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading || !dmMessage || (triggerType === 'comment_keyword' && keywords.length === 0)}
-              className="flex-1 py-2.5 bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50"
+              className="flex-1 py-2.5 shimmer-btn text-white rounded-lg text-sm font-medium disabled:opacity-50"
             >
               {loading ? 'Creating...' : 'Create Automation'}
             </button>
           </div>
         </form>
-      </div>
+      </motion.div>
     </div>
   )
 }
