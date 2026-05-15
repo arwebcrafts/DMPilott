@@ -2,8 +2,10 @@ import axios from 'axios'
 import { decryptToken } from '@/lib/encryption'
 
 const INSTAGRAM_MESSAGING_API_VERSION = 'v25.0'
+const FACEBOOK_MESSAGING_API_VERSION = 'v21.0'
 const INSTAGRAM_MESSAGING_HOSTS = ['https://graph.instagram.com', 'https://graph.facebook.com'] as const
 const INSTAGRAM_COMMENTS_PER_HOUR_LIMIT = 200
+const FACEBOOK_MESSAGES_PER_HOUR_LIMIT = 200
 
 interface ConnectedAccount {
   id: string
@@ -112,6 +114,51 @@ export async function sendInstagramDm(params: {
   })
 }
 
+export async function sendFacebookDm(params: {
+  account: ConnectedAccount
+  recipientId: string
+  message: string
+  videoUrl?: string | null
+}): Promise<{ success: boolean; error?: string }> {
+  const { account, recipientId, message, videoUrl } = params
+  const accessToken = decryptToken(account.access_token_encrypted)
+
+  const requestBody: any = {
+    recipient: { id: recipientId },
+    message: {},
+    messaging_type: 'RESPONSE',
+  }
+
+  if (videoUrl) {
+    requestBody.message = {
+      attachment: {
+        type: 'video',
+        payload: { url: videoUrl },
+      },
+    }
+  } else {
+    requestBody.message = { text: message }
+  }
+
+  try {
+    await axios.post(
+      `https://graph.facebook.com/${FACEBOOK_MESSAGING_API_VERSION}/me/messages`,
+      requestBody,
+      {
+        params: { access_token: accessToken },
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 10000,
+      }
+    )
+    return { success: true }
+  } catch (err: any) {
+    const errorCode = err?.response?.data?.error?.code
+    const errorMessage = err?.response?.data?.error?.message || err.message
+    console.log('[Facebook DM] Error:', errorCode, errorMessage)
+    return { success: false, error: `${errorCode}: ${errorMessage}` }
+  }
+}
+
 async function sendInstagramCommentReply(params: {
   account: ConnectedAccount
   commentId: string
@@ -146,49 +193,79 @@ async function sendInstagramCommentReply(params: {
   }
 }
 
+async function sendFacebookCommentReply(params: {
+  account: ConnectedAccount
+  commentId: string
+  replyText: string
+}): Promise<{ success: boolean; error?: string }> {
+  const { account, commentId, replyText } = params
+  const accessToken = decryptToken(account.access_token_encrypted)
+
+  try {
+    await axios.post(
+      `https://graph.facebook.com/${FACEBOOK_MESSAGING_API_VERSION}/${commentId}/comments`,
+      { message: replyText },
+      {
+        params: { access_token: accessToken },
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 10000,
+      }
+    )
+    return { success: true }
+  } catch (err: any) {
+    const errorCode = err?.response?.data?.error?.code
+    const errorMessage = err?.response?.data?.error?.message || err.message
+    console.log('[Facebook Comment Reply] Error:', errorCode, errorMessage)
+    return { success: false, error: `${errorCode}: ${errorMessage}` }
+  }
+}
+
 export async function processQueuedInstagramDmsForAccount(
   supabase: any,
   accountId: string
 ) {
   console.log('[Queue] Processing queue for account:', accountId)
-  
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
-  const { count: sentInLastHour } = await supabase
-    .from('dm_logs')
-    .select('id', { count: 'exact', head: true })
-    .eq('account_id', accountId)
-    .eq('platform', 'instagram')
-    .eq('status', 'sent')
-    .gte('sent_at', oneHourAgo)
-
-  const remainingQuota = Math.max(0, INSTAGRAM_COMMENTS_PER_HOUR_LIMIT - (sentInLastHour || 0))
-  console.log('[Queue] Sent in last hour:', sentInLastHour, 'Remaining quota:', remainingQuota)
-  
-  if (remainingQuota <= 0) {
-    console.log('[Queue] No quota remaining')
-    return { processed: 0, remainingQuota: 0 }
-  }
 
   const { data: account } = await supabase
     .from('connected_accounts')
     .select('*')
     .eq('id', accountId)
-    .eq('platform', 'instagram')
     .eq('is_active', true)
     .single()
 
   if (!account) {
     console.log('[Queue] No account found for:', accountId)
-    return { processed: 0, remainingQuota }
+    return { processed: 0, remainingQuota: 0 }
   }
+
   const resolvedAccount = account as ConnectedAccount
-  console.log('[Queue] Found account:', resolvedAccount.username)
+  const platform = resolvedAccount.platform
+  const quotaLimit = platform === 'facebook' ? FACEBOOK_MESSAGES_PER_HOUR_LIMIT : INSTAGRAM_COMMENTS_PER_HOUR_LIMIT
+
+  console.log('[Queue] Found account:', resolvedAccount.username, 'platform:', platform)
+
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+  const { count: sentInLastHour } = await supabase
+    .from('dm_logs')
+    .select('id', { count: 'exact', head: true })
+    .eq('account_id', accountId)
+    .eq('platform', platform)
+    .eq('status', 'sent')
+    .gte('sent_at', oneHourAgo)
+
+  const remainingQuota = Math.max(0, quotaLimit - (sentInLastHour || 0))
+  console.log('[Queue] Sent in last hour:', sentInLastHour, 'Remaining quota:', remainingQuota)
+
+  if (remainingQuota <= 0) {
+    console.log('[Queue] No quota remaining')
+    return { processed: 0, remainingQuota: 0 }
+  }
 
   const { data: queuedLogs } = await supabase
     .from('dm_logs')
     .select('id, automation_id, commenter_platform_id, commenter_username, dm_message_sent, comment_id, retry_count')
     .eq('account_id', accountId)
-    .eq('platform', 'instagram')
+    .eq('platform', platform)
     .eq('status', 'queued')
     .order('created_at', { ascending: true })
     .limit(remainingQuota)
@@ -245,46 +322,91 @@ export async function processQueuedInstagramDmsForAccount(
     const messageToSend = log.dm_message_sent || automation.dm_message
     console.log('[Queue] Sending DM to:', log.commenter_platform_id, 'message:', messageToSend)
     try {
-      await sendInstagramDm({
-        account: resolvedAccount,
-        recipientId: log.commenter_platform_id,
-        commentId: log.comment_id,
-        message: messageToSend,
-        videoUrl: automation.dm_video_url,
-      })
-      console.log('[Queue] ✓ DM sent successfully to:', log.commenter_platform_id)
-
-      await supabase
-        .from('dm_logs')
-        .update({
-          status: 'sent',
-          sent_at: new Date().toISOString(),
-          error_message: null,
+      let dmSent = false
+      if (platform === 'facebook') {
+        const result = await sendFacebookDm({
+          account: resolvedAccount,
+          recipientId: log.commenter_platform_id,
+          message: messageToSend,
+          videoUrl: automation.dm_video_url,
         })
-        .eq('id', log.id)
-
-      await supabase
-        .from('automations')
-        .update({ total_dms_sent: (automation.total_dms_sent || 0) + 1 })
-        .eq('id', automation.id)
-
-      automation.total_dms_sent = (automation.total_dms_sent || 0) + 1
-
-      if (automation.comment_reply_enabled && log.comment_id) {
-        const replyText = automation.comment_reply_text || 'Check your DM.'
-        try {
-          await sendInstagramCommentReply({
-            account: resolvedAccount,
-            commentId: log.comment_id,
-            replyText,
-          })
-        } catch (replyErr: any) {
-          // Public comment reply is best effort and should not fail DM delivery.
-          console.log('[Queue] Comment reply failed:', replyErr.response?.data?.error?.message || replyErr.message)
+        if (!result.success) {
+          // Facebook error 551: User cannot be messaged (hasn't messaged page first)
+          // Fallback to public comment reply
+          if (result.error?.includes('551') && log.comment_id) {
+            console.log('[Queue] Facebook DM blocked (551), attempting public comment reply')
+            const replyResult = await sendFacebookCommentReply({
+              account: resolvedAccount,
+              commentId: log.comment_id,
+              replyText: messageToSend,
+            })
+            if (replyResult.success) {
+              console.log('[Queue] ✓ Public comment reply sent successfully')
+              dmSent = true
+            } else {
+              console.log('[Queue] Comment reply failed:', replyResult.error)
+              throw new Error(result.error)
+            }
+          } else {
+            throw new Error(result.error)
+          }
+        } else {
+          dmSent = true
         }
+      } else {
+        await sendInstagramDm({
+          account: resolvedAccount,
+          recipientId: log.commenter_platform_id,
+          commentId: log.comment_id,
+          message: messageToSend,
+          videoUrl: automation.dm_video_url,
+        })
+        dmSent = true
       }
 
-      processed++
+      if (dmSent) {
+        console.log('[Queue] ✓ DM sent successfully to:', log.commenter_platform_id)
+
+        await supabase
+          .from('dm_logs')
+          .update({
+            status: 'sent',
+            sent_at: new Date().toISOString(),
+            error_message: null,
+          })
+          .eq('id', log.id)
+
+        await supabase
+          .from('automations')
+          .update({ total_dms_sent: (automation.total_dms_sent || 0) + 1 })
+          .eq('id', automation.id)
+
+        automation.total_dms_sent = (automation.total_dms_sent || 0) + 1
+
+        if (automation.comment_reply_enabled && log.comment_id) {
+          const replyText = automation.comment_reply_text || 'Check your DM.'
+          try {
+            if (platform === 'facebook') {
+              await sendFacebookCommentReply({
+                account: resolvedAccount,
+                commentId: log.comment_id,
+                replyText,
+              })
+            } else {
+              await sendInstagramCommentReply({
+                account: resolvedAccount,
+                commentId: log.comment_id,
+                replyText,
+              })
+            }
+          } catch (replyErr: any) {
+            // Public comment reply is best effort and should not fail DM delivery.
+            console.log('[Queue] Comment reply failed:', replyErr.response?.data?.error?.message || replyErr.message)
+          }
+        }
+
+        processed++
+      }
     } catch (err: any) {
       const errorCode = err?.response?.data?.error?.code
       const errorMessage = err?.response?.data?.error?.message || err.message
