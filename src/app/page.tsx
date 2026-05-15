@@ -87,8 +87,8 @@ export default function LandingPage() {
           
           {/* Desktop nav */}
           <div className="hidden md:flex items-center gap-8">
-            <Link href="/pricing" className="text-sm text-[#8a8a9a] hover:text-white transition-colors">Pricing</Link>
-            <Link href="/blog" className="text-sm text-[#8a8a9a] hover:text-white transition-colors">Blog</Link>
+            <Link href="/#pricing" className="text-sm text-[#8a8a9a] hover:text-white transition-colors">Pricing</Link>
+            <Link href="/#how-it-works" className="text-sm text-[#8a8a9a] hover:text-white transition-colors">How It Works</Link>
             <Link href="/login" className="text-sm text-[#8a8a9a] hover:text-white transition-colors">Sign in</Link>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Link
@@ -119,8 +119,8 @@ export default function LandingPage() {
               className="md:hidden glass-card-static mt-2 mx-4 rounded-xl overflow-hidden"
             >
               <div className="p-4 space-y-4">
-                <Link href="/pricing" className="block text-sm text-[#8a8a9a] hover:text-white">Pricing</Link>
-                <Link href="/blog" className="block text-sm text-[#8a8a9a] hover:text-white">Blog</Link>
+                <Link href="/#pricing" className="block text-sm text-[#8a8a9a] hover:text-white" onClick={() => setMobileMenuOpen(false)}>Pricing</Link>
+                <Link href="/#how-it-works" className="block text-sm text-[#8a8a9a] hover:text-white" onClick={() => setMobileMenuOpen(false)}>How It Works</Link>
                 <Link href="/login" className="block text-sm text-[#8a8a9a] hover:text-white">Sign in</Link>
                 <Link href="/signup" className="block px-6 py-2.5 shimmer-btn rounded-lg text-sm font-semibold text-white text-center">Start Free</Link>
               </div>
@@ -351,8 +351,6 @@ export default function LandingPage() {
           </motion.div>
           
           <div className="grid md:grid-cols-3 gap-8 relative">
-            {/* Connecting line */}
-            <div className="hidden md:block absolute top-24 left-1/4 right-1/4 h-0.5 bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF]" />
             
             {[
               {
@@ -785,15 +783,14 @@ export default function LandingPage() {
               <h4 className="font-semibold mb-4">Product</h4>
               <ul className="space-y-3 text-sm text-[#8a8a9a]">
                 <li><Link href="/#how-it-works" className="hover:text-white transition-colors">How It Works</Link></li>
-                <li><Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
-                <li><Link href="/blog" className="hover:text-white transition-colors">Blog</Link></li>
+                <li><Link href="/#pricing" className="hover:text-white transition-colors">Pricing</Link></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold mb-4">Legal</h4>
               <ul className="space-y-3 text-sm text-[#8a8a9a]">
-                <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
-                <li><Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
+                <li><Link href="/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+                <li><Link href="/terms-of-service" className="hover:text-white transition-colors">Terms of Service</Link></li>
               </ul>
             </div>
             <div>
@@ -804,7 +801,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="border-t border-[#22223a] mt-12 pt-8 text-center text-sm text-[#5a5a6e]">
-            2026 DMPilot. All rights reserved.
+            © 2026 DMPilot. All rights reserved.
           </div>
         </div>
       </footer>
