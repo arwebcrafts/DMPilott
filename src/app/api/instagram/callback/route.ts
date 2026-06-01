@@ -76,53 +76,129 @@ export async function GET(request: Request) {
     console.log('[Instagram Callback] Short token response data:', JSON.stringify(shortRes.data))
     
     const shortLivedToken: string = shortRes.data.access_token
+    const shortLivedUserId: string | number | null = shortRes.data.user_id || null
     console.log('[Instagram Callback] Short token received:', shortLivedToken ? 'YES' : 'NO')
+    console.log('[Instagram Callback] Short token user_id from response:', shortLivedUserId)
 
-    // Step 2: exchange for long-lived token
-    console.log('[Instagram Callback] ===== LONG-LIVED TOKEN =====')
-    console.log('[Instagram Callback] GET https://graph.instagram.com/access_token')
-    console.log('[Instagram Callback] Params: grant_type=ig_exchange_token, client_secret=***, access_token=***')
+    // Step 2: Long-lived token exchange (ig_exchange_token)
+    // Instagram Graph API requires GET with access_token as query parameter
+    console.log('[Instagram Callback] ===== LONG-LIVED TOKEN (best effort) =====')
+
+    let accessToken: string = shortLivedToken
+    let tokenExpiresAt: string | null = new Date(Date.now() + 55 * 60 * 1000).toISOString() // ~55 min conservative default
+
+    try {
+      const longRes = await axios.get('https://graph.instagram.com/access_token', {
+        params: {
+          grant_type: 'ig_exchange_token',
+          client_secret: igAppSecret,
+          access_token: shortLivedToken,
+        },
+      })
+
+      if (longRes.data?.access_token) {
+        accessToken = longRes.data.access_token
+        tokenExpiresAt = new Date(Date.now() + (longRes.data.expires_in || 0) * 1000).toISOString()
+        console.log('[Instagram Callback] Long token exchange succeeded')
+      }
+    } catch (longErr: any) {
+      console.warn('[Instagram Callback] Long-lived token exchange failed (non-fatal):',
+        longErr?.response?.data?.error?.message || longErr.message)
+      console.warn('[Instagram Callback] Proceeding with short-lived token (expires in ~55 minutes)')
+    }
     
-    const longRes = await axios.get('https://graph.instagram.com/access_token', {
-      params: {
-        grant_type: 'ig_exchange_token',
-        client_secret: igAppSecret,
-        access_token: shortLivedToken,
-      },
-    })
-    
-    console.log('[Instagram Callback] Long token response status:', longRes.status)
-    console.log('[Instagram Callback] Long token response data:', JSON.stringify(longRes.data))
-    
-    const accessToken: string = longRes.data.access_token
-    const tokenExpiresAt: string | null = new Date(Date.now() + longRes.data.expires_in * 1000).toISOString()
-    console.log('[Instagram Callback] Long token received:', accessToken ? 'YES' : 'NO')
+    console.log('[Instagram Callback] Using access token (long-lived preferred):', accessToken ? 'YES' : 'NO')
 
     // Step 3: get account details using user_id (IG professional account ID)
+    // Modern Meta/Instagram flows prefer the token in Authorization: Bearer header.
+    // We also have the user_id directly from the short-lived token response as a fallback.
+    let platformAccountId: string | null = shortLivedUserId ? String(shortLivedUserId) : null
+    let username: string | null = null
+    let displayName: string | null = null
+    let profilePictureUrl: string | null = null
+    let followerCount = 0
+
     console.log('[Instagram Callback] ===== ACCOUNT DETAILS =====')
-    console.log('[Instagram Callback] GET https://graph.instagram.com/me')
-    
-    const meRes = await axios.get('https://graph.instagram.com/me', {
-      params: {
-        fields: 'id,user_id,username,name,profile_picture_url,followers_count,account_type',
-        access_token: accessToken,
-      },
-    })
-    
-    console.log('[Instagram Callback] Account response status:', meRes.status)
-    console.log('[Instagram Callback] Account response data:', JSON.stringify(meRes.data))
+    try {
+      // Try Facebook Graph API first (recommended for Instagram Business accounts)
+      console.log('[Instagram Callback] GET https://graph.facebook.com/v21.0/me (with access_token query param)')
+      const meRes = await axios.get('https://graph.facebook.com/v21.0/me', {
+        params: {
+          fields: 'id,name',
+          access_token: accessToken,
+        },
+      })
 
-    const platformAccountId: string | null = meRes.data.user_id || meRes.data.id
-    const username: string | null = meRes.data.username
-    const displayName: string | null = meRes.data.name || meRes.data.username
-    const profilePictureUrl: string | null = meRes.data.profile_picture_url ?? null
-    const followerCount: number = meRes.data.followers_count || 0
+      console.log('[Instagram Callback] Account response status:', meRes.status)
+      console.log('[Instagram Callback] Account response data:', JSON.stringify(meRes.data))
 
-    console.log('[Instagram Callback] Account:', username, 'id:', platformAccountId)
+      platformAccountId = meRes.data.id || platformAccountId
+      username = meRes.data.name || 'instagram_user'
+      displayName = meRes.data.name || 'Instagram User'
+      console.log('[Instagram Callback] Account from FB /me:', username, 'id:', platformAccountId)
+    } catch (meErr: any) {
+      console.warn('[Instagram Callback] FB /me call failed, trying Instagram API:',
+        meErr?.response?.data?.error?.message || meErr.message)
+      try {
+        // Fallback to Instagram Graph API
+        console.log('[Instagram Callback] GET https://graph.instagram.com/me (with access_token query param)')
+        const igMeRes = await axios.get('https://graph.instagram.com/me', {
+          params: {
+            fields: 'id,user_id,username,name,profile_picture_url,followers_count,account_type',
+            access_token: accessToken,
+          },
+        })
+
+        console.log('[Instagram Callback] IG Account response status:', igMeRes.status)
+        console.log('[Instagram Callback] IG Account response data:', JSON.stringify(igMeRes.data))
+
+        platformAccountId = igMeRes.data.user_id || igMeRes.data.id || platformAccountId
+        username = igMeRes.data.username
+        displayName = igMeRes.data.name || igMeRes.data.username
+        profilePictureUrl = igMeRes.data.profile_picture_url ?? null
+        followerCount = igMeRes.data.followers_count || 0
+
+        console.log('[Instagram Callback] Account from IG /me:', username, 'id:', platformAccountId)
+      } catch (igMeErr: any) {
+        console.warn('[Instagram Callback] IG /me call also failed:',
+          igMeErr?.response?.data?.error?.message || igMeErr.message)
+        console.warn('[Instagram Callback] Falling back to user_id from short-lived token response:', shortLivedUserId)
+      }
+    }
+
+    console.log('[Instagram Callback] Final platformAccountId:', platformAccountId)
+
+    // If we couldn't fetch username from API, set a fallback based on user_id
+    if (!username && platformAccountId) {
+      username = `user_${platformAccountId.slice(-6)}`
+      displayName = 'Instagram Account'
+      console.log('[Instagram Callback] Using fallback username:', username)
+    }
 
     if (!platformAccountId) {
       console.log('[Instagram Callback] No platformAccountId found')
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard/accounts?error=no_account`)
+    }
+
+    // Fallback profile enrichment using the numeric IG user ID (some tokens reject /me but accept /<id>)
+    if (!username && platformAccountId) {
+      try {
+        console.log('[Instagram Callback] Trying fallback profile lookup via numeric ID on graph.instagram.com...')
+        const profileRes = await axios.get(`https://graph.instagram.com/v21.0/${platformAccountId}`, {
+          params: {
+            fields: 'username,name,profile_picture_url,followers_count,account_type',
+            access_token: accessToken,
+          },
+        })
+        username = profileRes.data.username
+        displayName = profileRes.data.name || profileRes.data.username
+        profilePictureUrl = profileRes.data.profile_picture_url ?? null
+        followerCount = profileRes.data.followers_count || 0
+        console.log('[Instagram Callback] Fallback profile lookup succeeded:', username)
+      } catch (profileErr: any) {
+        console.warn('[Instagram Callback] Fallback profile lookup failed:',
+          profileErr?.response?.data?.error?.message || profileErr.message)
+      }
     }
 
     const encryptedToken = encryptToken(accessToken)
@@ -152,23 +228,62 @@ export async function GET(request: Request) {
     }
 
     // Subscribe to webhooks
+    // For pure Instagram Business Login accounts, graph.instagram.com is often required.
+    // graph.facebook.com frequently rejects the IG user token with "Cannot parse access token".
     try {
       console.log('[Instagram Callback] ===== WEBHOOK SUBSCRIPTION =====')
-      const subRes = await axios.post(
-        `https://graph.facebook.com/v21.0/${platformAccountId}/subscribed_apps`,
-        null,
-        { params: { subscribed_fields: 'comments,messages', access_token: accessToken } }
-      )
-      console.log('[Instagram Callback] Webhook subscribed:', subRes.status)
+      let subscribed = false
 
-      await supabase
-        .from('connected_accounts')
-        .update({ webhook_subscribed: true })
-        .eq('user_id', stateData.userId)
-        .eq('platform', 'instagram')
-        .eq('platform_account_id', platformAccountId)
+      // Try Instagram host first (recommended for IG-only tokens)
+      try {
+        const igSubRes = await axios.post(
+          `https://graph.instagram.com/v21.0/${platformAccountId}/subscribed_apps`,
+          null,
+          {
+            params: {
+              subscribed_fields: 'comments,messages',
+              access_token: accessToken,
+            },
+          }
+        )
+        console.log('[Instagram Callback] Webhook subscribed via graph.instagram.com:', igSubRes.status)
+        subscribed = true
+      } catch (igSubErr: any) {
+        console.warn('[Instagram Callback] Subscription via graph.instagram.com failed:',
+          igSubErr?.response?.data?.error?.message || igSubErr.message)
+      }
+
+      // Fallback to Facebook host (for accounts linked to a FB Page)
+      if (!subscribed) {
+        try {
+          const fbSubRes = await axios.post(
+            `https://graph.facebook.com/v21.0/${platformAccountId}/subscribed_apps`,
+            null,
+            {
+              params: {
+                subscribed_fields: 'comments,messages',
+                access_token: accessToken,
+              },
+            }
+          )
+          console.log('[Instagram Callback] Webhook subscribed via graph.facebook.com:', fbSubRes.status)
+          subscribed = true
+        } catch (fbSubErr: any) {
+          console.error('[Instagram Callback] Subscription via graph.facebook.com also failed:',
+            fbSubErr?.response?.data?.error?.message || fbSubErr.message)
+        }
+      }
+
+      if (subscribed) {
+        await supabase
+          .from('connected_accounts')
+          .update({ webhook_subscribed: true })
+          .eq('user_id', stateData.userId)
+          .eq('platform', 'instagram')
+          .eq('platform_account_id', platformAccountId)
+      }
     } catch (subErr: any) {
-      console.error('[Instagram Callback] Webhook subscription failed:', subErr?.response?.data || subErr.message)
+      console.error('[Instagram Callback] Webhook subscription block error:', subErr?.response?.data || subErr.message)
     }
 
     console.log('[Instagram Callback] ===== SUCCESS =====')

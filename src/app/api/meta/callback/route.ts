@@ -63,18 +63,31 @@ export async function GET(request: Request) {
       const shortLivedToken: string = shortRes.data.access_token
 
       // Step 2: exchange for long-lived token via graph.instagram.com
-      const longRes = await axios.get('https://graph.instagram.com/access_token', {
-        params: {
-          grant_type: 'ig_exchange_token',
-          client_secret: igAppSecret,
-          access_token: shortLivedToken,
-        },
-      })
+      // Instagram Graph API requires GET with access_token as query parameter
+      accessToken = shortLivedToken
+      tokenExpiresAt = new Date(Date.now() + 55 * 60 * 1000).toISOString()
 
-      accessToken = longRes.data.access_token
-      tokenExpiresAt = new Date(Date.now() + longRes.data.expires_in * 1000).toISOString()
+      try {
+        const longRes = await axios.get('https://graph.instagram.com/access_token', {
+          params: {
+            grant_type: 'ig_exchange_token',
+            client_secret: igAppSecret,
+            access_token: shortLivedToken,
+          },
+        })
+
+        if (longRes.data?.access_token) {
+          accessToken = longRes.data.access_token
+          tokenExpiresAt = new Date(Date.now() + (longRes.data.expires_in || 0) * 1000).toISOString()
+          console.log('[Callback] Long-lived Instagram token obtained')
+        }
+      } catch (longErr: any) {
+        console.warn('[Callback] Long-lived IG token exchange failed (using short-lived):',
+          longErr?.response?.data?.error?.message || longErr.message)
+      }
 
       // Step 3: get account details using user_id (IG professional account ID)
+      // Instagram Graph API requires access_token as query parameter
       const meRes = await axios.get('https://graph.instagram.com/me', {
         params: {
           fields: 'id,user_id,username,name,profile_picture_url,followers_count,account_type',
@@ -172,7 +185,12 @@ export async function GET(request: Request) {
       await axios.post(
         `${subscribeBase}/${platformAccountId}/subscribed_apps`,
         null,
-        { params: { subscribed_fields: subscribeFields, access_token: accessToken } }
+        {
+          params: {
+            subscribed_fields: subscribeFields,
+            access_token: accessToken,
+          },
+        }
       )
       console.log('[Callback] ✓ Subscribed to webhook fields:', subscribeFields)
 
