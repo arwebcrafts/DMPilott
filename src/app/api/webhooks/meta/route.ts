@@ -291,6 +291,43 @@ async function handleInstagramComment(igAccountId: string, value: any, supabase:
 
   console.log('[Comment] Found automations:', automations?.length || 0)
 
+  // === DIAGNOSTIC LOGGING (when 0 found but UI shows automation) ===
+  if (!automations || automations.length === 0) {
+    console.log('[Comment][DIAG] Running diagnostic queries for account_id:', account.id)
+
+    // 1. All automations for this exact account_id (ignore is_active + platform)
+    const { data: allForAccountId } = await supabase
+      .from('automations')
+      .select('id, name, platform, is_active, trigger_type, account_id, user_id, created_at')
+      .eq('account_id', account.id)
+    console.log('[Comment][DIAG] All rows with this account_id (no filters):', JSON.stringify(allForAccountId))
+
+    // 2. All active automations for this account_id (ignore platform filter)
+    const { data: activeForAccount } = await supabase
+      .from('automations')
+      .select('id, name, platform, is_active, trigger_type, account_id')
+      .eq('account_id', account.id)
+      .eq('is_active', true)
+    console.log('[Comment][DIAG] Active rows for this account_id (no platform filter):', JSON.stringify(activeForAccount))
+
+    // 3. All automations for the same user (to see what account_ids they actually point to)
+    const { data: allUserAutos } = await supabase
+      .from('automations')
+      .select('id, name, platform, is_active, trigger_type, account_id')
+      .eq('user_id', account.user_id)
+      .order('created_at', { ascending: false })
+      .limit(20)
+    console.log('[Comment][DIAG] Recent automations for user (showing their account_id values):', JSON.stringify(allUserAutos))
+
+    // 4. All connected_accounts rows for this IG numeric id (to detect duplicates / stale rows)
+    const { data: allAccountRows } = await supabase
+      .from('connected_accounts')
+      .select('id, platform_account_id, username, is_active, platform, created_at')
+      .eq('platform_account_id', igAccountId)
+    console.log('[Comment][DIAG] All connected_accounts rows for IG id ' + igAccountId + ':', JSON.stringify(allAccountRows))
+  }
+  // === END DIAGNOSTIC ===
+
   let matchedAutomation = null
   let matchedKeyword: string | null = null
 
