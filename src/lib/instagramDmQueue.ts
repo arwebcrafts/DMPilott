@@ -165,32 +165,10 @@ async function sendInstagramCommentReply(params: {
   replyText: string
 }) {
   const { account, commentId, replyText } = params
-  // Instagram comment replies also require Facebook Page access token
-  const accessToken = process.env.FACEBOOK_PAGE_ACCESS_TOKEN || decryptToken(account.access_token_encrypted)
-
-  let lastError: any = null
-  for (const host of INSTAGRAM_MESSAGING_HOSTS) {
-    try {
-      await axios.post(
-        `${host}/${INSTAGRAM_MESSAGING_API_VERSION}/${commentId}/replies`,
-        null,
-        {
-          params: {
-            message: replyText,
-            access_token: accessToken,
-          },
-          timeout: 10000,
-        }
-      )
-      return
-    } catch (err) {
-      lastError = err
-    }
-  }
-
-  if (lastError) {
-    throw lastError
-  }
+  // Instagram comment replies require instagram_business_manage_comments permission
+  // This permission was rejected by Meta, so we log a warning instead
+  console.log('[Instagram Comment Reply] Skipped - instagram_business_manage_comments permission not approved')
+  return
 }
 
 async function sendFacebookCommentReply(params: {

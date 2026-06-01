@@ -455,18 +455,22 @@ function CreateAutomationModal({
               <label className="block text-sm font-medium text-white">
                 Auto-reply on comment
               </label>
-              <button
-                type="button"
-                onClick={() => setCommentReplyEnabled(prev => !prev)}
-                className="text-[#8a8a9a] hover:text-white"
-              >
-                {commentReplyEnabled
-                  ? <ToggleRight className="w-6 h-6 text-[#22c55e]" />
-                  : <ToggleLeft className="w-6 h-6" />
-                }
-              </button>
+              {platform === 'instagram' ? (
+                <span className="text-xs text-[#ff6b6b]">Unavailable for Instagram</span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setCommentReplyEnabled(prev => !prev)}
+                  className="text-[#8a8a9a] hover:text-white"
+                >
+                  {commentReplyEnabled
+                    ? <ToggleRight className="w-6 h-6 text-[#22c55e]" />
+                    : <ToggleLeft className="w-6 h-6" />
+                  }
+                </button>
+              )}
             </div>
-            {commentReplyEnabled && (
+            {platform === 'facebook' && commentReplyEnabled && (
               <input
                 type="text"
                 value={commentReplyText}
@@ -477,7 +481,10 @@ function CreateAutomationModal({
               />
             )}
             <p className="text-xs text-[#8a8a9a] mt-1">
-              Public reply posted on the comment after DM is sent
+              {platform === 'instagram' 
+                ? 'Instagram comment replies require additional Meta approval (currently pending)'
+                : 'Public reply posted on the comment after DM is sent'
+              }
             </p>
           </div>
 
