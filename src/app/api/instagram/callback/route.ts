@@ -132,6 +132,7 @@ export async function GET(request: Request) {
     // Modern Meta/Instagram flows prefer the token in Authorization: Bearer header.
     // We also have the user_id directly from the short-lived token response as a fallback.
     let platformAccountId: string | null = shortLivedUserId ? String(shortLivedUserId) : null
+    let altAccountId: string | null = null // alternate IG ID (used by webhooks)
     let username: string | null = null
     let displayName: string | null = null
     let profilePictureUrl: string | null = null
@@ -163,7 +164,7 @@ export async function GET(request: Request) {
         console.log('[Instagram Callback] GET https://graph.instagram.com/v21.0/me')
         const igMeRes = await axios.get('https://graph.instagram.com/v21.0/me', {
           params: {
-            fields: 'id,username,name,profile_picture_url,followers_count',
+            fields: 'id,user_id,username,name,profile_picture_url,followers_count',
             access_token: accessToken,
           },
         })
@@ -172,6 +173,10 @@ export async function GET(request: Request) {
         console.log('[Instagram Callback] IG Account response data:', JSON.stringify(igMeRes.data))
 
         platformAccountId = igMeRes.data.id || platformAccountId
+        if (igMeRes.data.user_id && String(igMeRes.data.user_id) !== String(igMeRes.data.id)) {
+          altAccountId = String(igMeRes.data.user_id)
+          console.log('[Instagram Callback] Alternate IG account ID (user_id):', altAccountId)
+        }
         username = igMeRes.data.username
         displayName = igMeRes.data.name || igMeRes.data.username
         profilePictureUrl = igMeRes.data.profile_picture_url ?? null
@@ -229,6 +234,7 @@ export async function GET(request: Request) {
         user_id: stateData.userId,
         platform: 'instagram',
         platform_account_id: platformAccountId,
+        ig_business_account_id: altAccountId,
         username,
         display_name: displayName,
         profile_picture_url: profilePictureUrl,

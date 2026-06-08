@@ -390,27 +390,89 @@ async function handleInstagramComment(igAccountId: string, value: any, supabase:
 async function findIgAccount(igAccountId: string, supabase: any) {
   console.log('[Account] Looking for IG account with ID:', igAccountId)
   console.log('[Account] Using Supabase client...')
-  
+
+  // Instagram exposes two IDs for the same account:
+  //   - platform_account_id: app-scoped ID returned by OAuth /me
+  //   - ig_business_account_id: IG Business Account ID sent in webhook entry.id
+  // Webhooks arrive keyed by the IG Business Account ID, so match either column.
   const { data: account, error } = await supabase
     .from('connected_accounts')
     .select('*')
-    .eq('platform_account_id', igAccountId)
+    .or(`platform_account_id.eq.${igAccountId},ig_business_account_id.eq.${igAccountId}`)
     .eq('is_active', true)
     .eq('platform', 'instagram')
+    .order('created_at', { ascending: false })
     .limit(1)
-    .single()
-  
+    .maybeSingle()
+
   if (error) {
     console.log('[Account] Query error:', error.message)
-    return null
   }
-  
+
   if (account) {
-    console.log('[Account] Found account:', account.username)
+    console.log('[Account] Found account:', account.username, 'created:', account.created_at)
     return account
   }
-  
+
+  // Self-healing fallback: the webhook ID was not stored yet for any account.
+  // Resolve it by asking the Instagram API for each active account's IDs, then
+  // persist the mapping so future lookups are instant.
+  console.log('[Account] No direct match. Attempting self-healing resolution via IG API...')
+  const resolved = await resolveAndLinkIgAccount(igAccountId, supabase)
+  if (resolved) {
+    console.log('[Account] ✓ Self-healing resolved account:', resolved.username)
+    return resolved
+  }
+
   console.log('[Account] No matching account found')
+  return null
+}
+
+// Query the Instagram API for each active IG account to discover which one owns
+// the given webhook account ID, then persist ig_business_account_id for fast
+// future lookups. This is account-agnostic and works for any user in the app.
+async function resolveAndLinkIgAccount(igAccountId: string, supabase: any) {
+  const { data: candidates } = await supabase
+    .from('connected_accounts')
+    .select('*')
+    .eq('is_active', true)
+    .eq('platform', 'instagram')
+
+  console.log('[Account][Resolve] Active IG accounts to check:', candidates?.length || 0)
+
+  for (const candidate of candidates || []) {
+    let token: string
+    try {
+      token = decryptToken(candidate.access_token_encrypted)
+    } catch (e: any) {
+      console.log('[Account][Resolve] Failed to decrypt token for', candidate.username, e.message)
+      continue
+    }
+
+    try {
+      const res = await axios.get('https://graph.instagram.com/me', {
+        params: { fields: 'id,user_id,username', access_token: token },
+        timeout: 5000,
+      })
+      const ids = [res.data?.id, res.data?.user_id]
+        .filter(Boolean)
+        .map((v: any) => String(v))
+      console.log('[Account][Resolve] @' + candidate.username, 'API ids:', JSON.stringify(ids))
+
+      if (ids.includes(String(igAccountId))) {
+        console.log('[Account][Resolve] ✓ Match found for @' + candidate.username + '. Linking ig_business_account_id.')
+        await supabase
+          .from('connected_accounts')
+          .update({ ig_business_account_id: igAccountId })
+          .eq('id', candidate.id)
+        return { ...candidate, ig_business_account_id: igAccountId }
+      }
+    } catch (err: any) {
+      console.log('[Account][Resolve] IG API lookup failed for @' + candidate.username + ':',
+        err?.response?.data?.error?.message || err.message)
+    }
+  }
+
   return null
 }
 
