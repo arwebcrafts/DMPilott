@@ -101,7 +101,7 @@ export function Hero() {
           onSubmit={handleSubmit}
           className="max-w-lg mx-auto mb-4"
         >
-          <div className="flex items-center bg-white rounded-full shadow-xl p-1.5 border border-gray-200/50">
+          <div className="flex items-center rounded-full shadow-xl p-1.5 border" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
             <input
               type="email"
               value={email}
@@ -115,7 +115,7 @@ export function Hero() {
               type="submit"
               disabled={status === 'loading'}
               className="px-6 py-3 rounded-full text-sm font-semibold text-white flex items-center gap-2 transition-all hover:shadow-lg"
-              style={{ background: '#1a1a1a' }}
+              style={{ background: 'var(--accent)' }}
             >
               Start your day <span className="text-base">↗</span>
             </button>
@@ -129,7 +129,7 @@ export function Hero() {
           <p className="text-sm text-red-500 text-center">Something went wrong. Try again?</p>
         )}
 
-        <p className="text-sm text-center mt-2" style={{ color: 'var(--text-muted)' }}>
+        <p className="text-sm text-center mt-2" style={{ color: 'var(--text-secondary)' }}>
           Join the calm crew already in beta. No spam.
         </p>
 
