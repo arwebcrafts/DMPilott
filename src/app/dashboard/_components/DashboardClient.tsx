@@ -34,8 +34,8 @@ function AnimatedNumber({ value }: { value: number }) {
 function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null
   return (
-    <div className="glass-card rounded-xl shadow-md p-3 text-xs border border-white/10">
-      <p className="text-[#8a8a9a] font-medium mb-2">{label}</p>
+    <div className="rounded-xl shadow-md p-3 text-xs border" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
+      <p className="text-gray-600 dark:text-gray-300 font-medium mb-2">{label}</p>
       {payload.map((entry: any) => (
         <p key={entry.dataKey} className="font-semibold" style={{ color: entry.color }}>
           {entry.dataKey === 'instagram' ? 'Instagram' : 'Facebook'}: {entry.value}
@@ -64,14 +64,14 @@ function DMsChart({ data }: { data: ChartPoint[] }) {
   }, [data, tab])
 
   return (
-    <div className="glass-card rounded-xl border border-white/10 shadow-sm p-5 h-full">
+    <div className="rounded-xl border shadow-sm p-5 h-full" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="font-semibold text-white">DMs Over Time</h2>
-          <p className="text-xs text-[#8a8a9a] mt-0.5">Instagram + Facebook combined</p>
+          <h2 className="font-semibold text-gray-900 dark:text-gray-100">DMs Over Time</h2>
+          <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">Instagram + Facebook combined</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-3 text-xs text-[#8a8a9a]">
+          <div className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-300">
             <span className="flex items-center gap-1">
               <span className="w-2.5 h-2.5 rounded-full bg-[#E1306C]" /> IG
             </span>
@@ -79,16 +79,17 @@ function DMsChart({ data }: { data: ChartPoint[] }) {
               <span className="w-2.5 h-2.5 rounded-full bg-[#1877F2]" /> FB
             </span>
           </div>
-          <div className="flex rounded-lg overflow-hidden border border-white/10">
+          <div className="flex rounded-lg overflow-hidden border" style={{ borderColor: 'var(--surface-3)' }}>
             {(['7D', '30D', '90D'] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
                 className={`px-3 py-1 text-xs font-medium transition-colors ${
                   tab === t
-                    ? 'bg-gradient-to-r from-[#F58529] to-[#DD2A7B] text-white'
-                    : 'bg-transparent text-[#8a8a9a] hover:bg-white/10'
+                    ? 'text-white'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
                 }`}
+                style={tab === t ? { background: 'var(--accent)' } : {}}
               >
                 {t}
               </button>
@@ -110,16 +111,16 @@ function DMsChart({ data }: { data: ChartPoint[] }) {
                 <stop offset="95%" stopColor="#1877F2" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#22223a" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} style={{ stroke: 'var(--surface-3)' }} />
             <XAxis
               dataKey="label"
-              tick={{ fontSize: 10, fill: '#8a8a9a' }}
+              tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
               axisLine={false}
               tickLine={false}
               interval={tab === '90D' ? 14 : tab === '30D' ? 6 : 0}
             />
             <YAxis
-              tick={{ fontSize: 10, fill: '#8a8a9a' }}
+              tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
               axisLine={false}
               tickLine={false}
               allowDecimals={false}
@@ -150,8 +151,8 @@ function DMsChart({ data }: { data: ChartPoint[] }) {
           </AreaChart>
         </ResponsiveContainer>
       ) : (
-        <div className="h-[220px] flex flex-col items-center justify-center text-[#8a8a9a] text-sm gap-2">
-          <BarChart2 className="w-10 h-10 text-[#5a5a6e]" />
+        <div className="h-[220px] flex flex-col items-center justify-center text-gray-600 dark:text-gray-300 text-sm gap-2">
+          <BarChart2 className="w-10 h-10 text-gray-400 dark:text-gray-500" />
           <p>No DM data for this period yet</p>
         </div>
       )}
@@ -163,13 +164,13 @@ function DMsChart({ data }: { data: ChartPoint[] }) {
 
 function TopPosts({ posts }: { posts: TopPost[] }) {
   return (
-    <div className="glass-card rounded-xl border border-white/10 shadow-sm p-5 h-full">
-      <h2 className="font-semibold text-white mb-4">Top Performing Posts</h2>
+    <div className="rounded-xl border shadow-sm p-5 h-full" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
+      <h2 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">Top Performing Posts</h2>
       {posts.length > 0 ? (
         <div className="space-y-3">
           {posts.map((post, i) => (
             <div key={post.post_id} className="flex items-center gap-3">
-              <span className="text-xs font-bold text-[#8a8a9a] w-4">{i + 1}</span>
+              <span className="text-xs font-bold text-gray-500 dark:text-gray-400 w-4">{i + 1}</span>
               <div
                 className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0 ${
                   post.platform === 'instagram'
@@ -180,10 +181,10 @@ function TopPosts({ posts }: { posts: TopPost[] }) {
                 {post.platform === 'instagram' ? 'IG' : 'FB'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-white truncate font-mono">
+                <p className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate font-mono">
                   {post.post_id.slice(0, 16)}…
                 </p>
-                <p className="text-[10px] text-[#8a8a9a] capitalize">{post.platform}</p>
+                <p className="text-[10px] text-gray-600 dark:text-gray-300 capitalize">{post.platform}</p>
               </div>
               <span
                 className={`text-xs font-semibold px-2 py-0.5 rounded-full text-white flex-shrink-0 ${
@@ -198,8 +199,8 @@ function TopPosts({ posts }: { posts: TopPost[] }) {
           ))}
         </div>
       ) : (
-        <div className="h-32 flex flex-col items-center justify-center text-[#8a8a9a] text-xs gap-2">
-          <TrendingUp className="w-8 h-8 text-[#5a5a6e]" />
+        <div className="h-32 flex flex-col items-center justify-center text-gray-600 dark:text-gray-300 text-xs gap-2">
+          <TrendingUp className="w-8 h-8 text-gray-400 dark:text-gray-500" />
           <p>No post data yet</p>
         </div>
       )}
@@ -217,10 +218,10 @@ function RecentActivity({ items }: { items: ActivityItem[] }) {
   const pageItems = items.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
   return (
-    <div className="glass-card rounded-xl border border-white/10 shadow-sm overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
-        <h2 className="font-semibold text-white">Recent DM Activity</h2>
-        <a href="/dashboard/analytics" className="text-xs text-[#1877F2] hover:underline">
+    <div className="rounded-xl border shadow-sm overflow-hidden" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
+      <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--surface-3)' }}>
+        <h2 className="font-semibold text-gray-900 dark:text-gray-100">Recent DM Activity</h2>
+        <a href="/dashboard/analytics" className="text-xs text-[#e85d3a] hover:underline">
           View All →
         </a>
       </div>
@@ -230,18 +231,18 @@ function RecentActivity({ items }: { items: ActivityItem[] }) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-[#1a1a2e]">
-                  <th className="text-left px-5 py-2.5 text-xs font-medium text-[#8a8a9a]">Platform</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-[#8a8a9a]">Post</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-[#8a8a9a]">Commenter</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-[#8a8a9a]">Keyword</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-[#8a8a9a]">Status</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-[#8a8a9a]">When</th>
+                <tr style={{ background: 'var(--surface-1)' }}>
+                  <th className="text-left px-5 py-2.5 text-xs font-medium text-gray-600 dark:text-gray-300">Platform</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-600 dark:text-gray-300">Post</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-600 dark:text-gray-300">Commenter</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-600 dark:text-gray-300">Keyword</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-600 dark:text-gray-300">Status</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-600 dark:text-gray-300">When</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#22223a]">
+              <tbody className="divide-y" style={{ borderColor: 'var(--surface-3)' }}>
                 {pageItems.map((dm) => (
-                  <tr key={dm.id} className="hover:bg-white/5 transition-colors">
+                  <tr key={dm.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                     <td className="px-5 py-3">
                       <div
                         className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${
@@ -253,10 +254,10 @@ function RecentActivity({ items }: { items: ActivityItem[] }) {
                         {dm.platform === 'instagram' ? 'IG' : 'FB'}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-[#8a8a9a] font-mono text-xs">
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-300 font-mono text-xs">
                       {dm.post_id ? `${dm.post_id.slice(0, 12)}…` : '—'}
                     </td>
-                    <td className="px-4 py-3 font-medium text-white">
+                    <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
                       @{dm.commenter_username || 'unknown'}
                     </td>
                     <td className="px-4 py-3">
@@ -265,7 +266,7 @@ function RecentActivity({ items }: { items: ActivityItem[] }) {
                           {dm.keyword_matched}
                         </span>
                       ) : (
-                        <span className="text-[#8a8a9a] text-xs">any</span>
+                        <span className="text-gray-600 dark:text-gray-300 text-xs">any</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -288,7 +289,7 @@ function RecentActivity({ items }: { items: ActivityItem[] }) {
                         {dm.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-xs text-[#8a8a9a] whitespace-nowrap">
+                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-300 whitespace-nowrap">
                       {formatDistanceToNow(new Date(dm.created_at), { addSuffix: true })}
                     </td>
                   </tr>
@@ -298,22 +299,24 @@ function RecentActivity({ items }: { items: ActivityItem[] }) {
           </div>
 
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-5 py-3 border-t border-white/10">
-              <span className="text-xs text-[#8a8a9a]">
+            <div className="flex items-center justify-between px-5 py-3 border-t" style={{ borderColor: 'var(--surface-3)' }}>
+              <span className="text-xs text-gray-600 dark:text-gray-300">
                 Page {page + 1} of {totalPages}
               </span>
               <div className="flex gap-2">
                 <button
                   onClick={() => setPage((p) => Math.max(0, p - 1))}
                   disabled={page === 0}
-                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium border border-white/10 rounded-lg text-white hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium border rounded-lg text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ borderColor: 'var(--surface-3)' }}
                 >
                   <ChevronLeft className="w-3.5 h-3.5" /> Prev
                 </button>
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                   disabled={page >= totalPages - 1}
-                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium border border-white/10 rounded-lg text-white hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium border rounded-lg text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ borderColor: 'var(--surface-3)' }}
                 >
                   Next <ChevronRight className="w-3.5 h-3.5" />
                 </button>
@@ -322,7 +325,7 @@ function RecentActivity({ items }: { items: ActivityItem[] }) {
           )}
         </>
       ) : (
-        <div className="p-10 text-center text-[#8a8a9a] text-sm">
+        <div className="p-10 text-center text-gray-600 dark:text-gray-300 text-sm">
           No DM activity yet. Connect an account and create an automation to get started.
         </div>
       )}
@@ -334,10 +337,10 @@ function RecentActivity({ items }: { items: ActivityItem[] }) {
 
 function ActiveAutomations({ automations }: { automations: AutomationItem[] }) {
   return (
-    <div className="glass-card rounded-xl border border-white/10 shadow-sm p-5 h-full">
+    <div className="rounded-xl border shadow-sm p-5 h-full" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-semibold text-white">Top Automations</h2>
-        <a href="/dashboard/automations" className="text-xs text-[#1877F2] hover:underline">
+        <h2 className="font-semibold text-gray-900 dark:text-gray-100">Top Automations</h2>
+        <a href="/dashboard/automations" className="text-xs text-[#e85d3a] hover:underline">
           Manage all →
         </a>
       </div>
@@ -346,7 +349,8 @@ function ActiveAutomations({ automations }: { automations: AutomationItem[] }) {
           {automations.map((auto) => (
             <div
               key={auto.id}
-              className="flex items-center gap-3 p-3 bg-[#1a1a2e] rounded-xl hover:bg-[#22223a] transition-colors"
+              className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              style={{ background: 'var(--surface-1)' }}
             >
               <div
                 className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0 ${
@@ -358,7 +362,7 @@ function ActiveAutomations({ automations }: { automations: AutomationItem[] }) {
                 {auto.platform === 'instagram' ? 'IG' : 'FB'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{auto.name}</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{auto.name}</p>
                 <div className="flex items-center gap-1 mt-0.5">
                   {auto.keywords.slice(0, 2).map((kw) => (
                     <span
@@ -369,27 +373,27 @@ function ActiveAutomations({ automations }: { automations: AutomationItem[] }) {
                     </span>
                   ))}
                   {auto.keywords.length > 2 && (
-                    <span className="text-[10px] text-[#8a8a9a]">+{auto.keywords.length - 2}</span>
+                    <span className="text-[10px] text-gray-600 dark:text-gray-300">+{auto.keywords.length - 2}</span>
                   )}
                 </div>
               </div>
               <div className="text-right flex-shrink-0">
-                <p className="text-sm font-bold text-white">{auto.total_dms_sent}</p>
-                <p className="text-[10px] text-[#8a8a9a]">DMs</p>
+                <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{auto.total_dms_sent}</p>
+                <p className="text-[10px] text-gray-600 dark:text-gray-300">DMs</p>
               </div>
               {auto.is_active ? (
                 <ToggleRight className="w-5 h-5 text-[#22c55e] flex-shrink-0" />
               ) : (
-                <ToggleLeft className="w-5 h-5 text-[#5a5a6e] flex-shrink-0" />
+                <ToggleLeft className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
               )}
             </div>
           ))}
         </div>
       ) : (
-        <div className="h-32 flex flex-col items-center justify-center text-[#8a8a9a] text-xs gap-2">
-          <Zap className="w-8 h-8 text-[#5a5a6e]" />
+        <div className="h-32 flex flex-col items-center justify-center text-gray-600 dark:text-gray-300 text-xs gap-2">
+          <Zap className="w-8 h-8 text-gray-400 dark:text-gray-500" />
           <p>No active automations</p>
-          <a href="/dashboard/automations" className="text-[#1877F2] hover:underline">
+          <a href="/dashboard/automations" className="text-[#e85d3a] hover:underline">
             Create one →
           </a>
         </div>
@@ -406,31 +410,35 @@ function QuickActions() {
       href: '/dashboard/automations',
       icon: <Plus className="w-5 h-5" />,
       label: 'New Automation',
-      className: 'shimmer-btn text-white',
+      className: 'text-white',
+      style: { background: 'var(--accent)' },
     },
     {
       href: '/dashboard/giveaways',
       icon: <Gift className="w-5 h-5 text-[#22c55e]" />,
       label: 'Create Giveaway',
-      className: 'glass-card text-[#22c55e] border border-[#22c55e]/30 hover:bg-[#22c55e]/10',
+      className: 'text-[#22c55e] border border-[#22c55e]/30 hover:bg-[#22c55e]/10',
+      style: { background: 'var(--surface-1)' },
     },
     {
       href: '/dashboard/analytics',
       icon: <BarChart3 className="w-5 h-5 text-[#1877F2]" />,
       label: 'View Analytics',
-      className: 'glass-card text-[#1877F2] border border-[#1877F2]/30 hover:bg-[#1877F2]/10',
+      className: 'text-[#1877F2] border border-[#1877F2]/30 hover:bg-[#1877F2]/10',
+      style: { background: 'var(--surface-1)' },
     },
     {
       href: '/dashboard/accounts',
-      icon: <UserPlus className="w-5 h-5 text-[#8a8a9a]" />,
+      icon: <UserPlus className="w-5 h-5 text-gray-600 dark:text-gray-300" />,
       label: 'Add Account',
-      className: 'glass-card text-[#8a8a9a] border border-white/10 hover:bg-white/10',
+      className: 'text-gray-600 dark:text-gray-300 border hover:bg-gray-100 dark:hover:bg-gray-800',
+      style: { background: 'var(--surface-1)', borderColor: 'var(--surface-3)' },
     },
   ]
 
   return (
-    <div className="glass-card rounded-xl border border-white/10 shadow-sm p-5 h-full">
-      <h2 className="font-semibold text-white mb-4">Quick Actions</h2>
+    <div className="rounded-xl border shadow-sm p-5 h-full" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
+      <h2 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">Quick Actions</h2>
       <div className="grid grid-cols-2 gap-3">
         {actions.map((action) => (
           <motion.a
@@ -439,6 +447,7 @@ function QuickActions() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className={`flex flex-col items-center gap-2 p-4 rounded-xl text-center transition-opacity ${action.className}`}
+            style={action.style}
           >
             {action.icon}
             <span className="text-xs font-medium">{action.label}</span>
@@ -490,10 +499,10 @@ export default function DashboardClient({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             Welcome back, {firstName} 👋
           </h1>
-          <p className="text-[#8a8a9a] text-sm mt-0.5">
+          <p className="text-gray-600 dark:text-gray-300 text-sm mt-0.5">
             Here&apos;s what&apos;s happening with your automations
           </p>
         </div>
@@ -501,7 +510,8 @@ export default function DashboardClient({
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           href="/dashboard/accounts"
-          className="flex items-center gap-2 px-4 py-2 glass-card border border-white/10 rounded-lg text-sm font-medium text-white hover:bg-white/10 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white hover:opacity-90 transition-colors"
+          style={{ background: 'var(--accent)' }}
         >
           <Users className="w-4 h-4" />
           Connect Account
@@ -515,10 +525,11 @@ export default function DashboardClient({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="glass-card rounded-xl p-5 border border-white/10 shadow-sm"
+          className="rounded-xl p-5 border shadow-sm"
+          style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}
         >
           <div className="flex items-center justify-between mb-3">
-            <div className="p-2 bg-[#DD2A7B]/20 rounded-lg">
+            <div className="p-2 rounded-lg" style={{ background: 'var(--surface-1)' }}>
               <Zap className="w-5 h-5 text-[#DD2A7B]" />
             </div>
             {totalDmsSent > 0 && (
@@ -527,10 +538,10 @@ export default function DashboardClient({
               </span>
             )}
           </div>
-          <div className="text-3xl font-bold text-white">
+          <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
             <AnimatedNumber value={totalDmsSent} />
           </div>
-          <div className="text-sm text-[#8a8a9a] mt-1">Total DMs Sent</div>
+          <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">Total DMs Sent</div>
         </motion.div>
 
         {/* DMs This Month */}
@@ -538,10 +549,11 @@ export default function DashboardClient({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="glass-card rounded-xl p-5 border border-white/10 shadow-sm"
+          className="rounded-xl p-5 border shadow-sm"
+          style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}
         >
           <div className="flex items-center justify-between mb-3">
-            <div className="p-2 bg-[#1877F2]/20 rounded-lg">
+            <div className="p-2 rounded-lg" style={{ background: 'var(--surface-1)' }}>
               <Clock className="w-5 h-5 text-[#1877F2]" />
             </div>
             {!isUnlimited && (
@@ -551,7 +563,7 @@ export default function DashboardClient({
                     ? 'text-[#FA3E3E]'
                     : dmsPercent > 80
                     ? 'text-[#F7B928]'
-                    : 'text-[#8a8a9a]'
+                    : 'text-gray-600 dark:text-gray-300'
                 }`}
               >
                 {dmsPercent.toFixed(0)}% used
@@ -561,17 +573,17 @@ export default function DashboardClient({
               <span className="text-xs font-medium text-[#22c55e]">Unlimited</span>
             )}
           </div>
-          <div className="text-3xl font-bold text-white">
+          <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
             <AnimatedNumber value={dmsUsed} />
             {!isUnlimited && (
-              <span className="text-base text-[#8a8a9a] font-normal">
+              <span className="text-base text-gray-600 dark:text-gray-300 font-normal">
                 /{dmsLimit.toLocaleString()}
               </span>
             )}
           </div>
-          <div className="text-sm text-[#8a8a9a] mt-1">DMs This Month</div>
+          <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">DMs This Month</div>
           {!isUnlimited && (
-            <div className="mt-2 h-1.5 bg-[#22223a] rounded-full overflow-hidden">
+            <div className="mt-2 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--surface-3)' }}>
               <motion.div
                 className={`h-full rounded-full transition-all duration-700 ${
                   dmsPercent > 95
@@ -593,18 +605,19 @@ export default function DashboardClient({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="glass-card rounded-xl p-5 border border-white/10 shadow-sm"
+          className="rounded-xl p-5 border shadow-sm"
+          style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}
         >
           <div className="flex items-center justify-between mb-3">
-            <div className="p-2 bg-[#22c55e]/20 rounded-lg">
+            <div className="p-2 rounded-lg" style={{ background: 'var(--surface-1)' }}>
               <BarChart3 className="w-5 h-5 text-[#22c55e]" />
             </div>
-            <span className="text-xs text-[#8a8a9a] capitalize">{plan} plan</span>
+            <span className="text-xs text-gray-600 dark:text-gray-300 capitalize">{plan} plan</span>
           </div>
-          <div className="text-3xl font-bold text-white">
+          <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
             <AnimatedNumber value={activeAutomations} />
           </div>
-          <div className="text-sm text-[#8a8a9a] mt-1">Active Automations</div>
+          <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">Active Automations</div>
         </motion.div>
 
         {/* Accounts */}
@@ -612,17 +625,18 @@ export default function DashboardClient({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="glass-card rounded-xl p-5 border border-white/10 shadow-sm"
+          className="rounded-xl p-5 border shadow-sm"
+          style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}
         >
           <div className="flex items-center justify-between mb-3">
-            <div className="p-2 bg-white/10 rounded-lg">
-              <Users className="w-5 h-5 text-[#8a8a9a]" />
+            <div className="p-2 rounded-lg" style={{ background: 'var(--surface-1)' }}>
+              <Users className="w-5 h-5 text-gray-600 dark:text-gray-300" />
             </div>
           </div>
-          <div className="text-3xl font-bold text-white">
+          <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
             <AnimatedNumber value={igAccounts + fbAccounts} />
           </div>
-          <div className="text-sm text-[#8a8a9a] mt-1 flex items-center gap-2 flex-wrap">
+          <div className="text-sm text-gray-600 dark:text-gray-300 mt-1 flex items-center gap-2 flex-wrap">
             {igAccounts > 0 && (
               <span className="text-xs bg-[#DD2A7B]/20 text-[#DD2A7B] border border-[#DD2A7B]/30 px-2 py-0.5 rounded-full">
                 IG ×{igAccounts}

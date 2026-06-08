@@ -110,23 +110,24 @@ export default function BillingPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Billing & Plans</h1>
-        <p className="text-[#8a8a9a] text-sm">Manage your subscription and billing</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Billing & Plans</h1>
+        <p className="text-gray-600 dark:text-gray-300 text-sm">Manage your subscription and billing</p>
       </div>
 
       {/* Current plan */}
-      <div className="glass-card rounded-xl border border-white/10 p-5">
+      <div className="rounded-xl border p-5 shadow-sm" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-sm text-[#8a8a9a] mb-1">Current Plan</div>
-            <div className="text-2xl font-bold text-white capitalize">{currentPlan}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-300 mb-1">Current Plan</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 capitalize">{currentPlan}</div>
           </div>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={openPortal}
             disabled={portalLoading}
-            className="flex items-center gap-2 px-4 py-2 glass-card border border-white/10 rounded-lg text-sm font-medium text-white hover:bg-white/10 disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 border rounded-lg text-sm font-medium text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50"
+            style={{ borderColor: 'var(--surface-3)' }}
           >
             {portalLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
             Manage Subscription
@@ -136,14 +137,14 @@ export default function BillingPage() {
 
       {/* Billing toggle */}
       <div className="flex items-center justify-center gap-4">
-        <span className={`text-sm font-medium ${billingInterval === 'monthly' ? 'text-white' : 'text-[#8a8a9a]'}`}>
+        <span className={`text-sm font-medium ${billingInterval === 'monthly' ? 'text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300'}`}>
           Monthly
         </span>
         <motion.button
           whileTap={{ scale: 0.95 }}
           onClick={() => setBillingInterval(billingInterval === 'monthly' ? 'yearly' : 'monthly')}
           className={`relative w-12 h-6 rounded-full transition-colors ${
-            billingInterval === 'yearly' ? 'bg-[#22c55e]' : 'bg-[#22223a]'
+            billingInterval === 'yearly' ? 'bg-[#22c55e]' : 'bg-gray-300 dark:bg-gray-600'
           }`}
         >
           <motion.span
@@ -152,7 +153,7 @@ export default function BillingPage() {
             }`}
           />
         </motion.button>
-        <span className={`text-sm font-medium ${billingInterval === 'yearly' ? 'text-white' : 'text-[#8a8a9a]'}`}>
+        <span className={`text-sm font-medium ${billingInterval === 'yearly' ? 'text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300'}`}>
           Yearly <span className="text-[#22c55e] text-xs">(-20%)</span>
         </span>
       </div>
@@ -169,11 +170,12 @@ export default function BillingPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className={`glass-card rounded-xl border-2 ${
-                plan.popular ? 'border-[#DD2A7B] shadow-lg' :
+              className={`rounded-xl border-2 shadow-sm ${
+                plan.popular ? 'border-[#DD2A7B]' :
                 isCurrent ? 'border-[#22c55e]' :
-                'border-white/10'
+                ''
               } relative overflow-hidden`}
+              style={{ background: 'var(--surface-0)', borderColor: plan.popular || isCurrent ? undefined : 'var(--surface-3)' }}
             >
               {plan.popular && (
                 <div className="bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white text-xs font-medium text-center py-1">
@@ -187,26 +189,26 @@ export default function BillingPage() {
               )}
 
               <div className="p-5">
-                <h3 className="text-lg font-bold text-white">{plan.name}</h3>
-                <p className="text-sm text-[#8a8a9a] mb-3">{plan.description}</p>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{plan.name}</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">{plan.description}</p>
 
                 <div className="mb-4">
-                  <span className="text-3xl font-bold text-white">
+                  <span className="text-3xl font-bold text-gray-900 dark:text-gray-100">
                     ${price !== undefined ? price : plan.price}
                   </span>
                   {price !== undefined && price > 0 && (
-                    <span className="text-[#8a8a9a] text-sm">/{billingInterval === 'yearly' ? 'mo (billed yearly)' : 'month'}</span>
+                    <span className="text-gray-600 dark:text-gray-300 text-sm">/{billingInterval === 'yearly' ? 'mo (billed yearly)' : 'month'}</span>
                   )}
                 </div>
 
                 <ul className="space-y-2 mb-5">
                   {plan.features.map((f, i) => (
-                    <li key={i} className="flex items-center gap-2 text-sm text-white">
+                    <li key={i} className="flex items-center gap-2 text-sm text-gray-900 dark:text-gray-100">
                       <Check className="w-4 h-4 text-[#22c55e]" /> {f}
                     </li>
                   ))}
                   {plan.limitations.map((f, i) => (
-                    <li key={i} className="flex items-center gap-2 text-sm text-[#8a8a9a]">
+                    <li key={i} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
                       <span className="w-4 h-4 text-center">–</span> {f}
                     </li>
                   ))}
@@ -215,12 +217,13 @@ export default function BillingPage() {
                 {isCurrent ? (
                   <button
                     disabled
-                    className="w-full py-2.5 glass-card border border-[#22c55e]/30 text-[#22c55e] rounded-lg text-sm font-medium cursor-default"
+                    className="w-full py-2.5 border text-[#22c55e] rounded-lg text-sm font-medium cursor-default"
+                    style={{ borderColor: 'var(--surface-3)' }}
                   >
                     Current Plan
                   </button>
                 ) : plan.id === 'free' ? (
-                  <button disabled className="w-full py-2.5 glass-card border border-white/10 text-[#8a8a9a] rounded-lg text-sm font-medium cursor-not-allowed">
+                  <button disabled className="w-full py-2.5 border text-gray-600 dark:text-gray-300 rounded-lg text-sm font-medium cursor-not-allowed" style={{ borderColor: 'var(--surface-3)' }}>
                     Free Forever
                   </button>
                 ) : (
@@ -229,11 +232,12 @@ export default function BillingPage() {
                     whileTap={{ scale: 0.98 }}
                     onClick={() => handleUpgrade(plan.id)}
                     disabled={loading}
-                    className={`w-full py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    className={`w-full py-2.5 rounded-lg text-sm font-medium transition-colors text-white ${
                       plan.popular
-                        ? 'shimmer-btn text-white'
-                        : 'bg-[#1877F2] text-white hover:bg-[#166FE5]'
+                        ? ''
+                        : 'bg-[#1877F2] hover:bg-[#166FE5]'
                     } disabled:opacity-50`}
+                    style={{ background: plan.popular ? 'var(--accent)' : undefined }}
                   >
                     {loading ? <Loader2 className="w-4 h-4 animate-spin inline" /> : `Upgrade to ${plan.name}`}
                   </motion.button>
@@ -244,7 +248,7 @@ export default function BillingPage() {
         })}
       </div>
 
-      <p className="text-center text-xs text-[#8a8a9a]">
+      <p className="text-center text-xs text-gray-600 dark:text-gray-300">
         All paid plans include a 7-day free trial. Cancel anytime.
       </p>
     </div>

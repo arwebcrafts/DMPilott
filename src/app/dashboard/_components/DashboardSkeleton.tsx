@@ -1,5 +1,5 @@
 function Pulse({ className }: { className?: string }) {
-  return <div className={`animate-pulse bg-[#22223a] rounded-lg ${className}`} />
+  return <div className={`animate-pulse rounded-lg ${className}`} style={{ background: 'var(--surface-3)' }} />
 }
 
 export default function DashboardSkeleton() {
@@ -17,7 +17,7 @@ export default function DashboardSkeleton() {
       {/* KPI cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="glass-card rounded-xl p-5 border border-white/10 shadow-sm space-y-3">
+          <div key={i} className="rounded-xl p-5 border shadow-sm space-y-3" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
             <div className="flex justify-between">
               <Pulse className="w-9 h-9" />
               <Pulse className="w-14 h-4" />
@@ -30,14 +30,14 @@ export default function DashboardSkeleton() {
 
       {/* Chart + top posts */}
       <div className="grid grid-cols-1 lg:grid-cols-[65fr_35fr] gap-5">
-        <div className="glass-card rounded-xl p-5 border border-white/10 shadow-sm space-y-3">
+        <div className="rounded-xl p-5 border shadow-sm space-y-3" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
           <div className="flex justify-between">
             <Pulse className="h-5 w-40" />
             <Pulse className="h-7 w-32" />
           </div>
           <Pulse className="h-[220px] w-full rounded-xl" />
         </div>
-        <div className="glass-card rounded-xl p-5 border border-white/10 shadow-sm space-y-3">
+        <div className="rounded-xl p-5 border shadow-sm space-y-3" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
           <Pulse className="h-5 w-40" />
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="flex items-center gap-3">
@@ -51,13 +51,13 @@ export default function DashboardSkeleton() {
 
       {/* Automations + Quick actions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="glass-card rounded-xl p-5 border border-white/10 shadow-sm space-y-3">
+        <div className="rounded-xl p-5 border shadow-sm space-y-3" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
           <Pulse className="h-5 w-36" />
           {Array.from({ length: 3 }).map((_, i) => (
             <Pulse key={i} className="h-14 w-full rounded-xl" />
           ))}
         </div>
-        <div className="glass-card rounded-xl p-5 border border-white/10 shadow-sm space-y-3">
+        <div className="rounded-xl p-5 border shadow-sm space-y-3" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
           <Pulse className="h-5 w-28" />
           <div className="grid grid-cols-2 gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -68,11 +68,11 @@ export default function DashboardSkeleton() {
       </div>
 
       {/* Activity table */}
-      <div className="glass-card rounded-xl border border-white/10 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-white/10">
+      <div className="rounded-xl border shadow-sm overflow-hidden" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
+        <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--surface-3)' }}>
           <Pulse className="h-5 w-40" />
         </div>
-        <div className="divide-y divide-[#22223a]">
+        <div className="divide-y" style={{ borderColor: 'var(--surface-3)' }}>
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="flex items-center gap-4 px-5 py-3">
               <Pulse className="w-7 h-7 rounded-full" />

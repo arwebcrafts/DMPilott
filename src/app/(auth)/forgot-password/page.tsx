@@ -44,16 +44,16 @@ export default function ForgotPasswordPage() {
 
   if (sent) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F0F2F5] px-4">
-        <Card className="w-full max-w-md text-center">
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--background)' }}>
+        <Card className="w-full max-w-md text-center border shadow-xl" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
           <CardHeader>
             <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 bg-[#E8F5E9] rounded-full flex items-center justify-center">
-                <span className="text-3xl">✓</span>
+              <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'var(--surface-1)' }}>
+                <span className="text-3xl text-[#22c55e]">✓</span>
               </div>
             </div>
-            <CardTitle className="text-2xl">Check your email</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-2xl text-gray-900 dark:text-gray-100">Check your email</CardTitle>
+            <CardDescription className="text-gray-600 dark:text-gray-300">
               We sent a password reset link to your email address.
             </CardDescription>
           </CardHeader>
@@ -63,27 +63,34 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F0F2F5] px-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--background)' }}>
+      <Card className="w-full max-w-md border shadow-xl" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
         <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">Reset password</CardTitle>
-          <CardDescription>Enter your email to receive a reset link</CardDescription>
+          <CardTitle className="text-2xl font-bold text-gray-900 dark:text-gray-100">Reset password</CardTitle>
+          <CardDescription className="text-gray-600 dark:text-gray-300">Enter your email to receive a reset link</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {error && (
-              <div className="bg-[#FDECEA] text-[#FA3E3E] text-sm p-3 rounded-md">
+              <div className="bg-red-50 border border-red-200 text-red-600 text-sm p-3 rounded-md dark:bg-red-900/20 dark:border-red-800 dark:text-red-400">
                 {error}
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="you@example.com" {...register('email')} />
-              {errors.email && <p className="text-sm text-[#FA3E3E]">{errors.email.message}</p>}
+              <Label htmlFor="email" className="text-gray-900 dark:text-gray-100">Email</Label>
+              <Input 
+                id="email" 
+                type="email" 
+                placeholder="you@example.com" 
+                {...register('email')} 
+                className="border-gray-300 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-800 focus:border-[#e85d3a]"
+              />
+              {errors.email && <p className="text-sm text-red-600 dark:text-red-400">{errors.email.message}</p>}
             </div>
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] hover:opacity-90 text-white"
+              className="w-full text-white font-semibold"
+              style={{ background: 'var(--accent)' }}
               disabled={loading}
             >
               {loading ? 'Sending...' : 'Send Reset Link'}

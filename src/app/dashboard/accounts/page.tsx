@@ -59,8 +59,8 @@ export default function AccountsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Connected Accounts</h1>
-          <p className="text-[#8a8a9a] text-sm">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Connected Accounts</h1>
+          <p className="text-gray-600 dark:text-gray-300 text-sm">
             {igCount + fbCount} account{igCount + fbCount !== 1 ? 's' : ''} connected
           </p>
         </div>
@@ -86,12 +86,12 @@ export default function AccountsPage() {
 
       {/* Progress bar - hidden since account limits are removed */}
       {false && planLimits.maxAccounts !== Infinity && (
-        <div className="glass-card rounded-lg p-4 border border-white/10">
+        <div className="rounded-lg p-4 border shadow-sm" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
           <div className="flex justify-between text-sm mb-2">
-            <span className="text-[#8a8a9a]">Accounts used</span>
-            <span className="font-medium text-white">{igCount + fbCount} / {planLimits.maxAccounts}</span>
+            <span className="text-gray-600 dark:text-gray-300">Accounts used</span>
+            <span className="font-medium text-gray-900 dark:text-gray-100">{igCount + fbCount} / {planLimits.maxAccounts}</span>
           </div>
-          <div className="h-2 bg-[#22223a] rounded-full overflow-hidden">
+          <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--surface-3)' }}>
             <motion.div
               className="h-full bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] rounded-full"
               initial={{ width: 0 }}
@@ -100,9 +100,9 @@ export default function AccountsPage() {
             />
           </div>
           {igCount + fbCount >= planLimits.maxAccounts && (
-            <p className="text-xs text-[#8a8a9a] mt-2">
+            <p className="text-xs text-gray-600 dark:text-gray-300 mt-2">
               Upgrade to Pro for up to 20 accounts.{' '}
-              <a href="/dashboard/billing" className="text-[#1877F2] hover:underline">Upgrade →</a>
+              <a href="/dashboard/billing" className="text-[#e85d3a] hover:underline">Upgrade →</a>
             </p>
           )}
         </div>
@@ -116,7 +116,8 @@ export default function AccountsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="glass-card rounded-xl border border-white/10 overflow-hidden"
+            className="rounded-xl border overflow-hidden shadow-sm"
+            style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}
           >
             <div className={`h-1 ${account.platform === 'instagram'
               ? 'bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF]'
@@ -135,10 +136,10 @@ export default function AccountsPage() {
                     </div>
                   )}
                   <div>
-                    <div className="font-semibold text-white">
+                    <div className="font-semibold text-gray-900 dark:text-gray-100">
                       {account.display_name || account.username || 'Account'}
                     </div>
-                    <div className="text-sm text-[#8a8a9a]">@{account.username || 'unknown'}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-300">@{account.username || 'unknown'}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
@@ -155,7 +156,7 @@ export default function AccountsPage() {
               </div>
 
               {account.follower_count > 0 && (
-                <p className="text-sm text-[#8a8a9a] mb-3">
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
                   {account.follower_count.toLocaleString()} followers
                 </p>
               )}
@@ -163,13 +164,15 @@ export default function AccountsPage() {
               <div className="flex gap-2">
                 <a
                   href={`/api/meta/connect?platform=${account.platform}`}
-                  className="flex items-center gap-1 px-3 py-1.5 glass-card border border-white/10 rounded-lg text-sm text-[#8a8a9a] hover:bg-white/10 transition-colors"
+                  className="flex items-center gap-1 px-3 py-1.5 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  style={{ borderColor: 'var(--surface-3)' }}
                 >
                   <RefreshCw className="w-3.5 h-3.5" /> Reconnect
                 </a>
                 <button
                   onClick={() => disconnectAccount(account.id)}
-                  className="flex items-center gap-1 px-3 py-1.5 glass-card border border-[#FA3E3E]/30 rounded-lg text-sm text-[#FA3E3E] hover:bg-[#FA3E3E]/10 transition-colors"
+                  className="flex items-center gap-1 px-3 py-1.5 border rounded-lg text-sm text-[#FA3E3E] hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  style={{ borderColor: 'var(--surface-3)' }}
                 >
                   <Trash2 className="w-3.5 h-3.5" /> Disconnect
                 </button>
@@ -185,18 +188,19 @@ export default function AccountsPage() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => connectAccount('instagram')}
-              className="glass-card rounded-xl border-2 border-dashed border-white/20 p-6 hover:border-[#DD2A7B]/50 hover:bg-[#DD2A7B]/10 transition-colors text-left"
+              className="rounded-xl border-2 border-dashed p-6 hover:border-[#DD2A7B]/50 hover:bg-[#DD2A7B]/10 transition-colors text-left"
+              style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}
             >
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] flex items-center justify-center">
                   <Plus className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <div className="font-semibold text-white">Connect Instagram</div>
-                  <div className="text-sm text-[#8a8a9a]">Business or Creator account</div>
+                  <div className="font-semibold text-gray-900 dark:text-gray-100">Connect Instagram</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-300">Business or Creator account</div>
                 </div>
               </div>
-              <p className="text-xs text-[#8a8a9a]">
+              <p className="text-xs text-gray-600 dark:text-gray-300">
                 Powered by Meta&apos;s official API ✓ Secure OAuth connection
               </p>
             </motion.button>
@@ -205,18 +209,19 @@ export default function AccountsPage() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => connectAccount('facebook')}
-              className="glass-card rounded-xl border-2 border-dashed border-white/20 p-6 hover:border-[#1877F2]/50 hover:bg-[#1877F2]/10 transition-colors text-left"
+              className="rounded-xl border-2 border-dashed p-6 hover:border-[#1877F2]/50 hover:bg-[#1877F2]/10 transition-colors text-left"
+              style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}
             >
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-12 h-12 rounded-full bg-[#1877F2] flex items-center justify-center">
                   <Plus className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <div className="font-semibold text-white">Connect Facebook</div>
-                  <div className="text-sm text-[#8a8a9a]">Facebook Page</div>
+                  <div className="font-semibold text-gray-900 dark:text-gray-100">Connect Facebook</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-300">Facebook Page</div>
                 </div>
               </div>
-              <p className="text-xs text-[#8a8a9a]">
+              <p className="text-xs text-gray-600 dark:text-gray-300">
                 Requires a Facebook Page linked to your account
               </p>
             </motion.button>
@@ -226,13 +231,13 @@ export default function AccountsPage() {
 
       {loading && (
         <div className="flex justify-center py-8">
-          <Loader2 className="w-6 h-6 animate-spin text-[#8a8a9a]" />
+          <Loader2 className="w-6 h-6 animate-spin text-gray-400 dark:text-gray-500" />
         </div>
       )}
 
       {/* Help text */}
       {accounts.length === 0 && !loading && (
-        <div className="text-center py-8 text-[#8a8a9a] text-sm">
+        <div className="text-center py-8 text-gray-600 dark:text-gray-300 text-sm">
           <p>Need help connecting? Make sure you have an Instagram Business/Creator account</p>
           <p>or a Facebook Page linked to your profile.</p>
         </div>
