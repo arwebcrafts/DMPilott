@@ -1,81 +1,42 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { ArrowRight, Check } from 'lucide-react';
 import { SectionContainer } from '../shared/SectionContainer';
-import { CTAButton } from '../shared/CTAButton';
 import { EmailCapture } from '../shared/EmailCapture';
 
 export function FinalCTA() {
-  const handleEmailSubmit = async (email: string) => {
-    // TODO: Implement email submission logic
-    console.log('Email submitted:', email);
-  };
-
   return (
-    <SectionContainer variant="dark" padding="xl" id="final-cta">
-      <div className="max-w-4xl mx-auto text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="space-y-8"
-        >
-          <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white">
-            Ready to Turn Comments into Customers?
+    <SectionContainer padding="xl" id="join">
+      <div className="max-w-2xl mx-auto text-center">
+        <div className="mb-8">
+          <p className="text-sm text-gray-500 mb-4">START YOUR DAY</p>
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900 mb-6 leading-tight">
+            When the day starts quiet, the day ends done.
           </h2>
-          
-          <p className="text-xl md:text-2xl text-gray-300 leading-relaxed">
-            Join 500+ creators who are already using DMPilot to automate their Instagram DMs and increase conversions.
+        </div>
+        
+        <div className="bg-gray-50 rounded-2xl p-8 mb-8">
+          <p className="text-gray-600 mb-4">Hi friend,</p>
+          <p className="text-gray-600 mb-4">
+            Most apps want you to do more. <span className="font-semibold text-gray-900">DMPilot wants you to feel done.</span>
           </p>
-
-          {/* Benefits */}
-          <div className="flex flex-wrap justify-center gap-6 text-gray-300">
-            <div className="flex items-center gap-2">
-              <Check className="h-5 w-5 text-green-400" />
-              <span>14-day free trial</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Check className="h-5 w-5 text-green-400" />
-              <span>No credit card required</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Check className="h-5 w-5 text-green-400" />
-              <span>Cancel anytime</span>
-            </div>
+          <p className="text-gray-600 mb-6">
+            Drop your email. We'll send a thoughtful invite when there's room — never a marketing blast, never a countdown.
+          </p>
+          <EmailCapture
+            placeholder="Your email"
+            buttonText="Start your day"
+            className="w-full"
+          />
+          <div className="mt-6">
+            <p className="text-gray-500">With calm,</p>
+            <p className="text-gray-600">— The DMPilot team</p>
           </div>
-
-          {/* Email Capture */}
-          <div className="max-w-md mx-auto">
-            <EmailCapture
-              onSubmit={handleEmailSubmit}
-              placeholder="Enter your email"
-              buttonText="Start Free Trial"
-              successMessage="Check your inbox to get started!"
-              className="w-full"
-            />
-          </div>
-
-          {/* Secondary CTA */}
-          <div className="pt-4">
-            <CTAButton
-              variant="outline"
-              size="lg"
-              href="/signup"
-              className="border-white text-white hover:bg-white hover:text-gray-900"
-            >
-              Create Account
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </CTAButton>
-          </div>
-
-          {/* Trust Badge */}
-          <div className="pt-8 border-t border-gray-700">
-            <p className="text-sm text-gray-400">
-              Trusted by creators worldwide. Your data is secure and encrypted.
-            </p>
-          </div>
-        </motion.div>
+        </div>
+        
+        <p className="text-sm text-gray-500">
+          JOIN THE CALM CREW · ALREADY IN BETA · QUIET ON PURPOSE
+        </p>
       </div>
     </SectionContainer>
   );

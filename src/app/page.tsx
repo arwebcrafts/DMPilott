@@ -1,10 +1,8 @@
 import dynamic from 'next/dynamic';
 import { Metadata } from 'next';
 import { Navigation } from '@/components/landing/shared/Navigation';
+import { SideNavigation } from '@/components/landing/shared/SideNavigation';
 import { Hero } from '@/components/landing/sections/Hero';
-import { Problem } from '@/components/landing/sections/Problem';
-import { Solution } from '@/components/landing/sections/Solution';
-import { ProductDemo } from '@/components/landing/sections/ProductDemo';
 
 export const metadata: Metadata = {
   title: 'DMPilot - Turn Instagram Comments into Customers with AI-Powered DM Automation',
@@ -72,7 +70,22 @@ const jsonLd = {
 };
 
 // Lazy load heavy sections below the fold
-const TargetAudience = dynamic(() => import('@/components/landing/sections/TargetAudience').then(m => m.TargetAudience), {
+const SoundFamiliar = dynamic(() => import('@/components/landing/sections/SoundFamiliar').then(m => m.SoundFamiliar), {
+  loading: () => <div className="h-96 bg-gray-100 animate-pulse" />,
+  ssr: true,
+});
+
+const CostOfManual = dynamic(() => import('@/components/landing/sections/CostOfManual').then(m => m.CostOfManual), {
+  loading: () => <div className="h-96 bg-gray-100 animate-pulse" />,
+  ssr: true,
+});
+
+const WhatDMPilotDoes = dynamic(() => import('@/components/landing/sections/WhatDMPilotDoes').then(m => m.WhatDMPilotDoes), {
+  loading: () => <div className="h-96 bg-gray-100 animate-pulse" />,
+  ssr: true,
+});
+
+const DayInDMPilot = dynamic(() => import('@/components/landing/sections/DayInDMPilot').then(m => m.DayInDMPilot), {
   loading: () => <div className="h-96 bg-gray-100 animate-pulse" />,
   ssr: true,
 });
@@ -82,12 +95,17 @@ const Values = dynamic(() => import('@/components/landing/sections/Values').then
   ssr: true,
 });
 
-const Comparison = dynamic(() => import('@/components/landing/sections/Comparison').then(m => m.Comparison), {
+const TargetAudience = dynamic(() => import('@/components/landing/sections/TargetAudience').then(m => m.TargetAudience), {
   loading: () => <div className="h-96 bg-gray-100 animate-pulse" />,
   ssr: true,
 });
 
-const Integrations = dynamic(() => import('@/components/landing/sections/Integrations').then(m => m.Integrations), {
+const HonestComparison = dynamic(() => import('@/components/landing/sections/HonestComparison').then(m => m.HonestComparison), {
+  loading: () => <div className="h-96 bg-gray-100 animate-pulse" />,
+  ssr: true,
+});
+
+const MeetsYouWhere = dynamic(() => import('@/components/landing/sections/MeetsYouWhere').then(m => m.MeetsYouWhere), {
   loading: () => <div className="h-96 bg-gray-100 animate-pulse" />,
   ssr: true,
 });
@@ -125,16 +143,18 @@ export default function LandingPage() {
       >
         Skip to main content
       </a>
-      <main id="main-content" className="light-theme">
+      <main id="main-content">
         <Navigation />
+        <SideNavigation />
         <Hero />
-        <Problem />
-        <Solution />
-        <ProductDemo />
-        <TargetAudience />
+        <SoundFamiliar />
+        <CostOfManual />
+        <WhatDMPilotDoes />
+        <DayInDMPilot />
         <Values />
-        <Comparison />
-        <Integrations />
+        <TargetAudience />
+        <HonestComparison />
+        <MeetsYouWhere />
         <SocialProof />
         <FAQ />
         <FinalCTA />

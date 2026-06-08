@@ -3,76 +3,76 @@
 import { motion } from 'framer-motion';
 import { SectionContainer } from '../shared/SectionContainer';
 import { SectionHeader } from '../shared/SectionHeader';
-import { TestimonialCard } from '../shared/TestimonialCard';
-import { StatisticDisplay } from '../data-viz/StatisticDisplay';
 
 export function SocialProof() {
   const testimonials = [
     {
-      quote: 'DMPilot transformed how I handle Instagram DMs. I went from spending 4 hours a day on DMs to just 30 minutes. My conversion rate increased by 250%.',
-      author: 'Sarah Chen',
+      letter: 'S',
+      name: 'Sarah Chen',
+      handle: '@sarahcreates',
       role: 'E-commerce Creator',
-      avatar: '/images/avatars/sarah.jpg',
-      rating: 5,
+      quote: 'First week with DMPilot: shipped 3 products, missed zero DMs, closed the laptop at 6. I hadn\'t done that in two years.',
     },
     {
-      quote: 'The AI responses feel so personal that my followers can\'t tell they\'re automated. I\'ve booked 3x more consultations since using DMPilot.',
-      author: 'Marcus Johnson',
+      letter: 'D',
+      name: 'Devon Park',
+      handle: '@devonp',
       role: 'Business Coach',
-      avatar: '/images/avatars/marcus.jpg',
-      rating: 5,
+      quote: 'Replaced manual DMs, my response templates, and the spreadsheet I was using to track conversations. One tab.',
     },
     {
-      quote: 'As a course creator, responding to every inquiry was impossible. DMPilot handles it all while I focus on creating content. Game changer.',
-      author: 'Emily Rodriguez',
-      role: 'Course Creator',
-      avatar: '/images/avatars/emily.jpg',
-      rating: 5,
+      letter: 'M',
+      name: 'Maya Reyes',
+      handle: '@maya_writes',
+      role: 'Writer & parent',
+      quote: 'Voice capture between drop-off and coffee. The DMs actually showed up later. Magical.',
     },
-  ];
-
-  const statistics = [
-    { value: 500, label: 'Active Creators', suffix: '+' },
-    { value: 2.5, label: 'Million DMs Automated', suffix: 'M' },
-    { value: 340, label: 'Average Conversion Increase', suffix: '%' },
-    { value: 4.9, label: 'Average Rating', suffix: '/5' },
+    {
+      letter: 'R',
+      name: 'Rohan Iyer',
+      handle: '@rohaniyer',
+      role: 'PM at series-B',
+      quote: 'Instagram went quiet for the first time since onboarding.',
+    },
+    {
+      letter: 'L',
+      name: 'Lina Sato',
+      handle: '@lina.sato',
+      role: 'Indie illustrator',
+      quote: 'I forgot what "feeling done" felt like. DMPilot gave it back, on a Tuesday.',
+    },
   ];
 
   return (
-    <SectionContainer variant="light" padding="xl" id="social-proof">
+    <SectionContainer padding="xl" id="social-proof">
       <SectionHeader
-        title="Trusted by 500+ Creators"
-        subtitle="See what our users are saying"
-        description="Join creators who are already using DMPilot to turn comments into customers."
+        title="From the Calm Crew"
+        subtitle="Already in beta"
+        description="Five creators who finished their day feeling done."
         align="center"
         size="lg"
       />
 
-      {/* Statistics */}
-      <StatisticDisplay statistics={statistics} className="mb-16" />
-
       {/* Testimonials */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {testimonials.map((testimonial, index) => (
-          <TestimonialCard key={index} {...testimonial} />
+      <div className="space-y-8 max-w-3xl mx-auto">
+        {testimonials.map((testimonial) => (
+          <div key={testimonial.letter} className="flex gap-6 items-start">
+            <div className="flex-shrink-0 w-16 h-16 bg-gray-900 text-white rounded-full flex items-center justify-center text-2xl font-bold">
+              {testimonial.letter}
+            </div>
+            <div className="flex-1">
+              <p className="text-lg text-gray-900 mb-4">"{testimonial.quote}"</p>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-gray-900">{testimonial.name}</span>
+                <span className="text-gray-400">@</span>
+                <span className="text-gray-600">{testimonial.handle}</span>
+                <span className="text-gray-400">·</span>
+                <span className="text-gray-600">{testimonial.role}</span>
+              </div>
+            </div>
+          </div>
         ))}
       </div>
-
-      {/* Logos Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        className="mt-16 text-center"
-      >
-        <p className="text-sm text-gray-500 mb-8">Used by creators from</p>
-        <div className="flex flex-wrap justify-center items-center gap-8 opacity-50">
-          <div className="text-2xl font-bold text-gray-400">Shopify</div>
-          <div className="text-2xl font-bold text-gray-400">Teachable</div>
-          <div className="text-2xl font-bold text-gray-400">Kajabi</div>
-          <div className="text-2xl font-bold text-gray-400">Gumroad</div>
-        </div>
-      </motion.div>
     </SectionContainer>
   );
 }

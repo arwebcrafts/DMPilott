@@ -7,7 +7,7 @@ import { CTAButton } from './CTAButton';
 import { cn } from '@/lib/utils';
 
 interface EmailCaptureProps {
-  onSubmit: (email: string) => Promise<void>;
+  onSubmit?: (email: string) => Promise<void>;
   placeholder?: string;
   buttonText?: string;
   successMessage?: string;
@@ -16,8 +16,8 @@ interface EmailCaptureProps {
 
 export function EmailCapture({
   onSubmit,
-  placeholder = 'Enter your email',
-  buttonText = 'Get Started',
+  placeholder = 'Your email',
+  buttonText = 'Start your day',
   successMessage = "You're on the list!",
   className,
 }: EmailCaptureProps) {
@@ -38,21 +38,23 @@ export function EmailCapture({
 
     setIsSubmitting(true);
     try {
-      const response = await fetch('/api/waitlist', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
+      if (onSubmit) {
+        const response = await fetch('/api/waitlist', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email }),
+        });
 
-      const data = await response.json();
+        const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to submit');
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to submit');
+        }
+
+        await onSubmit(email);
       }
-
-      await onSubmit(email);
       setIsSuccess(true);
       setEmail('');
     } catch (err) {
@@ -65,26 +67,24 @@ export function EmailCapture({
   return (
     <form onSubmit={handleSubmit} className={cn('w-full max-w-md', className)}>
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder={placeholder}
-            disabled={isSubmitting || isSuccess}
-            className={cn(
-              'w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300',
-              'focus:ring-2 focus:ring-blue-500 focus:border-transparent',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
-              'transition-all duration-200'
-            )}
-          />
-        </div>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder={placeholder}
+          disabled={isSubmitting || isSuccess}
+          className={cn(
+            'flex-1 px-5 py-4 rounded-lg border border-gray-300',
+            'focus:border-gray-900 focus:ring-2 focus:ring-gray-900 outline-none',
+            'text-gray-900 placeholder-gray-400',
+            'disabled:opacity-50 disabled:cursor-not-allowed',
+            'transition-all duration-200'
+          )}
+        />
         <CTAButton
           isLoading={isSubmitting}
           disabled={isSuccess}
-          className="sm:w-auto"
+          className="sm:w-auto whitespace-nowrap"
         >
           {buttonText}
         </CTAButton>

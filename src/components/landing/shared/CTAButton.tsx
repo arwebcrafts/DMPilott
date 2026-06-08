@@ -16,10 +16,10 @@ interface CTAButtonProps {
 }
 
 const variants = {
-  primary: 'bg-blue-600 text-white hover:bg-blue-700',
-  secondary: 'bg-gray-900 text-white hover:bg-gray-800',
-  outline: 'border-2 border-gray-900 text-gray-900 hover:bg-gray-50',
-  ghost: 'text-gray-900 hover:bg-gray-100',
+  primary: 'bg-slate-900 text-white hover:bg-slate-800',
+  secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200',
+  outline: 'border-2 border-gray-300 text-gray-900 hover:bg-gray-50 bg-transparent',
+  ghost: 'text-gray-700 hover:bg-gray-100 border-0 bg-transparent',
 };
 
 const sizes = {

@@ -38,13 +38,24 @@ export function FAQ() {
 
   return (
     <SectionContainer padding="xl" id="faq">
-      <SectionHeader
-        title="Frequently Asked Questions"
-        subtitle="Got questions? We've got answers"
-        description="Everything you need to know about DMPilot. Can't find what you're looking for? Contact our support team."
-        align="center"
-        size="lg"
-      />
+      <div className="text-center mb-12">
+        <div className="inline-flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center">
+            <span className="text-white font-bold">D</span>
+          </div>
+          <div className="text-left">
+            <div className="font-semibold text-gray-900">DMPilot</div>
+            <div className="text-sm text-gray-500">Online · Usually replies instantly</div>
+          </div>
+        </div>
+        <SectionHeader
+          title="Ask away."
+          subtitle="Common questions"
+          description="Honest answers, no marketing-speak."
+          align="center"
+          size="lg"
+        />
+      </div>
 
       <div className="max-w-3xl mx-auto space-y-4" role="region" aria-label="Frequently asked questions">
         {faqs.map((faq, index) => (
