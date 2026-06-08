@@ -245,8 +245,26 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
   const automation = automations[0]
   console.log('[Message] Found auto-reply automation:', automation.name)
 
+  // Fetch sender username for personalization
+  let senderUsername = null
+  try {
+    const token = decryptToken(account.access_token_encrypted)
+    const senderInfoRes = await axios.get(`https://graph.instagram.com/${senderId}`, {
+      params: { fields: 'username', access_token: token },
+      timeout: 5000,
+    })
+    senderUsername = senderInfoRes.data?.username
+    console.log('[Message] Sender username:', senderUsername)
+  } catch (err: any) {
+    console.log('[Message] Could not fetch sender username:', err?.response?.data?.error?.message || err?.message)
+  }
+
+  // Personalize message with variables
+  const autoReply = (automation.dm_message || "Thanks for your message! We'll get back to you soon. 👋")
+    .replace(/{name}/g, senderUsername || 'there')
+    .replace(/{username}/g, senderUsername ? `@${senderUsername}` : 'user')
+
   // Send auto-reply
-  const autoReply = automation.dm_message || "Thanks for your message! We'll get back to you soon. 👋"
   await sendInstagramDm({
     account,
     recipientId: senderId,

@@ -441,10 +441,7 @@ function CreateAutomationModal({
             />
             <div className="flex justify-between mt-1">
               <p className="text-xs text-[#8a8a9a]">
-                {triggerType === 'dm_received'
-                  ? 'This message is sent automatically whenever someone DMs this account.'
-                  : 'Use {name} for their name, {username} for @handle'
-                }
+                Use {'{name}'} for their name, {'{username}'} for @handle. Links work in DMs.
               </p>
               <span className="text-xs text-[#8a8a9a]">{dmMessage.length}/1000</span>
             </div>
