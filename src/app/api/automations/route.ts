@@ -21,12 +21,16 @@ export async function GET() {
 
 // POST /api/automations - create new automation
 export async function POST(request: Request) {
+  console.log('[Automation] ===== CREATE AUTOMATION START =====')
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
+    console.log('[Automation] ❌ Unauthorized - no user found')
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  console.log('[Automation] User ID:', user.id)
 
   const body = await request.json()
   const {
@@ -42,17 +46,32 @@ export async function POST(request: Request) {
     sendDelaySeconds,
   } = body
 
+  console.log('[Automation] Request body:', {
+    accountId,
+    name,
+    platform,
+    triggerType,
+    keywords,
+    dmMessage: dmMessage?.substring(0, 50) + '...',
+    dmVideoUrl,
+    commentReplyEnabled,
+    sendDelaySeconds,
+  })
+
   // Validate required fields
   if (!accountId || !platform || !triggerType || !dmMessage) {
+    console.log('[Automation] ❌ Missing required fields')
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
 
   const validTriggerTypes = ['any_comment', 'comment_keyword', 'dm_received', 'story_mention']
   if (!validTriggerTypes.includes(triggerType)) {
+    console.log('[Automation] ❌ Invalid trigger type:', triggerType)
     return NextResponse.json({ error: 'Invalid trigger type' }, { status: 400 })
   }
 
   if (triggerType === 'comment_keyword' && (!keywords || keywords.length === 0)) {
+    console.log('[Automation] ❌ No keywords provided for keyword trigger')
     return NextResponse.json({ error: 'At least one keyword is required' }, { status: 400 })
   }
 
@@ -60,20 +79,36 @@ export async function POST(request: Request) {
     typeof dmVideoUrl === 'string' && dmVideoUrl.trim().length > 0 ? dmVideoUrl.trim() : null
 
   if (normalizedVideoUrl && !/^https?:\/\//i.test(normalizedVideoUrl)) {
+    console.log('[Automation] ❌ Invalid video URL format')
     return NextResponse.json({ error: 'DM video URL must start with http:// or https://' }, { status: 400 })
   }
 
-  // Check account belongs to user
-  const { data: account } = await supabase
+  // Check account belongs to user and get full details
+  console.log('[Automation] Fetching account details for account_id:', accountId)
+  const { data: account, error: accountError } = await supabase
     .from('connected_accounts')
-    .select('id')
+    .select('*')
     .eq('id', accountId)
     .eq('user_id', user.id)
     .single()
 
-  if (!account) {
+  if (accountError) {
+    console.log('[Automation] ❌ Account query error:', accountError.message)
     return NextResponse.json({ error: 'Account not found' }, { status: 404 })
   }
+
+  if (!account) {
+    console.log('[Automation] ❌ Account not found for account_id:', accountId)
+    return NextResponse.json({ error: 'Account not found' }, { status: 404 })
+  }
+
+  console.log('[Automation] ✓ Account found:', {
+    id: account.id,
+    username: account.username,
+    platform: account.platform,
+    platform_account_id: account.platform_account_id,
+    is_active: account.is_active,
+  })
 
   const { data: automation, error } = await supabase
     .from('automations')
@@ -94,8 +129,18 @@ export async function POST(request: Request) {
     .single()
 
   if (error) {
+    console.log('[Automation] ❌ Failed to create automation:', error.message)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
+
+  console.log('[Automation] ✓ Automation created successfully:', {
+    id: automation.id,
+    name: automation.name,
+    account_id: automation.account_id,
+    platform: automation.platform,
+    trigger_type: automation.trigger_type,
+  })
+  console.log('[Automation] ===== CREATE AUTOMATION END =====')
 
   return NextResponse.json({ automation }, { status: 201 })
 }

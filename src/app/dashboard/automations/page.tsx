@@ -289,7 +289,7 @@ function CreateAutomationModal({
         accountId,
         name: triggerType === 'dm_received'
           ? 'DM auto-reply'
-          : `${triggerType.replace('_', ' ')} - ${keywords[0] || 'auto}`,
+          : `${triggerType.replace('_', ' ')} - ${keywords[0] || 'auto'}`,
         platform,
         triggerType,
         keywords: triggerType === 'comment_keyword' ? keywords : [],

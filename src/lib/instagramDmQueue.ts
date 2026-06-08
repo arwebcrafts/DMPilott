@@ -310,9 +310,10 @@ export async function processQueuedInstagramDmsForAccount(
         })
         if (!result.success) {
           // Facebook error 551: User cannot be messaged (hasn't messaged page first)
+          // Facebook error 10: Message sent outside 24-hour window
           // Fallback to public comment reply
-          if (result.error?.includes('551') && log.comment_id) {
-            console.log('[Queue] Facebook DM blocked (551), attempting public comment reply')
+          if ((result.error?.includes('551') || result.error?.includes('10')) && log.comment_id) {
+            console.log('[Queue] Facebook DM blocked (551/10), attempting public comment reply')
             const replyResult = await sendFacebookCommentReply({
               account: resolvedAccount,
               commentId: log.comment_id,
@@ -323,7 +324,8 @@ export async function processQueuedInstagramDmsForAccount(
               dmSent = true
             } else {
               console.log('[Queue] Comment reply failed:', replyResult.error)
-              throw new Error(result.error)
+              // Throw with combined error info
+              throw new Error(`DM blocked (${result.error}) and comment reply failed (${replyResult.error})`)
             }
           } else {
             throw new Error(result.error)
