@@ -260,16 +260,26 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
   }
 
   // Personalize message with variables
-  const autoReply = (automation.dm_message || "Thanks for your message! We'll get back to you soon. 👋")
+  let autoReply = (automation.dm_message || "Thanks for your message! We'll get back to you soon. 👋")
     .replace(/{name}/g, senderUsername || 'there')
     .replace(/{username}/g, senderUsername ? `@${senderUsername}` : 'user')
+
+  // Append follow links if configured
+  if (automation.follow_facebook_url || automation.follow_instagram_url) {
+    autoReply += '\n\n'
+    if (automation.follow_facebook_url) {
+      autoReply += `👉 Follow us on Facebook: ${automation.follow_facebook_url}\n`
+    }
+    if (automation.follow_instagram_url) {
+      autoReply += `👉 Follow us on Instagram: ${automation.follow_instagram_url}`
+    }
+  }
 
   // Send auto-reply
   await sendInstagramDm({
     account,
     recipientId: senderId,
     message: autoReply,
-    videoUrl: automation.dm_video_url,
   })
 
   // Increment DM counter
@@ -582,7 +592,7 @@ async function handleFacebookComment(pageId: string, value: any, supabase: any) 
   console.log('[Facebook Comment] Queueing DM for', commenterName)
   const personalizedMessage = matchedAutomation.dm_message
     .replace(/{name}/g, commenterName || 'there')
-    .replace(/{username}/g, commenterName || 'user')
+    .replace(/{username}/g, commenterName || 'there')
 
   console.log('[Facebook Comment] DM message:', personalizedMessage)
   console.log('[Facebook Comment] Comment ID:', commentId)
@@ -666,12 +676,43 @@ async function handleFacebookMessage(pageId: string, messaging: any, supabase: a
   const automation = automations[0]
   console.log('[Facebook Message] Found auto-reply automation:', automation.name)
 
+  // Fetch sender name for personalization
+  let senderName = null
+  try {
+    const token = decryptToken(account.access_token_encrypted)
+    const senderInfoRes = await axios.get(`https://graph.facebook.com/v19.0/${senderId}`, {
+      params: { fields: 'first_name,last_name,name', access_token: token },
+      timeout: 5000,
+    })
+    senderName = senderInfoRes.data?.name || senderInfoRes.data?.first_name
+    console.log('[Facebook Message] Sender name:', senderName)
+  } catch (err: any) {
+    console.log('[Facebook Message] Could not fetch sender name:', err?.response?.data?.error?.message || err?.message)
+    // Fallback: Use senderId if name fetch fails
+    senderName = `User ${senderId?.substring(0, 8)}`
+    console.log('[Facebook Message] Using fallback name:', senderName)
+  }
+
+  // Personalize message with variables
+  let autoReply = (automation.dm_message || "Thanks for your message! We'll get back to you soon. 👋")
+    .replace(/{name}/g, senderName || 'there')
+    .replace(/{username}/g, senderName || 'there')
+
+  // Append follow links if configured
+  if (automation.follow_facebook_url || automation.follow_instagram_url) {
+    autoReply += '\n\n'
+    if (automation.follow_facebook_url) {
+      autoReply += `👉 Follow us on Facebook: ${automation.follow_facebook_url}\n`
+    }
+    if (automation.follow_instagram_url) {
+      autoReply += `👉 Follow us on Instagram: ${automation.follow_instagram_url}`
+    }
+  }
+
   // Send auto-reply
-  const autoReply = automation.dm_message || "Thanks for your message! We'll get back to you soon. 👋"
   await sendFacebookDm({
     account,
     recipientId: senderId,
     message: autoReply,
-    videoUrl: automation.dm_video_url,
   })
 }

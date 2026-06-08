@@ -40,7 +40,8 @@ export async function POST(request: Request) {
     triggerType,
     keywords,
     dmMessage,
-    dmVideoUrl,
+    followFacebookUrl,
+    followInstagramUrl,
     commentReplyEnabled,
     commentReplyText,
     sendDelaySeconds,
@@ -53,7 +54,8 @@ export async function POST(request: Request) {
     triggerType,
     keywords,
     dmMessage: dmMessage?.substring(0, 50) + '...',
-    dmVideoUrl,
+    followFacebookUrl,
+    followInstagramUrl,
     commentReplyEnabled,
     sendDelaySeconds,
   })
@@ -73,14 +75,6 @@ export async function POST(request: Request) {
   if (triggerType === 'comment_keyword' && (!keywords || keywords.length === 0)) {
     console.log('[Automation] ❌ No keywords provided for keyword trigger')
     return NextResponse.json({ error: 'At least one keyword is required' }, { status: 400 })
-  }
-
-  const normalizedVideoUrl =
-    typeof dmVideoUrl === 'string' && dmVideoUrl.trim().length > 0 ? dmVideoUrl.trim() : null
-
-  if (normalizedVideoUrl && !/^https?:\/\//i.test(normalizedVideoUrl)) {
-    console.log('[Automation] ❌ Invalid video URL format')
-    return NextResponse.json({ error: 'DM video URL must start with http:// or https://' }, { status: 400 })
   }
 
   // Check account belongs to user and get full details
@@ -120,7 +114,8 @@ export async function POST(request: Request) {
       trigger_type: triggerType,
       keywords: keywords || [],
       dm_message: dmMessage,
-      dm_video_url: normalizedVideoUrl,
+      follow_facebook_url: followFacebookUrl || null,
+      follow_instagram_url: followInstagramUrl || null,
       comment_reply_enabled: commentReplyEnabled || false,
       comment_reply_text: commentReplyText,
       send_delay_seconds: sendDelaySeconds || 0,

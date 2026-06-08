@@ -94,32 +94,14 @@ export async function sendInstagramDm(params: {
   recipientId: string
   message: string
   commentId?: string | null
-  videoUrl?: string | null
 }) {
-  const { account, recipientId, message, commentId, videoUrl } = params
+  const { account, recipientId, message, commentId } = params
   const recipient = commentId ? { comment_id: commentId } : { id: recipientId }
 
   console.log('[DM] Sending DM to', recipientId, 'from account', account.username)
   console.log('[DM] Message:', message?.substring(0, 50) + '...')
 
-  // Meta allows one private reply per comment. If a video URL is configured,
-  // send video attachment as the primary message for comment-triggered outreach.
-  if (videoUrl) {
-    console.log('[DM] Sending with video attachment')
-    await sendWithHostAndIdFallback(account, {
-      recipient,
-      message: {
-        attachment: {
-          type: 'video',
-          payload: { url: videoUrl },
-        },
-      },
-    })
-    console.log('[DM] ✓ DM with video sent successfully')
-    return
-  }
-
-  console.log('[DM] Sending text message')
+  // Send text message (video/website links can be included in the text)
   await sendWithHostAndIdFallback(account, {
     recipient,
     message: { text: message },
@@ -131,26 +113,14 @@ export async function sendFacebookDm(params: {
   account: ConnectedAccount
   recipientId: string
   message: string
-  videoUrl?: string | null
 }): Promise<{ success: boolean; error?: string }> {
-  const { account, recipientId, message, videoUrl } = params
+  const { account, recipientId, message } = params
   const accessToken = decryptToken(account.access_token_encrypted)
 
   const requestBody: any = {
     recipient: { id: recipientId },
-    message: {},
+    message: { text: message },
     messaging_type: 'RESPONSE',
-  }
-
-  if (videoUrl) {
-    requestBody.message = {
-      attachment: {
-        type: 'video',
-        payload: { url: videoUrl },
-      },
-    }
-  } else {
-    requestBody.message = { text: message }
   }
 
   try {
@@ -319,7 +289,6 @@ export async function processQueuedInstagramDmsForAccount(
           account: resolvedAccount,
           recipientId: log.commenter_platform_id,
           message: messageToSend,
-          videoUrl: automation.dm_video_url,
         })
         if (!result.success) {
           // Facebook error 551: User cannot be messaged (hasn't messaged page first)
@@ -352,7 +321,6 @@ export async function processQueuedInstagramDmsForAccount(
           recipientId: log.commenter_platform_id,
           commentId: log.comment_id,
           message: messageToSend,
-          videoUrl: automation.dm_video_url,
         })
         dmSent = true
       }

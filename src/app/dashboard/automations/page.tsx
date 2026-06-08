@@ -244,7 +244,8 @@ function CreateAutomationModal({
   const [keywords, setKeywords] = useState<string[]>([])
   const [keywordInput, setKeywordInput] = useState('')
   const [dmMessage, setDmMessage] = useState('')
-  const [dmVideoUrl, setDmVideoUrl] = useState('')
+  const [followFacebookUrl, setFollowFacebookUrl] = useState('')
+  const [followInstagramUrl, setFollowInstagramUrl] = useState('')
   const [commentReplyEnabled, setCommentReplyEnabled] = useState(true)
   const [commentReplyText, setCommentReplyText] = useState('Check your DMs! 📩')
   const [loading, setLoading] = useState(false)
@@ -294,7 +295,8 @@ function CreateAutomationModal({
         triggerType,
         keywords: triggerType === 'comment_keyword' ? keywords : [],
         dmMessage,
-        dmVideoUrl: dmVideoUrl.trim() ? dmVideoUrl.trim() : null,
+        followFacebookUrl: followFacebookUrl.trim() || null,
+        followInstagramUrl: followInstagramUrl.trim() || null,
         commentReplyEnabled,
         commentReplyText: commentReplyEnabled ? commentReplyText : null,
       }),
@@ -447,22 +449,33 @@ function CreateAutomationModal({
             </div>
           </div>
 
-          {/* Optional video attachment */}
-          <div>
-            <label className="block text-sm font-medium text-white mb-2">
-              DM Video URL <span className="text-[#8a8a9a]">(optional)</span>
-            </label>
-            <input
-              type="url"
-              value={dmVideoUrl}
-              onChange={e => setDmVideoUrl(e.target.value)}
-              placeholder="https://cdn.example.com/video.mp4"
-              className="w-full px-3 py-2 glass-card border border-white/10 rounded-lg text-sm text-white focus:ring-2 focus:ring-[#DD2A7B]/50 bg-transparent placeholder:text-[#5a5a6e]"
-            />
-            <p className="text-xs text-[#8a8a9a] mt-1">
-              If set, Instagram will send this video in DM for each matched comment.
-            </p>
-          </div>
+          {/* Follow Links */}
+          {triggerType === 'dm_received' && (
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">
+                Ask user to follow (optional)
+              </label>
+              <div className="space-y-2">
+                <input
+                  type="url"
+                  value={followFacebookUrl}
+                  onChange={e => setFollowFacebookUrl(e.target.value)}
+                  placeholder="Facebook page URL (e.g., https://facebook.com/yourpage)"
+                  className="w-full px-3 py-2 glass-card border border-white/10 rounded-lg text-sm text-white focus:ring-2 focus:ring-[#DD2A7B]/50 bg-transparent placeholder:text-[#5a5a6e]"
+                />
+                <input
+                  type="url"
+                  value={followInstagramUrl}
+                  onChange={e => setFollowInstagramUrl(e.target.value)}
+                  placeholder="Instagram account URL (e.g., https://instagram.com/youraccount)"
+                  className="w-full px-3 py-2 glass-card border border-white/10 rounded-lg text-sm text-white focus:ring-2 focus:ring-[#DD2A7B]/50 bg-transparent placeholder:text-[#5a5a6e]"
+                />
+              </div>
+              <p className="text-xs text-[#8a8a9a] mt-1">
+                Add follow links to your DM message
+              </p>
+            </div>
+          )}
 
           {/* Auto-reply on comment */}
           {triggerType !== 'dm_received' && (
