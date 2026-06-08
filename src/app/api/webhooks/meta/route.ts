@@ -253,6 +253,14 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
     message: autoReply,
     videoUrl: automation.dm_video_url,
   })
+
+  // Increment DM counter
+  await supabase
+    .from('automations')
+    .update({ total_dms_sent: automation.total_dms_sent + 1 })
+    .eq('id', automation.id)
+
+  console.log('[Message] ✓ DM counter incremented for automation:', automation.name)
 }
 
 async function handleInstagramComment(igAccountId: string, value: any, supabase: any) {
