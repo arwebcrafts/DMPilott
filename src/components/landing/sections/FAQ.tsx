@@ -26,7 +26,7 @@ export function FAQ() {
           </div>
           <div className="flex-1">
             <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>DMPilot</div>
-            <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Online · Usually replies instantly</div>
+            <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Online · Usually replies instantly</div>
           </div>
         </div>
 

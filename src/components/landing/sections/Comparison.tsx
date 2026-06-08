@@ -39,7 +39,7 @@ export function Comparison() {
           >
             <div className="text-center mb-6 pb-4 border-b-2" style={{ borderColor: 'var(--accent)' }}>
               <h3 className="text-2xl font-bold" style={{ color: 'var(--accent)', fontFamily: 'var(--font-display)' }}>DMPilot</h3>
-              <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>Automated & Controlled</p>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Automated & Controlled</p>
             </div>
             <div className="space-y-3">
               {features.map((feature, index) => (
@@ -69,7 +69,7 @@ export function Comparison() {
           >
             <div className="text-center mb-6 pb-4 border-b-2" style={{ borderColor: 'var(--surface-3)' }}>
               <h3 className="text-2xl font-bold" style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>Manual</h3>
-              <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>Time-Intensive & Inconsistent</p>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Time-Intensive & Inconsistent</p>
             </div>
             <div className="space-y-3">
               {features.map((feature, index) => (
@@ -102,7 +102,7 @@ export function Comparison() {
         <p className="text-lg mb-4" style={{ color: 'var(--text-secondary)' }}>
           DMPilot gives you the best of both worlds: the speed and scale of automation with the personal touch of manual responses.
         </p>
-        <p style={{ color: 'var(--text-muted)' }}>
+        <p style={{ color: 'var(--text-secondary)' }}>
           You maintain full control over your messaging while saving hours every day.
         </p>
       </motion.div>
