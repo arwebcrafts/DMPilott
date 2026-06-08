@@ -76,7 +76,7 @@ export function TargetAudience() {
             </p>
             <ul className="space-y-2">
               {segment.useCases.map((useCase, i) => (
-                <li key={i} className="text-sm flex items-start gap-2" style={{ color: 'var(--text-muted)' }}>
+                <li key={i} className="text-sm flex items-start gap-2" style={{ color: 'var(--text-secondary)' }}>
                   <span style={{ color: 'var(--text-primary)' }}>—</span>
                   {useCase}
                 </li>

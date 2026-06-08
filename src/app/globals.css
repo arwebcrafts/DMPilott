@@ -20,8 +20,8 @@
 
   /* Text colors */
   --text-primary: #1a1a1a;
-  --text-secondary: #4b5563;
-  --text-muted: #6b7280;
+  --text-secondary: #374151;
+  --text-muted: #4b5563;
 
   /* Accent colors (warm coral) */
   --accent: #e85d3a;            /* warm coral CTA */
@@ -114,8 +114,8 @@
   --surface-4: #3a3a48;
 
   --text-primary: #f0ede8;
-  --text-secondary: #b8b3ad;
-  --text-muted: #8a8580;
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
 
   --accent: #ff7a57;
   --accent-hover: #ff6842;

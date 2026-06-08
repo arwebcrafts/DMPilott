@@ -73,7 +73,7 @@ export function SocialProof() {
               style={{ background: 'var(--surface-1)' }}
             >
               <div className="text-3xl font-bold mb-1" style={{ color: 'var(--accent)', fontFamily: 'var(--font-display)' }}>{stat.value}</div>
-              <div className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{stat.label}</div>
+              <div className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{stat.label}</div>
             </motion.div>
           ))}
         </div>
@@ -96,13 +96,13 @@ export function SocialProof() {
               </div>
               <div className="flex-1">
                 <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>{testimonial.name}</div>
-                <div className="text-sm" style={{ color: 'var(--text-muted)' }}>{testimonial.role}</div>
+                <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>{testimonial.role}</div>
               </div>
             </div>
             <p className="text-base leading-relaxed mb-4" style={{ color: 'var(--text-secondary)' }}>
               "{testimonial.quote}"
             </p>
-            <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
               {testimonial.handle}
             </div>
           </motion.div>

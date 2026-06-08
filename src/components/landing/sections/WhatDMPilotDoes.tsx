@@ -61,7 +61,7 @@ export function WhatDMPilotDoes() {
       </div>
       <div className="mt-12 text-center">
         <p className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>Four columns under one roof.</p>
-        <p style={{ color: 'var(--text-muted)' }}>Quiet, on purpose.</p>
+        <p style={{ color: 'var(--text-secondary)' }}>Quiet, on purpose.</p>
       </div>
     </SectionContainer>
   );

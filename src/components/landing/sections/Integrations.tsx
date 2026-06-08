@@ -124,7 +124,7 @@ export function Integrations() {
         <p className="text-lg mb-2" style={{ color: 'var(--text-secondary)' }}>
           Need a specific integration?
         </p>
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
           We're constantly adding new integrations. Let us know what you need.
         </p>
       </motion.div>

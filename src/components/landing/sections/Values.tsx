@@ -24,7 +24,7 @@ export function Values() {
           {/* Document styling */}
           <div className="border-b-2 pb-4 mb-6" style={{ borderColor: 'var(--surface-3)' }}>
             <h2 className="text-3xl md:text-4xl font-bold mb-2" style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>Five Commitments</h2>
-            <p className="text-sm uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>THE MANIFESTO</p>
+            <p className="text-sm uppercase tracking-widest" style={{ color: 'var(--text-secondary)' }}>THE MANIFESTO</p>
           </div>
 
           <div className="space-y-6">
@@ -48,7 +48,7 @@ export function Values() {
           </div>
 
           <div className="mt-8 pt-6 border-t" style={{ borderColor: 'var(--surface-3)' }}>
-            <p className="text-sm italic" style={{ color: 'var(--text-muted)' }}>
+            <p className="text-sm italic" style={{ color: 'var(--text-secondary)' }}>
               These aren't marketing claims. They're the foundation of how we build DMPilot.
             </p>
           </div>
