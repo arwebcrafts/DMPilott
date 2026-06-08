@@ -27,6 +27,7 @@ export function DarkModeToggle() {
       onClick={toggle}
       className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
       aria-label="Toggle dark mode"
+      style={{ color: 'var(--text-primary)' }}
     >
       {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
     </button>
