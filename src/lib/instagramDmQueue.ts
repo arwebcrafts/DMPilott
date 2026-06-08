@@ -60,10 +60,13 @@ async function sendWithHostAndIdFallback(
   const accountIdsToTry = [configuredAccountId, tokenUserId].filter(id => id && id !== configuredAccountId)
 
   let lastError: any = null
+  console.log('[DM] Attempting to send DM with account IDs:', [configuredAccountId, ...accountIdsToTry])
+
   for (const accountId of [configuredAccountId, ...accountIdsToTry]) {
     if (!accountId) continue
     for (const host of INSTAGRAM_MESSAGING_HOSTS) {
       const endpoint = `${host}/${INSTAGRAM_MESSAGING_API_VERSION}/${accountId}/messages`
+      console.log('[DM] Trying endpoint:', endpoint)
       try {
         await axios.post(endpoint, requestBody, {
           headers: {
@@ -73,13 +76,16 @@ async function sendWithHostAndIdFallback(
           params: { access_token: accessToken },
           timeout: 10000,
         })
+        console.log('[DM] ✓ DM sent successfully via', endpoint)
         return
-      } catch (err) {
+      } catch (err: any) {
+        console.log('[DM] ✗ Failed via', endpoint, ':', err?.response?.data?.error?.message || err?.message)
         lastError = err
       }
     }
   }
 
+  console.log('[DM] ✗ All attempts failed, throwing error')
   throw lastError
 }
 
@@ -93,9 +99,13 @@ export async function sendInstagramDm(params: {
   const { account, recipientId, message, commentId, videoUrl } = params
   const recipient = commentId ? { comment_id: commentId } : { id: recipientId }
 
+  console.log('[DM] Sending DM to', recipientId, 'from account', account.username)
+  console.log('[DM] Message:', message?.substring(0, 50) + '...')
+
   // Meta allows one private reply per comment. If a video URL is configured,
   // send video attachment as the primary message for comment-triggered outreach.
   if (videoUrl) {
+    console.log('[DM] Sending with video attachment')
     await sendWithHostAndIdFallback(account, {
       recipient,
       message: {
@@ -105,13 +115,16 @@ export async function sendInstagramDm(params: {
         },
       },
     })
+    console.log('[DM] ✓ DM with video sent successfully')
     return
   }
 
+  console.log('[DM] Sending text message')
   await sendWithHostAndIdFallback(account, {
     recipient,
     message: { text: message },
   })
+  console.log('[DM] ✓ DM sent successfully')
 }
 
 export async function sendFacebookDm(params: {
