@@ -18,7 +18,7 @@ export function Comparison() {
   ];
 
   return (
-    <SectionContainer variant="light" padding="xl" id="comparison">
+    <SectionContainer variant="light" padding="xl" id="comparison" className="section-neutral">
       <SectionHeader
         title="DMPilot vs Manual Responses"
         subtitle="See the difference automation makes"
@@ -27,47 +27,68 @@ export function Comparison() {
         size="lg"
       />
 
-      <div className="max-w-4xl mx-auto overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-gray-200">
-              <th className="text-left py-4 px-6 text-gray-600 font-medium">Feature</th>
-              <th className="text-center py-4 px-6 text-gray-900 font-bold text-lg bg-blue-50 rounded-t-lg">
-                DMPilot
-              </th>
-              <th className="text-center py-4 px-6 text-gray-600 font-medium">Manual</th>
-            </tr>
-          </thead>
-          <tbody>
-            {features.map((feature, index) => (
-              <tr key={index} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                <td className="py-4 px-6 text-gray-700">{feature.name}</td>
-                <td className="py-4 px-6 text-center">
+      {/* Quadrant Chart Layout */}
+      <div className="mt-12 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-8">
+          {/* DMPilot Column */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="card-warm p-6"
+          >
+            <div className="text-center mb-6 pb-4 border-b-2" style={{ borderColor: 'var(--accent)' }}>
+              <h3 className="text-2xl font-bold" style={{ color: 'var(--accent)', fontFamily: 'var(--font-display)' }}>DMPilot</h3>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>Automated & Controlled</p>
+            </div>
+            <div className="space-y-3">
+              {features.map((feature, index) => (
+                <div key={index} className="flex items-center gap-3">
                   {feature.dmpilot ? (
-                    <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-100">
-                      <Check className="h-5 w-5 text-green-600" />
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center" style={{ background: '#22c55e' }}>
+                      <Check className="h-4 w-4 text-white" />
                     </div>
                   ) : (
-                    <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-100">
-                      <X className="h-5 w-5 text-gray-400" />
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center" style={{ background: '#e5e7eb' }}>
+                      <X className="h-4 w-4 text-gray-400" />
                     </div>
                   )}
-                </td>
-                <td className="py-4 px-6 text-center">
+                  <span className="text-base" style={{ color: 'var(--text-secondary)' }}>{feature.name}</span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Manual Column */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 }}
+            className="card-warm p-6"
+          >
+            <div className="text-center mb-6 pb-4 border-b-2" style={{ borderColor: 'var(--surface-3)' }}>
+              <h3 className="text-2xl font-bold" style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>Manual</h3>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>Time-Intensive & Inconsistent</p>
+            </div>
+            <div className="space-y-3">
+              {features.map((feature, index) => (
+                <div key={index} className="flex items-center gap-3">
                   {feature.manual ? (
-                    <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-100">
-                      <Check className="h-5 w-5 text-green-600" />
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center" style={{ background: '#22c55e' }}>
+                      <Check className="h-4 w-4 text-white" />
                     </div>
                   ) : (
-                    <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-100">
-                      <X className="h-5 w-5 text-gray-400" />
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center" style={{ background: '#e5e7eb' }}>
+                      <X className="h-4 w-4 text-gray-400" />
                     </div>
                   )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  <span className="text-base" style={{ color: 'var(--text-secondary)' }}>{feature.name}</span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        </div>
       </div>
 
       {/* Summary */}
@@ -75,12 +96,13 @@ export function Comparison() {
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        className="mt-12 max-w-2xl mx-auto text-center"
+        className="mt-12 max-w-2xl mx-auto text-center p-6 rounded-xl"
+        style={{ background: 'var(--surface-1)' }}
       >
-        <p className="text-lg text-gray-600 mb-4">
+        <p className="text-lg mb-4" style={{ color: 'var(--text-secondary)' }}>
           DMPilot gives you the best of both worlds: the speed and scale of automation with the personal touch of manual responses.
         </p>
-        <p className="text-gray-500">
+        <p style={{ color: 'var(--text-muted)' }}>
           You maintain full control over your messaging while saving hours every day.
         </p>
       </motion.div>

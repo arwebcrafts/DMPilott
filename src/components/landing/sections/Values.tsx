@@ -2,66 +2,57 @@
 
 import { motion } from 'framer-motion';
 import { SectionContainer } from '../shared/SectionContainer';
-import { SectionHeader } from '../shared/SectionHeader';
+
+const commitments = [
+  'Let you own everything. Export anytime. Delete anytime. We never sell your data, never read DMs for ads, never train AI on you without consent.',
+  'Stay free at the core. When we open up, the basics stay free. There will be a Pro tier later for power features. Core is yours.',
+  'Choose calm over clever. We\'d rather be quiet than viral. We\'d rather you finish your day than open the app twelve times.',
+  'Build for creators, by creators. We understand your challenges because we face them too. Built by creators, for creators.',
+  'Radical transparency. We\'re upfront about what our AI can and cannot do. No hidden fees, no surprise limitations, complete clarity.',
+];
 
 export function Values() {
-  const commitments = [
-    {
-      number: '01',
-      title: 'Let you own everything.',
-      description: 'Export anytime. Delete anytime. We never sell your data, never read DMs for ads, never train AI on you without consent.',
-    },
-    {
-      number: '02',
-      title: 'Stay free at the core.',
-      description: 'When we open up, the basics stay free. There will be a Pro tier later for power features. Core is yours.',
-    },
-    {
-      number: '03',
-      title: 'Choose calm over clever.',
-      description: 'We\'d rather be quiet than viral. We\'d rather you finish your day than open the app twelve times.',
-    },
-    {
-      number: '04',
-      title: 'Build for creators, by creators.',
-      description: 'We understand your challenges because we face them too. Built by creators, for creators.',
-    },
-    {
-      number: '05',
-      title: 'Radical transparency.',
-      description: 'We\'re upfront about what our AI can and cannot do. No hidden fees, no surprise limitations, complete clarity.',
-    },
-  ];
-
   return (
-    <SectionContainer padding="xl" id="values" className="bg-gray-50">
-      <SectionHeader
-        title="Five Commitments"
-        subtitle="What we promise"
-        description="These aren't marketing claims. They're the foundation of how we build DMPilot."
-        align="center"
-        size="lg"
-      />
+    <SectionContainer padding="xl" id="values" className="section-warm">
+      <div className="max-w-3xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="card-warm p-8 md:p-12"
+        >
+          {/* Document styling */}
+          <div className="border-b-2 pb-4 mb-6" style={{ borderColor: 'var(--surface-3)' }}>
+            <h2 className="text-3xl md:text-4xl font-bold mb-2" style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>Five Commitments</h2>
+            <p className="text-sm uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>THE MANIFESTO</p>
+          </div>
 
-      <div className="max-w-3xl mx-auto space-y-6">
-        {commitments.map((commitment, index) => (
-          <motion.div
-            key={index}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: index * 0.1 }}
-            className="flex gap-6 items-start"
-          >
-            <div className="flex-shrink-0 w-16 h-16 bg-gray-900 text-white rounded-full flex items-center justify-center text-2xl font-bold">
-              {commitment.number}
-            </div>
-            <div className="flex-1">
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">{commitment.title}</h3>
-              <p className="text-gray-600">{commitment.description}</p>
-            </div>
-          </motion.div>
-        ))}
+          <div className="space-y-6">
+            {commitments.map((commitment, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                className="flex gap-4"
+              >
+                <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white" style={{ background: 'var(--accent)' }}>
+                  {index + 1}
+                </div>
+                <p className="text-base leading-relaxed flex-1 pt-1" style={{ color: 'var(--text-secondary)' }}>
+                  {commitment}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="mt-8 pt-6 border-t" style={{ borderColor: 'var(--surface-3)' }}>
+            <p className="text-sm italic" style={{ color: 'var(--text-muted)' }}>
+              These aren't marketing claims. They're the foundation of how we build DMPilot.
+            </p>
+          </div>
+        </motion.div>
       </div>
     </SectionContainer>
   );

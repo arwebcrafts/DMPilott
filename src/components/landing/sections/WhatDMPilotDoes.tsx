@@ -29,7 +29,7 @@ const pillars = [
 
 export function WhatDMPilotDoes() {
   return (
-    <SectionContainer padding="xl" id="what-dmpilot-does" className="bg-gray-50">
+    <SectionContainer padding="xl" id="what-dmpilot-does" className="section-cool">
       <SectionHeader
         title="What DMPilot Does"
         subtitle="Quiet, on purpose."
@@ -38,28 +38,30 @@ export function WhatDMPilotDoes() {
         size="lg"
       />
       <div className="mt-16 max-w-4xl mx-auto">
-        {pillars.map((pillar, index) => (
-          <motion.div
-            key={index}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: index * 0.1 }}
-            className="flex gap-8 items-start mb-12 last:mb-0"
-          >
-            <div className="flex-shrink-0 w-16 h-16 bg-gray-900 text-white rounded-full flex items-center justify-center text-2xl font-bold">
-              {pillar.number}
-            </div>
-            <div className="flex-1">
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">{pillar.title}</h3>
-              <p className="text-gray-600">{pillar.description}</p>
-            </div>
-          </motion.div>
-        ))}
+        <div className="grid md:grid-cols-2 gap-6">
+          {pillars.map((pillar, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.1 }}
+              className="card-warm flex items-start gap-5"
+            >
+              <div className="flex-shrink-0 w-14 h-14 text-white rounded-full flex items-center justify-center text-xl font-bold" style={{ background: 'var(--accent)' }}>
+                {pillar.number}
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>{pillar.title}</h3>
+                <p className="text-base" style={{ color: 'var(--text-secondary)' }}>{pillar.description}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
       </div>
       <div className="mt-12 text-center">
-        <p className="text-lg text-gray-600">Four columns under one roof.</p>
-        <p className="text-gray-500">Quiet, on purpose.</p>
+        <p className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>Four columns under one roof.</p>
+        <p style={{ color: 'var(--text-muted)' }}>Quiet, on purpose.</p>
       </div>
     </SectionContainer>
   );

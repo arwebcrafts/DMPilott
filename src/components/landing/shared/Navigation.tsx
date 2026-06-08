@@ -25,63 +25,72 @@ export function Navigation() {
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled
-          ? 'bg-white/80 backdrop-blur-lg border-b border-gray-200'
-          : 'bg-white'
-      }`}
+      className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-auto max-w-3xl"
       role="navigation"
       aria-label="Main navigation"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <a
-            href="/"
-            className="text-xl font-bold text-gray-900"
-            aria-label="DMPilot Home"
-          >
-            DMPilot
-          </a>
-
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-8" role="menubar">
-            {navLinks.map((link) => (
-              <a
-                key={link.name}
-                href={link.href}
-                className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
-                role="menuitem"
-              >
-                {link.name}
-              </a>
-            ))}
-            <DarkModeToggle />
-            <CTAButton variant="primary" size="sm" href="/signup" aria-label="Join beta">
-              Join beta →
-            </CTAButton>
+      <div className="nav-glass rounded-full px-6 h-14 flex items-center gap-8">
+        {/* Logo */}
+        <a
+          href="/"
+          className="flex items-center gap-2"
+          aria-label="DMPilot Home"
+        >
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#e85d3a] to-[#f09433] flex items-center justify-center">
+            <span className="text-white text-xs font-bold">D</span>
           </div>
+          <span className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>DMPilot</span>
+        </a>
 
-          {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center gap-4">
-            <DarkModeToggle />
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-lg hover:bg-gray-100"
-              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
-              aria-expanded={mobileMenuOpen}
-              aria-controls="mobile-menu"
+        {/* Desktop Navigation */}
+        <div className="hidden md:flex items-center gap-8 flex-1" role="menubar">
+          {navLinks.map((link) => (
+            <a
+              key={link.name}
+              href={link.href}
+              className="text-sm font-medium hover:opacity-70 transition-opacity cursor-pointer"
+              style={{ color: 'var(--text-secondary)' }}
+              role="menuitem"
             >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-          </div>
+              {link.name}
+            </a>
+          ))}
         </div>
 
-        {/* Mobile Menu */}
+        <div className="flex items-center gap-4">
+          <DarkModeToggle />
+          <CTAButton
+            variant="primary"
+            size="sm"
+            href="/signup"
+            aria-label="Join beta"
+            className="px-5 py-2.5 text-sm font-semibold text-white rounded-full transition-all hover:shadow-lg hover:scale-105"
+          >
+            Join beta →
+          </CTAButton>
+        </div>
+
+        {/* Mobile Menu Button */}
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="md:hidden p-2 rounded-lg hover:bg-gray-100"
+          aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={mobileMenuOpen}
+          aria-controls="mobile-menu"
+        >
+          {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </button>
+      </div>
+
+      {/* Mobile Menu */}
+      <AnimatePresence>
         {mobileMenuOpen && (
-          <div
+          <motion.div
             id="mobile-menu"
-            className="md:hidden py-4 border-t border-gray-200"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="md:hidden mt-2 nav-glass rounded-2xl p-4"
             role="menu"
           >
             <div className="flex flex-col gap-4">
@@ -89,20 +98,27 @@ export function Navigation() {
                 <a
                   key={link.name}
                   href={link.href}
-                  className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                  className="text-sm font-medium hover:opacity-70 transition-opacity"
+                  style={{ color: 'var(--text-secondary)' }}
                   onClick={() => setMobileMenuOpen(false)}
                   role="menuitem"
                 >
                   {link.name}
                 </a>
               ))}
-              <CTAButton variant="primary" size="md" href="/signup" className="w-full" aria-label="Join beta">
+              <CTAButton
+                variant="primary"
+                size="md"
+                href="/signup"
+                className="w-full"
+                aria-label="Join beta"
+              >
                 Join beta →
               </CTAButton>
             </div>
-          </div>
+          </motion.div>
         )}
-      </div>
+      </AnimatePresence>
     </nav>
   );
 }

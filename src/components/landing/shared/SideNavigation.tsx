@@ -51,8 +51,8 @@ export function SideNavigation() {
           onClick={() => scrollToSection(section.id)}
           className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-colors ${
             activeSection === section.id
-              ? 'bg-gray-900 text-white'
-              : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+              ? 'bg-[#e85d3a] text-white scale-110 shadow-md'
+              : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)]'
           }`}
           aria-label={`Navigate to ${section.label}`}
         >

@@ -20,8 +20,8 @@
 
   /* Text colors */
   --text-primary: #1a1a1a;
-  --text-secondary: #6b6b6b;
-  --text-muted: #9a9a9a;
+  --text-secondary: #4b5563;
+  --text-muted: #6b7280;
 
   /* Accent colors (warm coral) */
   --accent: #e85d3a;            /* warm coral CTA */
@@ -114,8 +114,8 @@
   --surface-4: #3a3a48;
 
   --text-primary: #f0ede8;
-  --text-secondary: #9a9590;
-  --text-muted: #6a655f;
+  --text-secondary: #b8b3ad;
+  --text-muted: #8a8580;
 
   --accent: #ff7a57;
   --accent-hover: #ff6842;
@@ -161,6 +161,7 @@ h1 {
   font-weight: var(--font-bold);
   letter-spacing: -0.02em;
   margin-bottom: 1.5rem;
+  font-family: var(--font-display);
 }
 
 h2 {
@@ -169,6 +170,7 @@ h2 {
   font-weight: var(--font-semibold);
   letter-spacing: -0.01em;
   margin-bottom: 1.25rem;
+  font-family: var(--font-display);
 }
 
 h3 {
@@ -256,6 +258,44 @@ p {
 
 /* ─── Utility Classes ───────────────────────────────────────────── */
 
+/* Section background utilities */
+.section-warm { background: var(--section-warm); }
+.section-cool { background: var(--section-cool); }
+.section-neutral { background: var(--section-neutral); }
+
+/* Glassmorphism nav */
+.nav-glass {
+  background: rgba(255, 252, 248, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(232, 224, 216, 0.5);
+}
+.dark .nav-glass {
+  background: rgba(15, 15, 20, 0.75);
+  border: 1px solid rgba(47, 47, 58, 0.5);
+}
+
+/* Card warm styling */
+.card-warm {
+  background: #fffcf8;
+  border: 1px solid var(--surface-3);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(139, 109, 79, 0.06);
+  transition: all 0.3s ease;
+}
+.card-warm:hover {
+  box-shadow: 0 8px 24px rgba(139, 109, 79, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Marquee */
+.marquee-track {
+  display: flex;
+  animation: marquee 20s linear infinite;
+  width: max-content;
+}
+
 /* Minimal card */
 .card {
   background: #ffffff;
@@ -289,7 +329,15 @@ p {
 
 /* ─── Landing page specific backgrounds ────────────────────────── */
 .hero-bg {
-  background: #ffffff;
+  background: linear-gradient(
+    180deg,
+    var(--hero-sky-top) 0%,
+    var(--hero-sky-mid) 40%,
+    var(--hero-mountain) 70%,
+    var(--hero-mountain-dark) 100%
+  );
+  position: relative;
+  overflow: hidden;
 }
 
 .hero-gradient {
@@ -308,6 +356,58 @@ p {
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
+
+/* ─── Scroll animation utilities ───────────────────────────────── */
+.scroll-animate {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.scroll-animate.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.scroll-animate-left {
+  opacity: 0;
+  transform: translateX(-30px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.scroll-animate-left.is-visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.scroll-animate-right {
+  opacity: 0;
+  transform: translateX(30px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.scroll-animate-right.is-visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.scroll-animate-scale {
+  opacity: 0;
+  transform: scale(0.95);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.scroll-animate-scale.is-visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Staggered animation delays */
+.scroll-animate-delay-1 { transition-delay: 0.1s; }
+.scroll-animate-delay-2 { transition-delay: 0.2s; }
+.scroll-animate-delay-3 { transition-delay: 0.3s; }
+.scroll-animate-delay-4 { transition-delay: 0.4s; }
+.scroll-animate-delay-5 { transition-delay: 0.5s; }
 
 .dashboard-sidebar {
   background: rgba(13, 13, 21, 0.6);

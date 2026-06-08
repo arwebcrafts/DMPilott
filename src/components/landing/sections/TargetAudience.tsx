@@ -49,7 +49,7 @@ export function TargetAudience() {
   ];
 
   return (
-    <SectionContainer padding="xl" id="audience" className="bg-gray-50">
+    <SectionContainer padding="xl" id="audience" className="section-neutral">
       <SectionHeader
         title="Built for You, If..."
         subtitle="You're one of these"
@@ -66,18 +66,18 @@ export function TargetAudience() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: index * 0.1 }}
-            className="bg-white rounded-xl p-6 border border-gray-200"
+            className="card-warm"
           >
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+            <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
               {segment.title}
             </h3>
-            <p className="text-gray-600 leading-relaxed mb-4">
+            <p className="leading-relaxed mb-4" style={{ color: 'var(--text-secondary)' }}>
               {segment.description}
             </p>
             <ul className="space-y-2">
               {segment.useCases.map((useCase, i) => (
-                <li key={i} className="text-sm text-gray-500 flex items-start gap-2">
-                  <span className="text-gray-900 mt-1">—</span>
+                <li key={i} className="text-sm flex items-start gap-2" style={{ color: 'var(--text-muted)' }}>
+                  <span style={{ color: 'var(--text-primary)' }}>—</span>
                   {useCase}
                 </li>
               ))}

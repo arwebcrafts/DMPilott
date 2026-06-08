@@ -1,62 +1,86 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Bell, Mail, MessageSquare, Calendar, Clock } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 interface Notification {
   app: string;
-  icon: React.ReactNode;
   time: string;
-  message: string;
-  urgent?: boolean;
+  title: string;
+  color: string;
 }
 
 const notifications: Notification[] = [
-  { app: 'SLACK', icon: <MessageSquare className="w-4 h-4" />, time: 'now', message: 'Sarah Chen · #project-alpha', urgent: true },
-  { app: 'CALENDAR', icon: <Calendar className="w-4 h-4" />, time: '1m', message: 'URGENT · Standup added', urgent: true },
-  { app: 'GMAIL', icon: <Mail className="w-4 h-4" />, time: '3m', message: '47 new emails', urgent: false },
-  { app: 'WHATSAPP', icon: <MessageSquare className="w-4 h-4" />, time: '14m', message: 'Mom', urgent: false },
-  { app: 'REMINDERS', icon: <Clock className="w-4 h-4" />, time: '1h', message: 'Submit Q1 review', urgent: true },
+  { app: 'INSTAGRAM', time: 'now', title: 'New DM from @fashionista', color: '#E1306C' },
+  { app: 'INSTAGRAM', time: '2m', title: 'Comment: "How much?"', color: '#833AB4' },
+  { app: 'GMAIL', time: '5m', title: '12 new leads', color: '#EA4335' },
+  { app: 'WHATSAPP', time: '14m', title: 'Supplier reply', color: '#25D366' },
+  { app: 'REMINDERS', time: '1h', title: 'Post content at 3pm', color: '#FF9500' },
 ];
 
 export function NotificationVisualization() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setIsVisible(true); },
+      { threshold: 0.3 }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div className="max-w-md mx-auto bg-gray-50 rounded-2xl p-6 border border-gray-200">
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-sm font-medium text-gray-600">9:41 AM</span>
-        <span className="text-sm text-gray-400">Tuesday, May 5</span>
-      </div>
-      
-      <div className="space-y-3">
-        {notifications.map((notification, index) => (
-          <motion.div
-            key={index}
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: index * 0.1 }}
-            className={`flex items-start gap-3 p-3 rounded-lg ${
-              notification.urgent ? 'bg-white border border-red-200' : 'bg-white/50'
-            }`}
-          >
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-              {notification.icon}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-gray-900">{notification.app}</span>
-                <span className="text-xs text-gray-400">{notification.time}</span>
+    <div ref={ref} className="max-w-sm mx-auto">
+      {/* iPhone frame */}
+      <div className="rounded-[3rem] p-3 shadow-2xl" style={{ background: '#1a1a1a' }}>
+        {/* Notch */}
+        <div className="flex justify-center mb-1">
+          <div className="w-28 h-6 rounded-full bg-black" />
+        </div>
+        {/* Screen */}
+        <div className="rounded-[2.4rem] overflow-hidden bg-white p-5">
+          {/* Status bar */}
+          <div className="flex justify-between items-center mb-4">
+            <span className="text-sm font-semibold" style={{ color: '#1a1a1a' }}>9:41 AM</span>
+            <span className="text-sm" style={{ color: '#6b6b6b' }}>Tuesday, May 5</span>
+          </div>
+
+          {/* Notifications */}
+          <div className="space-y-3">
+            {notifications.map((notif, i) => (
+              <div
+                key={i}
+                className={`rounded-2xl p-4 border transition-all ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+                style={{
+                  background: 'var(--surface-1)',
+                  borderColor: 'var(--surface-3)',
+                  transitionDelay: `${i * 150}ms`,
+                  transitionDuration: '500ms',
+                }}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style={{ background: notif.color }}>
+                    {notif.app.charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>{notif.app}</span>
+                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{notif.time}</span>
+                    </div>
+                    <div className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{notif.title}</div>
+                  </div>
+                </div>
               </div>
-              <p className="text-sm text-gray-600 truncate">{notification.message}</p>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-      
-      <div className="mt-4 pt-4 border-t border-gray-200">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-gray-500">+ 3 NEW</span>
-          <span className="text-red-500 font-medium">47 missed</span>
+            ))}
+          </div>
+
+          {/* Footer badges */}
+          <div className="flex justify-between mt-4 pt-3" style={{ borderTop: '1px solid var(--surface-2)' }}>
+            <span className="text-xs font-bold px-2 py-1 rounded-full" style={{ background: '#fee2e2', color: '#dc2626' }}>+ 3 NEW</span>
+            <span className="text-xs font-bold px-2 py-1 rounded-full" style={{ background: 'var(--surface-2)', color: 'var(--text-muted)' }}>47 missed</span>
+          </div>
         </div>
       </div>
     </div>
