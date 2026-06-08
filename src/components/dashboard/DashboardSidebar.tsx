@@ -27,7 +27,7 @@ export default function DashboardSidebar() {
   const dmsPercent = dmsLimit === Infinity ? 0 : (dmsUsed / dmsLimit) * 100
 
   return (
-    <aside className="w-60 glass-card-static border-r border-white/10 min-h-[calc(100vh-64px)] hidden md:block relative">
+    <aside className="w-60 border-r min-h-[calc(100vh-64px)] hidden md:block relative" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
       <div className="p-4">
         {/* Logo */}
         <motion.div
@@ -58,7 +58,7 @@ export default function DashboardSidebar() {
                     'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
                     isActive
                       ? 'bg-gradient-to-r from-[#DD2A7B]/20 to-[#8134AF]/20 text-[#DD2A7B] border border-[#DD2A7B]/30'
-                      : 'text-[#8a8a9a] hover:bg-white/10 hover:text-white'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'
                   )}
                 >
                   <span>{item.icon}</span>
@@ -72,9 +72,9 @@ export default function DashboardSidebar() {
 
       {/* Plan card at bottom */}
       <div className="absolute bottom-4 left-0 w-60 px-4">
-        <div className="glass-card rounded-xl p-4">
+        <div className="rounded-xl p-4 border shadow-sm" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-3)' }}>
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-white capitalize">
+            <span className="text-xs font-semibold text-gray-900 dark:text-gray-100 capitalize">
               {user?.plan || 'Free'} Plan
             </span>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
@@ -88,10 +88,10 @@ export default function DashboardSidebar() {
           </div>
           {dmsLimit !== Infinity ? (
             <>
-              <div className="text-xs text-[#8a8a9a] mb-2">
+              <div className="text-xs text-gray-600 dark:text-gray-300 mb-2">
                 {dmsUsed.toLocaleString()} / {dmsLimit.toLocaleString()} DMs
               </div>
-              <div className="h-2 bg-[#22223a] rounded-full overflow-hidden">
+              <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--surface-3)' }}>
                 <motion.div
                   className={`h-full rounded-full transition-all ${
                     dmsPercent > 95 ? 'bg-[#FA3E3E]' :
