@@ -34,7 +34,7 @@ export default function DashboardSidebar() {
           whileHover={{ scale: 1.05 }}
           className="flex items-center gap-2 mb-6"
         >
-          <Link href="/dashboard" className="gradient-text text-xl font-bold">
+          <Link href="/dashboard" className="text-xl font-bold text-gray-900 dark:text-gray-100">
             DMPilot
           </Link>
         </motion.div>
@@ -57,7 +57,7 @@ export default function DashboardSidebar() {
                   className={cn(
                     'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
                     isActive
-                      ? 'bg-gradient-to-r from-[#DD2A7B]/20 to-[#8134AF]/20 text-[#DD2A7B] border border-[#DD2A7B]/30'
+                      ? 'bg-[#DD2A7B] text-white'
                       : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'
                   )}
                 >

@@ -35,8 +35,8 @@ export default function DashboardNavbar() {
   }
 
   const planColors: Record<string, string> = {
-    free: 'text-gray-600 dark:text-gray-300',
-    creator: 'text-[#DD2A7B]',
+    free: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300',
+    creator: 'bg-gradient-to-r from-[#DD2A7B]/20 to-[#8134AF]/20 text-[#DD2A7B] border border-[#DD2A7B]/30',
     pro: 'text-white',
   }
 
