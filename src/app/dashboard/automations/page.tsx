@@ -273,28 +273,41 @@ function CreateAutomationModal({
     if (triggerType === 'comment_keyword' && keywords.length === 0) return
 
     setLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
 
-    const { data, error } = await supabase
-      .from('automations')
-      .insert({
-        user_id: user.id,
-        account_id: accountId,
-        name: `${triggerType.replace('_', ' ')} - ${keywords[0] || 'auto'}`,
+    const selectedAccount = availableAccounts.find(a => a.id === accountId)
+    console.log('[Client] Creating automation for account:', {
+      accountId,
+      username: selectedAccount?.username,
+      platform_account_id: selectedAccount?.platform_account_id,
+      platform,
+    })
+
+    const res = await fetch('/api/automations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        accountId,
+        name: triggerType === 'dm_received'
+          ? 'DM auto-reply'
+          : `${triggerType.replace('_', ' ')} - ${keywords[0] || 'auto}`,
         platform,
-        trigger_type: triggerType,
+        triggerType,
         keywords: triggerType === 'comment_keyword' ? keywords : [],
-        dm_message: dmMessage,
-        dm_video_url: dmVideoUrl.trim() ? dmVideoUrl.trim() : null,
-        comment_reply_enabled: commentReplyEnabled,
-        comment_reply_text: commentReplyEnabled ? commentReplyText : null,
-      })
-      .select('*, connected_accounts(username)')
-      .single()
+        dmMessage,
+        dmVideoUrl: dmVideoUrl.trim() ? dmVideoUrl.trim() : null,
+        commentReplyEnabled,
+        commentReplyText: commentReplyEnabled ? commentReplyText : null,
+      }),
+    })
 
-    if (!error && data) {
-      onCreated(data)
+    const data = await res.json()
+
+    if (res.ok) {
+      console.log('[Client] ✓ Automation created successfully:', data.automation)
+      onCreated(data.automation)
+    } else {
+      console.error('[Client] ❌ Failed to create automation:', data.error)
+      alert(data.error || 'Failed to create automation')
     }
     setLoading(false)
   }
@@ -350,7 +363,9 @@ function CreateAutomationModal({
                 className="w-full px-3 py-2 glass-card border border-white/10 rounded-lg text-sm text-white focus:ring-2 focus:ring-[#DD2A7B]/50 bg-transparent"
               >
                 {availableAccounts.map(acc => (
-                  <option key={acc.id} value={acc.id}>@{acc.username}</option>
+                  <option key={acc.id} value={acc.id}>
+                    @{acc.username} (ID: {acc.platform_account_id})
+                  </option>
                 ))}
               </select>
             </div>
@@ -362,8 +377,8 @@ function CreateAutomationModal({
             <div className="grid grid-cols-3 gap-2">
               {[
                 { value: 'comment_keyword', label: 'Keyword', icon: '💬' },
-                { value: 'story_reply', label: 'Story Reply', icon: '📖' },
                 { value: 'any_comment', label: 'Any Comment', icon: '✉️' },
+                { value: 'dm_received', label: 'DM Reply', icon: '📩' },
               ].map(opt => (
                 <button
                   key={opt.value}
@@ -419,14 +434,17 @@ function CreateAutomationModal({
             <textarea
               value={dmMessage}
               onChange={e => setDmMessage(e.target.value)}
-              placeholder="Hey {name}! 👋 Here's the link you asked for: ..."
+              placeholder={triggerType === 'dm_received' ? 'Thanks for reaching out! Here is more info...' : "Hey {name}! 👋 Here's the link you asked for: ..."}
               rows={4}
               maxLength={1000}
               className="w-full px-3 py-2 glass-card border border-white/10 rounded-lg text-sm text-white focus:ring-2 focus:ring-[#DD2A7B]/50 resize-none bg-transparent placeholder:text-[#5a5a6e]"
             />
             <div className="flex justify-between mt-1">
               <p className="text-xs text-[#8a8a9a]">
-                Use {'{name}'} for their name, {'{username}'} for @handle
+                {triggerType === 'dm_received'
+                  ? 'This message is sent automatically whenever someone DMs this account.'
+                  : 'Use {name} for their name, {username} for @handle'
+                }
               </p>
               <span className="text-xs text-[#8a8a9a]">{dmMessage.length}/1000</span>
             </div>
@@ -450,43 +468,45 @@ function CreateAutomationModal({
           </div>
 
           {/* Auto-reply on comment */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-white">
-                Auto-reply on comment
-              </label>
-              {platform === 'instagram' ? (
-                <span className="text-xs text-[#ff6b6b]">Unavailable for Instagram</span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setCommentReplyEnabled(prev => !prev)}
-                  className="text-[#8a8a9a] hover:text-white"
-                >
-                  {commentReplyEnabled
-                    ? <ToggleRight className="w-6 h-6 text-[#22c55e]" />
-                    : <ToggleLeft className="w-6 h-6" />
-                  }
-                </button>
+          {triggerType !== 'dm_received' && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-white">
+                  Auto-reply on comment
+                </label>
+                {platform === 'instagram' ? (
+                  <span className="text-xs text-[#ff6b6b]">Unavailable for Instagram</span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setCommentReplyEnabled(prev => !prev)}
+                    className="text-[#8a8a9a] hover:text-white"
+                  >
+                    {commentReplyEnabled
+                      ? <ToggleRight className="w-6 h-6 text-[#22c55e]" />
+                      : <ToggleLeft className="w-6 h-6" />
+                    }
+                  </button>
+                )}
+              </div>
+              {platform === 'facebook' && commentReplyEnabled && (
+                <input
+                  type="text"
+                  value={commentReplyText}
+                  onChange={e => setCommentReplyText(e.target.value)}
+                  placeholder="Check your DMs! 📩"
+                  maxLength={200}
+                  className="w-full px-3 py-2 glass-card border border-white/10 rounded-lg text-sm text-white focus:ring-2 focus:ring-[#DD2A7B]/50 bg-transparent placeholder:text-[#5a5a6e]"
+                />
               )}
+              <p className="text-xs text-[#8a8a9a] mt-1">
+                {platform === 'instagram' 
+                  ? 'Instagram comment replies require additional Meta approval (currently pending)'
+                  : 'Public reply posted on the comment after DM is sent'
+                }
+              </p>
             </div>
-            {platform === 'facebook' && commentReplyEnabled && (
-              <input
-                type="text"
-                value={commentReplyText}
-                onChange={e => setCommentReplyText(e.target.value)}
-                placeholder="Check your DMs! 📩"
-                maxLength={200}
-                className="w-full px-3 py-2 glass-card border border-white/10 rounded-lg text-sm text-white focus:ring-2 focus:ring-[#DD2A7B]/50 bg-transparent placeholder:text-[#5a5a6e]"
-              />
-            )}
-            <p className="text-xs text-[#8a8a9a] mt-1">
-              {platform === 'instagram' 
-                ? 'Instagram comment replies require additional Meta approval (currently pending)'
-                : 'Public reply posted on the comment after DM is sent'
-              }
-            </p>
-          </div>
+          )}
 
           {/* Actions */}
           <div className="flex gap-3 pt-2">
