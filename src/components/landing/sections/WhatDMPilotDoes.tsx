@@ -52,16 +52,16 @@ export function WhatDMPilotDoes() {
                 {pillar.number}
               </div>
               <div className="flex-1">
-                <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>{pillar.title}</h3>
-                <p className="text-base" style={{ color: 'var(--text-secondary)' }}>{pillar.description}</p>
+                <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">{pillar.title}</h3>
+                <p className="text-base text-gray-600 dark:text-gray-300">{pillar.description}</p>
               </div>
             </motion.div>
           ))}
         </div>
       </div>
       <div className="mt-12 text-center">
-        <p className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>Four columns under one roof.</p>
-        <p style={{ color: 'var(--text-secondary)' }}>Quiet, on purpose.</p>
+        <p className="text-lg font-medium text-gray-900 dark:text-gray-100">Four columns under one roof.</p>
+        <p className="text-gray-600 dark:text-gray-300">Quiet, on purpose.</p>
       </div>
     </SectionContainer>
   );

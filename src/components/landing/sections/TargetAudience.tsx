@@ -68,16 +68,16 @@ export function TargetAudience() {
             transition={{ delay: index * 0.1 }}
             className="card-warm"
           >
-            <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+            <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">
               {segment.title}
             </h3>
-            <p className="leading-relaxed mb-4" style={{ color: 'var(--text-secondary)' }}>
+            <p className="leading-relaxed mb-4 text-gray-600 dark:text-gray-300">
               {segment.description}
             </p>
             <ul className="space-y-2">
               {segment.useCases.map((useCase, i) => (
-                <li key={i} className="text-sm flex items-start gap-2" style={{ color: 'var(--text-secondary)' }}>
-                  <span style={{ color: 'var(--text-primary)' }}>—</span>
+                <li key={i} className="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300">
+                  <span className="text-gray-900 dark:text-gray-100">—</span>
                   {useCase}
                 </li>
               ))}

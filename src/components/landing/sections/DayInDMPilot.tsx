@@ -40,12 +40,12 @@ export function DayInDMPilot() {
             {/* Calendar header */}
             <div className="flex items-center justify-between mb-4 p-4 rounded-xl" style={{ background: 'var(--surface-1)' }}>
               <div>
-                <span className="text-xs font-bold tracking-wider uppercase" style={{ color: 'var(--text-muted)' }}>TODAY</span>
-                <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Tuesday, May 5</div>
+                <span className="text-xs font-bold tracking-wider uppercase text-gray-500 dark:text-gray-400">TODAY</span>
+                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">Tuesday, May 5</div>
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 font-medium">On track</span>
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>3 deep · 2 rituals</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">3 deep · 2 rituals</span>
               </div>
             </div>
             {/* Time axis + colored blocks */}
@@ -60,7 +60,7 @@ export function DayInDMPilot() {
                   className="flex items-center gap-4 p-3 rounded-xl border"
                   style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}
                 >
-                  <div className="flex-shrink-0 text-sm font-mono" style={{ color: 'var(--text-muted)' }}>{block.time}</div>
+                  <div className="flex-shrink-0 text-sm font-mono text-gray-500 dark:text-gray-400">{block.time}</div>
                   <div className="flex-1 h-12 rounded-lg" style={{ background: typeColors[block.type], opacity: 0.8 }} />
                   <div className="flex-shrink-0">
                     <span className="text-xs font-bold px-2 py-1 rounded" style={{ background: typeColors[block.type], color: 'white' }}>{block.type}</span>
@@ -82,7 +82,7 @@ export function DayInDMPilot() {
               style={{ borderColor: '#e85d3a', background: 'var(--surface-1)' }}
             >
               <div className="text-xs font-bold" style={{ color: '#e85d3a' }}>← 06:30 · RITUAL</div>
-              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
+              <p className="text-sm mt-1 text-gray-600 dark:text-gray-300">
                 A 5-minute ritual lands you in your day before the world does.
               </p>
             </motion.div>
@@ -95,7 +95,7 @@ export function DayInDMPilot() {
               style={{ borderColor: '#3b82f6', background: 'var(--surface-1)' }}
             >
               <div className="text-xs font-bold" style={{ color: '#3b82f6' }}>← 09:00 · DEEP</div>
-              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
+              <p className="text-sm mt-1 text-gray-600 dark:text-gray-300">
                 Notifications off automatically. Instagram stays away. Plant grows on screen.
               </p>
             </motion.div>
@@ -108,7 +108,7 @@ export function DayInDMPilot() {
               style={{ borderColor: '#22c55e', background: 'var(--surface-1)' }}
             >
               <div className="text-xs font-bold" style={{ color: '#22c55e' }}>← 13:00 · REST</div>
-              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
+              <p className="text-sm mt-1 text-gray-600 dark:text-gray-300">
                 Actual lunch. No notifications.
               </p>
             </motion.div>
@@ -121,7 +121,7 @@ export function DayInDMPilot() {
               style={{ borderColor: '#6b7280', background: 'var(--surface-1)' }}
             >
               <div className="text-xs font-bold" style={{ color: '#6b7280' }}>← 17:00 · CLOSE</div>
-              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
+              <p className="text-sm mt-1 text-gray-600 dark:text-gray-300">
                 Tomorrow's three are already drafted. Inbox quiet. Laptop shut.
               </p>
             </motion.div>
@@ -129,8 +129,8 @@ export function DayInDMPilot() {
         </div>
       </div>
       <div className="mt-12 text-center">
-        <p className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>Six small moments.</p>
-        <p style={{ color: 'var(--text-muted)' }}>One quiet day.</p>
+        <p className="text-lg font-medium text-gray-900 dark:text-gray-100">Six small moments.</p>
+        <p className="text-gray-500 dark:text-gray-400">One quiet day.</p>
       </div>
     </SectionContainer>
   );

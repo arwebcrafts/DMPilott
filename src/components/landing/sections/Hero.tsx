@@ -26,14 +26,14 @@ export function Hero() {
     <section id="hero" className="relative min-h-screen flex flex-col items-center justify-center text-center px-6 pt-32 pb-24 overflow-hidden hero-bg">
       {/* SVG Cloud decorations */}
       <div className="absolute top-20 left-[10%] opacity-80 animate-[float_6s_ease-in-out_infinite]">
-        <svg width="140" height="50" viewBox="0 0 140 50" fill="white" opacity="0.9">
+        <svg width="140" height="50" viewBox="0 0 140 50" fill="rgba(255,255,255,0.5)" opacity="0.9">
           <ellipse cx="70" cy="35" rx="70" ry="15" />
           <ellipse cx="50" cy="25" rx="40" ry="20" />
           <ellipse cx="90" cy="28" rx="35" ry="18" />
         </svg>
       </div>
       <div className="absolute top-16 right-[15%] opacity-60 animate-[float_8s_ease-in-out_infinite_1s]">
-        <svg width="100" height="35" viewBox="0 0 100 35" fill="white" opacity="0.8">
+        <svg width="100" height="35" viewBox="0 0 100 35" fill="rgba(255,255,255,0.4)" opacity="0.8">
           <ellipse cx="50" cy="20" rx="50" ry="15" />
           <ellipse cx="35" cy="15" rx="30" ry="12" />
         </svg>
@@ -108,8 +108,7 @@ export function Hero() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@studio.co"
               required
-              className="flex-1 px-6 py-3 bg-transparent text-base outline-none rounded-full"
-              style={{ color: 'var(--text-primary)' }}
+              className="flex-1 px-6 py-3 bg-transparent text-base outline-none rounded-full text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
             />
             <button
               type="submit"

@@ -66,10 +66,10 @@ export function NotificationVisualization() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>{notif.app}</span>
-                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{notif.time}</span>
+                      <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{notif.app}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">{notif.time}</span>
                     </div>
-                    <div className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{notif.title}</div>
+                    <div className="text-sm font-medium truncate text-gray-900 dark:text-gray-100">{notif.title}</div>
                   </div>
                 </div>
               </div>
@@ -79,7 +79,7 @@ export function NotificationVisualization() {
           {/* Footer badges */}
           <div className="flex justify-between mt-4 pt-3" style={{ borderTop: '1px solid var(--surface-2)' }}>
             <span className="text-xs font-bold px-2 py-1 rounded-full" style={{ background: '#fee2e2', color: '#dc2626' }}>+ 3 NEW</span>
-            <span className="text-xs font-bold px-2 py-1 rounded-full" style={{ background: 'var(--surface-2)', color: 'var(--text-muted)' }}>47 missed</span>
+            <span className="text-xs font-bold px-2 py-1 rounded-full text-gray-500 dark:text-gray-400" style={{ background: 'var(--surface-2)' }}>47 missed</span>
           </div>
         </div>
       </div>

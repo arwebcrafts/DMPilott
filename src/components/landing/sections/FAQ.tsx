@@ -25,8 +25,8 @@ export function FAQ() {
             <span className="text-white font-bold">D</span>
           </div>
           <div className="flex-1">
-            <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>DMPilot</div>
-            <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Online · Usually replies instantly</div>
+            <div className="font-semibold text-gray-900 dark:text-gray-100">DMPilot</div>
+            <div className="text-sm text-gray-600 dark:text-gray-300">Online · Usually replies instantly</div>
           </div>
         </div>
 
@@ -63,8 +63,7 @@ export function FAQ() {
           <input
             type="text"
             placeholder="Ask anything..."
-            className="flex-1 bg-transparent outline-none text-sm"
-            style={{ color: 'var(--text-primary)' }}
+            className="flex-1 bg-transparent outline-none text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
           />
           <button className="p-2 rounded-full" style={{ background: 'var(--accent)' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
@@ -81,7 +80,7 @@ export function FAQ() {
           className="mt-8 text-center"
         >
           <p className="text-base mb-2" style={{ color: 'var(--text-secondary)' }}>
-            Still have questions?
+            Still have questions?xt-gay-600dk:gr-300"
           </p>
           <a
             href="mailto:support@dmpilot.com"

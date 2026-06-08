@@ -25,18 +25,18 @@ export function FinalCTA() {
     <SectionContainer padding="xl" id="join" className="section-warm">
       <div className="max-w-2xl mx-auto text-center">
         <div className="mb-8">
-          <p className="text-sm font-medium tracking-widest uppercase mb-4" style={{ color: 'var(--text-muted)' }}>START YOUR DAY</p>
-          <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6 leading-tight" style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>
+          <p className="text-sm font-medium tracking-widest uppercase mb-4 text-gray-500 dark:text-gray-400">START YOUR DAY</p>
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6 leading-tight text-gray-900 dark:text-gray-100" style={{ fontFamily: 'var(--font-display)' }}>
             When the day starts quiet, the day ends done.
           </h2>
         </div>
 
         <div className="card-warm p-8 mb-8">
-          <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>Hi friend,</p>
-          <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
-            Most apps want you to do more. <strong style={{ color: 'var(--text-primary)' }}>DMPilot wants you to feel done.</strong>
+          <p className="mb-4 text-gray-600 dark:text-gray-300">Hi friend,</p>
+          <p className="mb-4 text-gray-600 dark:text-gray-300">
+            Most apps want you to do more. <strong className="text-gray-900 dark:text-gray-100">DMPilot wants you to feel done.</strong>
           </p>
-          <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>
+          <p className="mb-6 text-gray-600 dark:text-gray-300">
             Drop your email. We'll send a thoughtful invite when there's room — never a marketing blast, never a countdown.
           </p>
           <form onSubmit={handleSubmit} className="max-w-md mx-auto">
@@ -47,8 +47,8 @@ export function FinalCTA() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Your email"
                 required
-                className="flex-1 px-4 py-3 rounded-lg border outline-none"
-                style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)', color: 'var(--text-primary)' }}
+                className="flex-1 px-4 py-3 rounded-lg border outline-none text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+                style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}
               />
               <button
                 type="submit"
@@ -67,8 +67,8 @@ export function FinalCTA() {
             )}
           </form>
           <div className="mt-6">
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>With calm,</p>
-            <p style={{ color: 'var(--text-secondary)' }}>— The DMPilot team</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">With calm,</p>
+            <p className="text-gray-600 dark:text-gray-300">— The DMPilot team</p>
           </div>
         </div>
 
@@ -77,17 +77,17 @@ export function FinalCTA() {
           <div className="marquee-track">
             {[...Array(2)].map((_, i) => (
               <div key={i} className="flex items-center gap-8 px-4">
-                <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>JOIN THE CALM CREW</span>
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">JOIN THE CALM CREW</span>
                 <span style={{ color: 'var(--accent)' }}>•</span>
-                <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>ALREADY IN BETA</span>
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">ALREADY IN BETA</span>
                 <span style={{ color: 'var(--accent)' }}>•</span>
-                <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>QUIET ON PURPOSE</span>
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">QUIET ON PURPOSE</span>
                 <span style={{ color: 'var(--accent)' }}>•</span>
-                <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>CALM ENGAGEMENT</span>
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">CALM ENGAGEMENT</span>
                 <span style={{ color: 'var(--accent)' }}>•</span>
-                <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>PRIVATE BETA</span>
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">PRIVATE BETA</span>
                 <span style={{ color: 'var(--accent)' }}>•</span>
-                <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>START YOUR DAY</span>
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">START YOUR DAY</span>
                 <span style={{ color: 'var(--accent)' }}>•</span>
               </div>
             ))}
