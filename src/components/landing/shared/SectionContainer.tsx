@@ -13,10 +13,10 @@ interface SectionContainerProps {
 }
 
 const variants = {
-  default: 'bg-white',
-  light: 'bg-gray-50',
-  dark: 'bg-gray-900',
-  gradient: 'bg-gradient-to-b from-gray-50 to-white',
+  default: 'section-neutral',
+  light: 'section-warm',
+  dark: 'dark',
+  gradient: 'section-neutral',
 };
 
 const paddings = {
@@ -51,6 +51,7 @@ export function SectionContainer({
         'w-full',
         className
       )}
+      style={{ background: variant === 'default' || variant === 'gradient' ? 'var(--surface-1)' : variant === 'light' ? 'var(--surface-0)' : undefined }}
     >
       <div className={cn('mx-auto px-4 sm:px-6 lg:px-8', maxWidths[maxWidth])}>
         {children}

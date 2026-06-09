@@ -10,7 +10,7 @@ export function Footer() {
           {/* Brand Column */}
           <div className="md:col-span-1">
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#e85d3a] to-[#f09433] flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'var(--accent)' }}>
                 <span className="text-white text-sm font-bold">D</span>
               </div>
               <span className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>DMPilot</span>

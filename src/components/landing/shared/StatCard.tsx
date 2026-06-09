@@ -35,17 +35,17 @@ export function StatCard({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       className={cn(
-        'bg-white rounded-xl p-6 shadow-sm border border-gray-100',
-        'hover:shadow-md transition-shadow duration-200',
+        'p-6 border hover:shadow-md transition-shadow duration-200',
         className
       )}
+      style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', boxShadow: 'var(--shadow-sm)' }}
     >
       {icon && (
-        <div className="mb-4 text-blue-600">{icon}</div>
+        <div className="mb-4" style={{ color: 'var(--accent)' }}>{icon}</div>
       )}
       
       <div className="flex items-baseline gap-2">
-        <h3 className="text-4xl font-bold text-gray-900">
+        <h3 className="font-bold" style={{ color: 'var(--text-primary)', fontSize: 'clamp(2rem, 4vw, 3rem)' }}>
           {typeof value === 'number' ? value.toLocaleString() : value}
         </h3>
         {trend && trendValue && (
@@ -60,10 +60,14 @@ export function StatCard({
         )}
       </div>
       
-      <p className="mt-2 text-lg font-medium text-gray-700">{label}</p>
+      <p className="mt-2 font-medium" style={{ color: 'var(--text-primary)', fontSize: 'var(--font-lg)' }}>
+        {label}
+      </p>
       
       {description && (
-        <p className="mt-2 text-sm text-gray-500">{description}</p>
+        <p className="mt-2" style={{ color: 'var(--text-muted)', fontSize: 'var(--font-sm)' }}>
+          {description}
+        </p>
       )}
     </motion.div>
   );

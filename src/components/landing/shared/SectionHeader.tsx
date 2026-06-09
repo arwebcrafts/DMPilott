@@ -77,7 +77,8 @@ export function SectionHeader({
           variants={itemVariants}
           className="inline-block mb-4"
         >
-          <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
+          <span className="inline-flex items-center px-4 py-2 rounded-full font-medium"
+            style={{ background: 'var(--surface-0)', color: 'var(--text-secondary)', fontSize: 'var(--font-sm)', borderRadius: 'var(--radius-md)' }}>
             {badge}
           </span>
         </motion.div>
@@ -86,10 +87,10 @@ export function SectionHeader({
       <motion.h2
         variants={itemVariants}
         className={cn(
-          sizes[size].title,
-          'font-bold text-gray-900 tracking-tight',
+          'font-bold tracking-tight',
           align === 'center' && 'mx-auto max-w-3xl'
         )}
+        style={{ color: 'var(--text-primary)', fontSize: size === 'xl' ? 'clamp(2.5rem, 6vw, 5rem)' : size === 'lg' ? 'clamp(2rem, 5vw, 4rem)' : size === 'md' ? 'clamp(1.5rem, 4vw, 3rem)' : 'clamp(1.25rem, 3vw, 2.5rem)' }}
       >
         {title}
       </motion.h2>
@@ -98,10 +99,10 @@ export function SectionHeader({
         <motion.p
           variants={itemVariants}
           className={cn(
-            sizes[size].subtitle,
-            'mt-4 text-gray-600',
+            'mt-4',
             align === 'center' && 'mx-auto max-w-2xl'
           )}
+          style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-base)' }}
         >
           {subtitle}
         </motion.p>
@@ -111,9 +112,10 @@ export function SectionHeader({
         <motion.p
           variants={itemVariants}
           className={cn(
-            'mt-4 text-lg text-gray-500 leading-relaxed',
+            'mt-4 leading-relaxed',
             align === 'center' && 'mx-auto max-w-3xl'
           )}
+          style={{ color: 'var(--text-muted)', fontSize: 'var(--font-base)' }}
         >
           {description}
         </motion.p>

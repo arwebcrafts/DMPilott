@@ -23,14 +23,18 @@ export function FeatureCard({
       viewport={{ once: true }}
       whileHover={{ y: -4 }}
       className={cn(
-        'bg-white rounded-xl p-6 shadow-sm border border-gray-100',
-        'hover:shadow-lg transition-all duration-200',
+        'p-6 border hover:shadow-lg transition-all duration-200',
         className
       )}
+      style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', boxShadow: 'var(--shadow-sm)' }}
     >
-      <div className="mb-4 text-blue-600">{icon}</div>
-      <h3 className="text-xl font-semibold text-gray-900 mb-2">{title}</h3>
-      <p className="text-gray-600 leading-relaxed">{description}</p>
+      <div className="mb-4" style={{ color: 'var(--accent)' }}>{icon}</div>
+      <h3 className="font-semibold mb-2" style={{ color: 'var(--text-primary)', fontSize: 'var(--font-lg)' }}>
+        {title}
+      </h3>
+      <p className="leading-relaxed" style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-base)' }}>
+        {description}
+      </p>
     </motion.div>
   );
 }

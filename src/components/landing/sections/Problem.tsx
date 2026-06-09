@@ -79,15 +79,16 @@ export function Problem() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: index * 0.1 }}
-            className="bg-white rounded-xl p-6 shadow-sm border border-gray-100"
+            className="p-6 border"
+            style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', boxShadow: 'var(--shadow-sm)' }}
           >
             <div className="flex items-start gap-4">
-              <div className="text-red-500 flex-shrink-0">{point.icon}</div>
+              <div style={{ color: 'var(--accent)' }} className="flex-shrink-0">{point.icon}</div>
               <div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                <h3 className="font-semibold mb-2" style={{ color: 'var(--text-primary)', fontSize: 'var(--font-lg)' }}>
                   {point.title}
                 </h3>
-                <p className="text-gray-600 leading-relaxed">
+                <p className="leading-relaxed" style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-base)' }}>
                   {point.description}
                 </p>
               </div>
@@ -98,7 +99,7 @@ export function Problem() {
 
       {/* Data Source */}
       <div className="mt-12 text-center">
-        <p className="text-sm text-gray-500">
+        <p style={{ color: 'var(--text-muted)', fontSize: 'var(--font-xs)' }}>
           Source: Instagram Business Survey 2024, Harvard Business Review
         </p>
       </div>

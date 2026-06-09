@@ -23,7 +23,7 @@ export function Hero() {
   };
 
   return (
-    <section id="hero" className="relative min-h-screen flex flex-col items-center justify-center text-center px-6 pt-32 pb-24 overflow-hidden hero-bg">
+    <section id="hero" className="relative min-h-screen flex flex-col items-center justify-center text-center px-6 pt-32 pb-24 overflow-hidden" style={{ background: 'var(--surface-0)' }}>
       {/* SVG Cloud decorations */}
       <div className="absolute top-20 left-[10%] opacity-80 animate-[float_6s_ease-in-out_infinite]">
         <svg width="140" height="50" viewBox="0 0 140 50" fill="rgba(255,255,255,0.5)" opacity="0.9">
@@ -65,7 +65,7 @@ export function Hero() {
           className="flex items-center gap-4 justify-center mb-8"
         >
           <div className="h-px w-12" style={{ background: 'var(--text-muted)' }} />
-          <span className="text-xs font-medium tracking-[0.2em] uppercase" style={{ color: 'black' }}>
+          <span className="font-medium tracking-[0.2em] uppercase" style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-xs)' }}>
             CALM ENGAGEMENT · PRIVATE BETA
           </span>
           <div className="h-px w-12" style={{ background: 'var(--text-muted)' }} />
@@ -76,8 +76,8 @@ export function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 leading-tight"
-          style={{ color: 'black' }}
+          className="font-bold tracking-tight mb-6 leading-tight"
+          style={{ color: 'var(--text-primary)', fontSize: 'clamp(2rem, 5vw, 4rem)' }}
         >
           End the day knowing you actually connected.
         </motion.h1>
@@ -87,8 +87,8 @@ export function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="text-xl md:text-2xl mb-12 leading-relaxed max-w-2xl mx-auto"
-          style={{ color: 'black' }}
+          className="mb-12 leading-relaxed max-w-2xl mx-auto"
+          style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-base)' }}
         >
           A calm DM automation tool that helps you respond without losing the personal touch.
         </motion.p>
@@ -101,20 +101,21 @@ export function Hero() {
           onSubmit={handleSubmit}
           className="max-w-lg mx-auto mb-4"
         >
-          <div className="flex items-center rounded-full shadow-xl p-1.5 border" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
+          <div className="flex items-center rounded-full p-1.5 border" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-2)', boxShadow: 'var(--shadow-md)' }}>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@studio.co"
               required
-              className="flex-1 px-6 py-3 bg-transparent text-base outline-none rounded-full text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+              className="flex-1 px-6 py-3 bg-transparent outline-none rounded-full"
+              style={{ color: 'var(--text-primary)', fontSize: 'var(--font-base)' }}
             />
             <button
               type="submit"
               disabled={status === 'loading'}
-              className="px-6 py-3 rounded-full text-sm font-semibold text-white flex items-center gap-2 transition-all hover:shadow-lg"
-              style={{ background: 'var(--accent)' }}
+              className="px-6 py-3 rounded-full font-semibold text-white flex items-center gap-2 transition-all"
+              style={{ background: 'var(--accent)', fontSize: 'var(--font-sm)', boxShadow: 'var(--shadow-sm)' }}
             >
               Start your day <span className="text-base">↗</span>
             </button>
@@ -128,7 +129,7 @@ export function Hero() {
           <p className="text-sm text-red-500 text-center">Something went wrong. Try again?</p>
         )}
 
-        <p className="text-sm text-center mt-2" style={{ color: 'black' }}>
+        <p className="text-center mt-2" style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-xs)' }}>
           Join the calm crew already in beta. No spam.
         </p>
 
@@ -139,22 +140,22 @@ export function Hero() {
           transition={{ duration: 0.8, delay: 0.5 }}
           className="relative mt-16 max-w-4xl mx-auto"
         >
-          <div className="rounded-t-xl overflow-hidden shadow-2xl border border-gray-200/30">
+          <div className="rounded-t-xl overflow-hidden border" style={{ boxShadow: 'var(--shadow-lg)', borderColor: 'var(--surface-2)' }}>
             {/* Browser chrome */}
-            <div className="bg-gray-100 px-4 py-3 flex items-center gap-2">
+            <div className="px-4 py-3 flex items-center gap-2" style={{ background: 'var(--surface-1)' }}>
               <div className="flex gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-red-400" />
-                <div className="w-3 h-3 rounded-full bg-yellow-400" />
-                <div className="w-3 h-3 rounded-full bg-green-400" />
+                <div className="rounded-full" style={{ width: '12px', height: '12px', background: '#f87171' }} />
+                <div className="rounded-full" style={{ width: '12px', height: '12px', background: '#fbbf24' }} />
+                <div className="rounded-full" style={{ width: '12px', height: '12px', background: '#34d399' }} />
               </div>
               <div className="flex-1 mx-4">
-                <div className="bg-white rounded-md px-3 py-1 text-xs text-gray-400 max-w-xs">
+                <div className="rounded-md px-3 py-1 max-w-xs" style={{ background: 'var(--surface-1)', color: 'var(--text-muted)', fontSize: 'var(--font-xs)' }}>
                   dashboard.dmpilot.com/inbox
                 </div>
               </div>
             </div>
             {/* Screenshot placeholder */}
-            <div className="bg-gradient-to-b from-gray-50 to-gray-100 h-64 flex items-center justify-center text-gray-300 text-sm">
+            <div className="h-64 flex items-center justify-center" style={{ background: 'linear-gradient(to bottom, var(--surface-1), var(--surface-0))', color: 'var(--text-muted)', fontSize: 'var(--font-sm)' }}>
               DMPilot Dashboard Screenshot
             </div>
           </div>

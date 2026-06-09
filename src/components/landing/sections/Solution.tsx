@@ -80,11 +80,11 @@ export function Solution() {
             transition={{ delay: index * 0.1 }}
             className="text-center"
           >
-            <div className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 mb-2">
+            <div className="font-bold mb-2" style={{ color: 'var(--accent)', fontSize: 'clamp(2rem, 4vw, 3rem)' }}>
               {benefit.value}
             </div>
-            <p className="text-lg font-semibold text-gray-900 mb-1">{benefit.label}</p>
-            <p className="text-sm text-gray-500">{benefit.description}</p>
+            <p className="font-semibold mb-1" style={{ color: 'var(--text-primary)', fontSize: 'var(--font-lg)' }}>{benefit.label}</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: 'var(--font-sm)' }}>{benefit.description}</p>
           </motion.div>
         ))}
       </div>

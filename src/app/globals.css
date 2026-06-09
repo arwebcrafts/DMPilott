@@ -1,59 +1,55 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Inter', system-ui, sans-serif;
-  --font-display: 'Outfit', 'Inter', system-ui, sans-serif;
-  --color-background: #ffffff;
-  --color-foreground: #111827;
+  --font-sans: 'Outfit', 'Outfit Fallback', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Outfit', 'Outfit Fallback', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --color-background: #fbf5ec;
+  --color-foreground: #1a1a1a;
 }
 
 /* ─── Root Design Tokens (Light Theme - Default) ─────────────────────────────────────────── */
 :root {
-  /* Light theme (default) - Warm palette */
-  --background: #fffcf8;
+  /* Light theme (default) - mursa.me palette */
+  --background: #fbf5ec;
   --foreground: #1a1a1a;
-  --surface-0: #fffcf8;         /* warm white */
-  --surface-1: #fef7f0;         /* cream */
-  --surface-2: #f5ede4;         /* warm gray */
-  --surface-3: #e8e0d8;         /* warm border */
-  --surface-4: #d4cdc5;
+  --surface-0: #000000;         /* base */
+  --surface-1: #fffcf8;         /* muted */
+  --surface-2: #1a1a24;         /* raised */
+  --surface-3: #24242f;         /* strong */
+  --surface-4: #2f2f3a;         /* border strong */
 
   /* Text colors */
   --text-primary: #1a1a1a;
-  --text-secondary: #374151;
-  --text-muted: #4b5563;
+  --text-secondary: #3a3530;
+  --text-tertiary: #ffffff;
+  --text-inverse: #5c5752;
+  --text-muted: #6b6560;
 
-  /* Accent colors (warm coral) */
-  --accent: #e85d3a;            /* warm coral CTA */
-  --accent-hover: #d14e2e;
-  --accent-light: #fff0eb;
+  /* Accent colors */
+  --accent: #ff7a45;            /* strong accent */
+  --accent-hover: #e56a35;
+  --accent-light: rgba(255, 122, 69, 0.1);
 
   /* Section-specific backgrounds */
-  --section-warm: #fef7f0;      /* cream sections */
-  --section-cool: #f0f5f2;      /* mint/sage sections */
-  --section-neutral: #f8f6f3;   /* ivory sections */
-
-  /* Hero gradient colors */
-  --hero-sky-top: #fde8d8;      /* peach */
-  --hero-sky-mid: #f5d5b8;      /* warm tan */
-  --hero-mountain: #7a9e8e;     /* sage green */
-  --hero-mountain-dark: #5a7d6e; /* darker sage */
+  --section-warm: #fbf5ec;
+  --section-cool: #f5f5f0;
+  --section-neutral: #ffffff;
 
   /* Status */
   --success: #22c55e;
   --warning: #f59e0b;
   --error: #ef4444;
 
-  /* Typography scale */
-  --font-xs: 0.75rem;    /* 12px */
-  --font-sm: 0.875rem;   /* 14px */
-  --font-base: 1.125rem; /* 18px - increased from 16px */
-  --font-lg: 1.25rem;    /* 20px */
-  --font-xl: 1.5rem;     /* 24px */
-  --font-2xl: 2rem;      /* 32px */
-  --font-3xl: 2.5rem;    /* 40px */
-  --font-4xl: 3rem;      /* 48px */
-  --font-5xl: 4.5rem;    /* 72px - new largest size */
+  /* Typography scale - mursa.me */
+  --font-xs: 0.59375rem;  /* 9.5px */
+  --font-sm: 0.65625rem;  /* 10.5px */
+  --font-md: 0.75rem;     /* 12px */
+  --font-lg: 0.875rem;    /* 14px */
+  --font-base: 1rem;      /* 16px */
+  --font-xl: 1rem;        /* 16px */
+  --font-2xl: 1.5rem;     /* 24px */
+  --font-3xl: 2rem;       /* 32px */
+  --font-4xl: 3rem;       /* 48px */
   
   /* Line heights */
   --leading-tight: 1.25;
@@ -69,37 +65,39 @@
   --font-bold: 700;
   --font-extrabold: 800;
 
-  /* Spacing scale */
+  /* Spacing scale - mursa.me */
   --space-0: 0;
-  --space-1: 0.25rem; /* 4px */
-  --space-2: 0.5rem;  /* 8px */
-  --space-3: 0.75rem; /* 12px */
-  --space-4: 1rem;    /* 16px */
-  --space-5: 1.25rem; /* 20px */
-  --space-6: 1.5rem;  /* 24px */
-  --space-8: 2rem;    /* 32px */
-  --space-10: 2.5rem; /* 40px */
-  --space-12: 3rem;   /* 48px */
-  --space-16: 4rem;   /* 64px */
-  --space-20: 5rem;   /* 80px */
-  --space-24: 6rem;   /* 96px */
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.625rem;  /* 10px */
+  --space-4: 0.75rem;   /* 12px */
+  --space-5: 1rem;      /* 16px */
+  --space-6: 1.25rem;   /* 20px */
+  --space-7: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+  --space-16: 4rem;     /* 64px */
+  --space-20: 5rem;     /* 80px */
+  --space-24: 6rem;     /* 96px */
 
-  /* Border radius */
+  /* Border radius - mursa.me */
   --radius-none: 0;
-  --radius-sm: 0.25rem;   /* 4px */
-  --radius-md: 0.375rem;  /* 6px */
-  --radius-lg: 0.5rem;    /* 8px */
-  --radius-xl: 0.75rem;   /* 12px */
-  --radius-2xl: 1rem;     /* 16px */
-  --radius-3xl: 1.5rem;   /* 24px */
+  --radius-xs: 0.25rem;   /* 4px */
+  --radius-sm: 1rem;      /* 16px */
+  --radius-md: 9999px;    /* full pill */
+  --radius-lg: 26843500px;
+  --radius-xl: 9999px;
+  --radius-2xl: 9999px;
+  --radius-3xl: 9999px;
   --radius-full: 9999px;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  /* Shadows - mursa.me */
+  --shadow-sm: rgba(139, 109, 79, 0.06) 0px 2px 8px 0px;
+  --shadow-md: rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px;
+  --shadow-lg: rgba(255, 255, 255, 0.7) 0px 1px 0px 0px inset, rgba(26, 26, 26, 0.05) 0px 4px 16px 0px, rgba(26, 26, 26, 0.06) 0px 12px 32px 0px;
+  --shadow-xl: rgba(255, 255, 255, 0.7) 0px 1px 0px 0px inset, rgba(26, 26, 26, 0.08) 0px 8px 24px 0px, rgba(26, 26, 26, 0.06) 0px 24px 56px 0px;
+  --shadow-2xl: rgba(255, 255, 255, 0.65) 0px 1px 0px 0px inset, rgba(26, 26, 26, 0.1) 0px 8px 24px 0px, rgba(26, 26, 26, 0.08) 0px 24px 56px 0px;
   --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
 }
 
@@ -156,7 +154,7 @@ body {
 }
 
 h1 {
-  font-size: var(--font-5xl);
+  font-size: clamp(2rem, 5vw, 4rem);
   line-height: var(--leading-tight);
   font-weight: var(--font-bold);
   letter-spacing: -0.02em;
@@ -165,7 +163,7 @@ h1 {
 }
 
 h2 {
-  font-size: var(--font-4xl);
+  font-size: clamp(1.5rem, 4vw, 3rem);
   line-height: var(--leading-tight);
   font-weight: var(--font-semibold);
   letter-spacing: -0.01em;
@@ -174,14 +172,14 @@ h2 {
 }
 
 h3 {
-  font-size: var(--font-2xl);
+  font-size: clamp(1.25rem, 3vw, 2rem);
   line-height: var(--leading-normal);
   font-weight: var(--font-semibold);
   margin-bottom: 1rem;
 }
 
 h4 {
-  font-size: var(--font-xl);
+  font-size: clamp(1rem, 2.5vw, 1.5rem);
   line-height: var(--leading-normal);
   font-weight: var(--font-medium);
   margin-bottom: 0.75rem;
