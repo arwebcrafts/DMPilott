@@ -13,6 +13,7 @@ export function CostOfManual() {
         description="We tracked one creator's typical day, minute by minute. Here's where it actually went."
         align="center"
         size="lg"
+        className="custom-black-title"
       />
       <div className="mt-12">
         <TimelineVisualization />
