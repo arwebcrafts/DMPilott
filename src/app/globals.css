@@ -19,7 +19,7 @@
   --surface-4: #e5e5e5;
 
   /* Text colors */
-  --text-primary: #1a1a1a;
+  --text-primary: #000000;
   --text-secondary: #3a3530;
   --text-tertiary: #ffffff;
   --text-inverse: #5c5752;
@@ -340,6 +340,33 @@ p {
 }
 
 .dark .custom-black-title h2 {
+  color: #ffffff !important;
+}
+
+/* Hero headline - black in light, white in dark */
+.hero-headline {
+  color: #000000 !important;
+}
+
+.dark .hero-headline {
+  color: #ffffff !important;
+}
+
+.dark .dark-hero-headline {
+  color: #ffffff !important;
+}
+
+/* Force hero h1 to be black in light theme */
+#hero h1 {
+  color: #000000 !important;
+}
+
+.dark #hero h1 {
+  color: #ffffff !important;
+}
+
+/* Override inline style for dark mode */
+.dark #hero h1[style*="color"] {
   color: #ffffff !important;
 }
 

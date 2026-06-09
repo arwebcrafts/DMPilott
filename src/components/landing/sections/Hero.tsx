@@ -77,7 +77,7 @@ export function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
           className="font-bold tracking-tight mb-6 leading-tight"
-          style={{ color: 'var(--text-primary)', fontSize: 'clamp(2rem, 5vw, 4rem)' }}
+          style={{ color: '#000000', fontSize: 'clamp(2rem, 5vw, 4rem)' }}
         >
           End the day knowing you actually connected.
         </motion.h1>
