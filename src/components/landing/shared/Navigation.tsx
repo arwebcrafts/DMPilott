@@ -39,7 +39,7 @@ export function Navigation() {
           <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#e85d3a] to-[#f09433] flex items-center justify-center">
             <span className="text-white text-xs font-bold">D</span>
           </div>
-          <span className="text-lg font-bold text-gray-900 dark:text-gray-100">DMPilot</span>
+          <span className="text-lg font-bold" style={{ color: 'var(--foreground)' }}>DMPilot</span>
         </a>
 
         {/* Desktop Navigation */}
@@ -48,7 +48,8 @@ export function Navigation() {
             <a
               key={link.name}
               href={link.href}
-              className="text-sm font-medium hover:opacity-70 transition-opacity cursor-pointer text-gray-600 dark:text-gray-300"
+              className="text-sm font-medium hover:opacity-70 transition-opacity cursor-pointer"
+              style={{ color: 'var(--text-secondary)' }}
               role="menuitem"
             >
               {link.name}
@@ -72,7 +73,8 @@ export function Navigation() {
         {/* Mobile Menu Button */}
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-900 dark:text-gray-100"
+          className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          style={{ color: 'var(--foreground)' }}
           aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={mobileMenuOpen}
           aria-controls="mobile-menu"
@@ -97,7 +99,8 @@ export function Navigation() {
                 <a
                   key={link.name}
                   href={link.href}
-                  className="text-sm font-medium hover:opacity-70 transition-opacity text-gray-600 dark:text-gray-300"
+                  className="text-sm font-medium hover:opacity-70 transition-opacity"
+                  style={{ color: 'var(--text-secondary)' }}
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   {link.name}

@@ -65,7 +65,7 @@ export function Hero() {
           className="flex items-center gap-4 justify-center mb-8"
         >
           <div className="h-px w-12" style={{ background: 'var(--text-muted)' }} />
-          <span className="text-xs font-medium tracking-[0.2em] uppercase" style={{ color: 'var(--text-secondary)' }}>
+          <span className="text-xs font-medium tracking-[0.2em] uppercase" style={{ color: 'black' }}>
             CALM ENGAGEMENT · PRIVATE BETA
           </span>
           <div className="h-px w-12" style={{ background: 'var(--text-muted)' }} />
@@ -77,7 +77,7 @@ export function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
           className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 leading-tight"
-          style={{ color: 'var(--text-primary)' }}
+          style={{ color: 'black' }}
         >
           End the day knowing you actually connected.
         </motion.h1>
@@ -88,7 +88,7 @@ export function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
           className="text-xl md:text-2xl mb-12 leading-relaxed max-w-2xl mx-auto"
-          style={{ color: 'var(--text-secondary)' }}
+          style={{ color: 'black' }}
         >
           A calm DM automation tool that helps you respond without losing the personal touch.
         </motion.p>
@@ -128,7 +128,7 @@ export function Hero() {
           <p className="text-sm text-red-500 text-center">Something went wrong. Try again?</p>
         )}
 
-        <p className="text-sm text-center mt-2" style={{ color: 'var(--text-secondary)' }}>
+        <p className="text-sm text-center mt-2" style={{ color: 'black' }}>
           Join the calm crew already in beta. No spam.
         </p>
 
