@@ -17,6 +17,16 @@ export interface PageConfiguration {
   updated_at: string;
 }
 
+export interface InstagramGiftOffer {
+  id: string;
+  user_id: string;
+  account_username: string;
+  gift_link_url: string;
+  gift_link_title?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface CreatePageConfigurationInput {
   user_id: string;
   page_name: string;
@@ -180,4 +190,97 @@ export async function deletePageConfiguration(id: string): Promise<void> {
   if (error) {
     throw new Error(`Failed to delete page configuration: ${error.message}`);
   }
+}
+
+/**
+ * Get Instagram gift offer by account username
+ */
+export async function getInstagramGiftOffer(accountUsername: string): Promise<InstagramGiftOffer | null> {
+  const { data, error } = await supabase
+    .from('instagram_gift_offers')
+    .select()
+    .eq('account_username', accountUsername)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      return null; // Not found
+    }
+    throw new Error(`Failed to get Instagram gift offer: ${error.message}`);
+  }
+
+  return data;
+}
+
+/**
+ * Get Instagram user interaction
+ */
+export async function getInstagramUserInteraction(psid: string, giftOfferId: string) {
+  const { data, error } = await supabase
+    .from('instagram_user_interactions')
+    .select()
+    .eq('instagram_psid', psid)
+    .eq('instagram_gift_offer_id', giftOfferId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('[Instagram User Interaction] Failed to fetch interaction:', error);
+    return null;
+  }
+
+  return data;
+}
+
+/**
+ * Create Instagram user interaction
+ */
+export async function createInstagramUserInteraction(input: {
+  instagram_gift_offer_id: string;
+  instagram_psid: string;
+  interaction_type?: string;
+  self_reported_followed?: boolean;
+}) {
+  const { data, error } = await supabase
+    .from('instagram_user_interactions')
+    .insert({
+      instagram_gift_offer_id: input.instagram_gift_offer_id,
+      instagram_psid: input.instagram_psid,
+      interaction_type: input.interaction_type || 'message_received',
+      self_reported_followed: input.self_reported_followed || false,
+    })
+    .select()
+    .maybeSingle();
+
+  if (error) {
+    console.error('[Instagram User Interaction] Failed to create interaction:', error);
+    return null;
+  }
+
+  return data;
+}
+
+/**
+ * Update Instagram user interaction
+ */
+export async function updateInstagramUserInteraction(psid: string, giftOfferId: string, updates: {
+  interaction_type?: string;
+  self_reported_followed?: boolean;
+  gift_claimed_at?: string;
+}) {
+  const { data, error } = await supabase
+    .from('instagram_user_interactions')
+    .update(updates)
+    .eq('instagram_psid', psid)
+    .eq('instagram_gift_offer_id', giftOfferId)
+    .select()
+    .maybeSingle();
+
+  if (error) {
+    console.error('[Instagram User Interaction] Failed to update interaction:', error);
+    return null;
+  }
+
+  return data;
 }

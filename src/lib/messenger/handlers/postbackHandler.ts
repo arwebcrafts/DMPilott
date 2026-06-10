@@ -1,5 +1,6 @@
 import { sendButtonTemplate, sendTextMessage } from '../api/sendMessage';
-import { getPageConfiguration } from '@/lib/db/pageConfigurations';
+import { sendInstagramDm } from '@/lib/instagramDmQueue';
+import { getPageConfiguration, getInstagramGiftOffer, createInstagramUserInteraction, getInstagramUserInteraction, updateInstagramUserInteraction } from '@/lib/db/pageConfigurations';
 import { createUserInteraction, getUserInteraction, updateUserInteraction } from '@/lib/db/userInteractions';
 
 /**
@@ -7,12 +8,122 @@ import { createUserInteraction, getUserInteraction, updateUserInteraction } from
  */
 export async function handlePostback(psid: string, postback: any) {
   const payload = postback.payload;
-  
+
   if (payload === 'FOLLOW_PAGE_REQUEST') {
     await handleFollowButton(psid);
   } else if (payload === 'CHECK_LIKE_STATUS') {
     await handleLikeStatusCheck(psid);
+  } else if (payload.startsWith('IG_CHECK_FOLLOW_STATUS:')) {
+    const accountUsername = payload.split(':')[1];
+    await handleInstagramFollowStatusCheck(psid, accountUsername);
   }
+}
+
+/**
+ * Handle Instagram follow status check
+ */
+export async function handleInstagramFollowStatusCheck(psid: string, accountUsername?: string, account?: any) {
+  if (!accountUsername) {
+    await sendInstagramDm({
+      account,
+      recipientId: psid,
+      message: 'Configuration error.',
+    });
+    return;
+  }
+
+  const giftOffer = await getInstagramGiftOffer(accountUsername);
+
+  if (!giftOffer) {
+    await sendInstagramDm({
+      account,
+      recipientId: psid,
+      message: 'Configuration error.',
+    });
+    return;
+  }
+
+  // Update existing interaction or create new one
+  const existingInteraction = await getInstagramUserInteraction(psid, giftOffer.id);
+
+  if (existingInteraction) {
+    await updateInstagramUserInteraction(psid, giftOffer.id, {
+      interaction_type: 'account_followed',
+      self_reported_followed: true,
+    });
+  } else {
+    await createInstagramUserInteraction({
+      instagram_gift_offer_id: giftOffer.id,
+      instagram_psid: psid,
+      interaction_type: 'account_followed',
+      self_reported_followed: true,
+    });
+  }
+
+  // Trust user's self-report and send gift link
+  await sendInstagramGiftLink(psid, giftOffer, account);
+}
+
+/**
+ * Send Instagram gift link to user
+ */
+async function sendInstagramGiftLink(psid: string, giftOffer: any, account: any) {
+  // Check if already claimed
+  const existingInteraction = await getInstagramUserInteraction(psid, giftOffer.id);
+
+  if (existingInteraction?.gift_claimed_at) {
+    await sendInstagramDm({
+      account,
+      recipientId: psid,
+      message: "You've already claimed your gift!",
+    });
+    return;
+  }
+
+  // Send gift link as text message
+  const giftMessage = `🎉 Thank you for following! Here's your exclusive gift:\n\n${giftOffer.gift_link_title || 'Get Your Gift'}\n${giftOffer.gift_link_url}`;
+  await sendInstagramDm({
+    account,
+    recipientId: psid,
+    message: giftMessage,
+  });
+
+  // Mark as claimed
+  await updateInstagramUserInteraction(psid, giftOffer.id, {
+    gift_claimed_at: new Date().toISOString(),
+    interaction_type: 'gift_claimed',
+  });
+}
+
+/**
+ * Handle Instagram follow button - send account link
+ */
+export async function handleInstagramFollowButton(psid: string, accountUsername: string, account: any) {
+  const giftOffer = await getInstagramGiftOffer(accountUsername);
+
+  if (!giftOffer) {
+    await sendInstagramDm({
+      account,
+      recipientId: psid,
+      message: 'Sorry, no gift offer configuration found.',
+    });
+    return;
+  }
+
+  // Track button click
+  await createInstagramUserInteraction({
+    instagram_gift_offer_id: giftOffer.id,
+    instagram_psid: psid,
+    interaction_type: 'button_clicked',
+  });
+
+  // Send simple text message with Instagram link (Instagram doesn't support button templates like Facebook)
+  const followMessage = `Follow our Instagram account to get exclusive access!\n\n👉 https://instagram.com/${accountUsername}\n\nOnce you've followed, reply with "done" to get your gift link!`;
+  await sendInstagramDm({
+    account,
+    recipientId: psid,
+    message: followMessage,
+  });
 }
 
 /**

@@ -32,6 +32,14 @@ interface PageConfiguration {
   created_at: string
 }
 
+interface InstagramGiftOffer {
+  id: string
+  account_username: string
+  gift_link_url: string
+  gift_link_title: string | null
+  created_at: string
+}
+
 function FacebookPageConfigModal({
   onClose,
   onSaved,
@@ -215,12 +223,160 @@ function FacebookPageConfigModal({
   )
 }
 
+function InstagramGiftOfferModal({
+  onClose,
+  onSaved,
+  igAccounts,
+}: {
+  onClose: () => void
+  onSaved: () => void
+  igAccounts: any[]
+}) {
+  const [selectedAccountId, setSelectedAccountId] = useState('')
+  const [giftLinkUrl, setGiftLinkUrl] = useState('')
+  const [giftLinkTitle, setGiftLinkTitle] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  // Auto-select first Instagram account
+  useEffect(() => {
+    if (igAccounts.length > 0 && !selectedAccountId) {
+      setSelectedAccountId(igAccounts[0].id)
+    }
+  }, [igAccounts, selectedAccountId])
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!giftLinkUrl) {
+      alert('Please fill in all required fields')
+      return
+    }
+
+    const selectedAccount = igAccounts.find(a => a.id === selectedAccountId)
+    if (!selectedAccount) {
+      alert('Please select an Instagram account')
+      return
+    }
+
+    setLoading(true)
+
+    const res = await fetch('/api/instagram-gift-offers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        account_username: selectedAccount.username,
+        gift_link_url: giftLinkUrl,
+        gift_link_title: giftLinkTitle,
+      }),
+    })
+
+    const data = await res.json()
+
+    if (res.ok) {
+      alert('Instagram Gift Offer saved successfully!')
+      onSaved()
+      onClose()
+    } else {
+      alert(data.error || 'Failed to save Instagram Gift Offer')
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto border shadow-xl"
+        style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}
+      >
+        <div className="p-6 border-b" style={{ borderColor: 'var(--surface-3)' }}>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Instagram Gift Offer</h2>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Account Selection */}
+          {igAccounts.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+                Instagram Account
+              </label>
+              <select
+                value={selectedAccountId}
+                onChange={e => setSelectedAccountId(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-[#DD2A7B]/50 bg-white dark:bg-gray-800"
+                style={{ borderColor: 'var(--surface-3)' }}
+              >
+                {igAccounts.map(acc => (
+                  <option key={acc.id} value={acc.id}>
+                    @{acc.username}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Gift Link URL */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+              Gift Link URL <span className="text-[#FA3E3E]">*</span>
+            </label>
+            <input
+              type="url"
+              value={giftLinkUrl}
+              onChange={e => setGiftLinkUrl(e.target.value)}
+              placeholder="https://your-gift-link.com"
+              className="w-full px-3 py-2 border rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-[#DD2A7B]/50 bg-white dark:bg-gray-800 placeholder-gray-400 dark:placeholder-gray-500"
+              style={{ borderColor: 'var(--surface-3)' }}
+            />
+          </div>
+
+          {/* Gift Link Title */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+              Gift Link Title
+            </label>
+            <input
+              type="text"
+              value={giftLinkTitle}
+              onChange={e => setGiftLinkTitle(e.target.value)}
+              placeholder="e.g. Get Your Free Gift"
+              className="w-full px-3 py-2 border rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-[#DD2A7B]/50 bg-white dark:bg-gray-800 placeholder-gray-400 dark:placeholder-gray-500"
+              style={{ borderColor: 'var(--surface-3)' }}
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2.5 border rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+              style={{ borderColor: 'var(--surface-3)' }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 py-2.5 rounded-lg text-sm font-medium text-white disabled:opacity-50 bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF]"
+            >
+              {loading ? 'Saving...' : 'Save Configuration'}
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  )
+}
+
 export default function AutomationsPage() {
   const [automations, setAutomations] = useState<Automation[]>([])
   const [pageConfigs, setPageConfigs] = useState<PageConfiguration[]>([])
+  const [instagramGiftOffers, setInstagramGiftOffers] = useState<InstagramGiftOffer[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [showPageConfig, setShowPageConfig] = useState(false)
+  const [showInstagramGift, setShowInstagramGift] = useState(false)
   const [editingAutomation, setEditingAutomation] = useState<Automation | null>(null)
   const { user } = useUserStore()
   const supabase = createClient()
@@ -231,6 +387,7 @@ export default function AutomationsPage() {
   useEffect(() => {
     fetchAutomations()
     fetchPageConfigs()
+    fetchInstagramGiftOffers()
     fetchAccounts()
   }, [])
 
@@ -271,6 +428,18 @@ export default function AutomationsPage() {
       .order('created_at', { ascending: false })
 
     setPageConfigs(data || [])
+  }
+
+  async function fetchInstagramGiftOffers() {
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    if (!authUser) return
+
+    const { data } = await supabase
+      .from('instagram_gift_offers')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    setInstagramGiftOffers(data || [])
     setLoading(false)
   }
 
@@ -300,6 +469,12 @@ export default function AutomationsPage() {
     setPageConfigs(prev => prev.filter(c => c.id !== id))
   }
 
+  async function deleteInstagramGiftOffer(id: string) {
+    if (!confirm('Delete this Instagram Gift Offer?')) return
+    await supabase.from('instagram_gift_offers').delete().eq('id', id)
+    setInstagramGiftOffers(prev => prev.filter(o => o.id !== id))
+  }
+
   const igAccounts = accounts.filter(a => a.platform === 'instagram')
   const fbAccounts = accounts.filter(a => a.platform === 'facebook')
 
@@ -318,6 +493,14 @@ export default function AutomationsPage() {
             className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm text-white border-2 border-[#1877F2] bg-[#1877F2]/20 text-[#1877F2]"
           >
             <FacebookIcon className="w-4 h-4" /> FB Gift Offer
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowInstagramGift(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm text-white border-2 border-[#DD2A7B] bg-[#DD2A7B]/20 text-[#DD2A7B]"
+          >
+            <InstagramIcon className="w-4 h-4" /> Insta Gift Offer
           </motion.button>
           <motion.button
             whileHover={{ scale: 1.05 }}
@@ -489,6 +672,54 @@ export default function AutomationsPage() {
         </div>
       )}
 
+      {/* Instagram Gift Offers */}
+      {instagramGiftOffers.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Instagram Gift Offers</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {instagramGiftOffers.map((offer, index) => (
+              <motion.div
+                key={offer.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="rounded-xl border overflow-hidden shadow-sm"
+                style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}
+              >
+                <div className="h-1 bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF]" />
+                <div className="p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <InstagramIcon className="w-4 h-4 text-[#E1306C]" />
+                      <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--surface-1)', color: 'var(--text-muted)' }}>
+                        Gift Offer
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => deleteInstagramGiftOffer(offer.id)}
+                      className="p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                    >
+                      <Trash2 className="w-4 h-4 text-[#FA3E3E]" />
+                    </button>
+                  </div>
+
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">@{offer.account_username}</h3>
+                  <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">
+                    Instagram Gift Offer
+                  </p>
+
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-300 truncate flex-1 mr-2">
+                      {offer.gift_link_title || offer.gift_link_url}
+                    </span>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Create Automation Modal */}
       {showCreate && (
         <CreateAutomationModal
@@ -522,6 +753,15 @@ export default function AutomationsPage() {
           onClose={() => setShowPageConfig(false)}
           onSaved={() => fetchPageConfigs()}
           fbAccounts={fbAccounts}
+        />
+      )}
+
+      {/* Instagram Gift Offer Modal */}
+      {showInstagramGift && (
+        <InstagramGiftOfferModal
+          onClose={() => setShowInstagramGift(false)}
+          onSaved={() => fetchInstagramGiftOffers()}
+          igAccounts={igAccounts}
         />
       )}
     </div>

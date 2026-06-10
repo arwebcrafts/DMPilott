@@ -4,9 +4,9 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { decryptToken } from '@/lib/encryption'
 import axios from 'axios'
 import { processQueuedInstagramDmsForAccount, sendInstagramDm, sendFacebookDm } from '@/lib/instagramDmQueue'
-import { handleFollowButton, handleLikeStatusCheck } from '@/lib/messenger/handlers/postbackHandler'
+import { handleFollowButton, handleLikeStatusCheck, handleInstagramFollowButton, handleInstagramFollowStatusCheck } from '@/lib/messenger/handlers/postbackHandler'
 import { getUserInteraction } from '@/lib/db/userInteractions'
-import { getPageConfiguration } from '@/lib/db/pageConfigurations'
+import { getPageConfiguration, getInstagramGiftOffer, getInstagramUserInteraction } from '@/lib/db/pageConfigurations'
 
 console.log('[INIT] Webhook route module loaded')
 
@@ -205,7 +205,7 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
 
   // Log full messaging structure for debugging
   console.log('[Message] Full messaging object:', JSON.stringify(messaging, null, 2))
-  
+
   // Extract message text - handle different possible structures
   const messageText = message?.text || message?.content?.text || message?.message?.text
   const isEcho = message?.is_echo || message?.content?.is_echo || false
@@ -230,6 +230,49 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
   if (!account) {
     console.log('[Message] No matching IG account found for:', igAccountId)
     return
+  }
+
+  // Check for Instagram gift offer
+  console.log('[IG Follow Button] Checking Instagram gift offer for account:', account.username)
+  const giftOffer = await getInstagramGiftOffer(account.username)
+  console.log('[IG Follow Button] Gift offer found:', !!giftOffer)
+
+  if (giftOffer) {
+    console.log('[IG Follow Button] Gift offer ID:', giftOffer.id)
+    console.log('[IG Follow Button] Checking user interaction for sender:', senderId)
+    const existingInteraction = await getInstagramUserInteraction(senderId, giftOffer.id)
+    console.log('[IG Follow Button] Existing interaction found:', !!existingInteraction)
+
+    // Check if user replied with "done" to get gift link
+    if (existingInteraction && messageText && messageText.toLowerCase().trim() === 'done') {
+      console.log('[IG Follow Button] User replied with "done", sending gift link')
+      if (!existingInteraction?.gift_claimed_at) {
+        try {
+          await handleInstagramFollowStatusCheck(senderId, account.username, account)
+          console.log('[IG Follow Button] Gift link sent successfully')
+        } catch (err: any) {
+          console.log('[IG Follow Button] Error sending gift link:', err.message)
+        }
+      } else {
+        console.log('[IG Follow Button] Gift already claimed')
+      }
+      return
+    }
+
+    // Only send follow button if user hasn't interacted yet
+    if (!existingInteraction) {
+      console.log('[IG Follow Button] Sending follow button to new user:', senderId)
+      try {
+        await handleInstagramFollowButton(senderId, account.username, account)
+        console.log('[IG Follow Button] Follow button sent successfully')
+      } catch (err: any) {
+        console.log('[IG Follow Button] Error sending follow button:', err.message)
+      }
+    } else {
+      console.log('[IG Follow Button] User already interacted, skipping follow button:', senderId)
+    }
+  } else {
+    console.log('[IG Follow Button] No Instagram gift offer found for account:', account.username)
   }
 
   // Find automations for this account
