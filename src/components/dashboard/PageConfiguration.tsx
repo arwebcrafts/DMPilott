@@ -65,10 +65,13 @@ export function PageConfiguration() {
       if (response.ok) {
         alert('Configuration saved!');
       } else {
-        alert('Error saving configuration');
+        const errorData = await response.json();
+        console.error('Error saving configuration:', errorData);
+        alert(`Error saving configuration: ${errorData.error || 'Unknown error'}`);
       }
     } catch (error) {
-      alert('Error saving configuration');
+      console.error('Error saving configuration:', error);
+      alert(`Error saving configuration: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
     setSaving(false);
   };

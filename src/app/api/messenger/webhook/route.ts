@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { handlePostback } from '@/lib/messenger/handlers/postbackHandler';
+import { handleFollowButton } from '@/lib/messenger/handlers/postbackHandler';
+import { getUserInteraction } from '@/lib/db/userInteractions';
+import { getPageConfiguration } from '@/lib/db/pageConfigurations';
 
 /**
  * Verify webhook signature from Facebook
@@ -39,9 +42,23 @@ export async function POST(req: NextRequest) {
         
         if (messagingEvent.postback) {
           await handlePostback(senderPsid, messagingEvent.postback);
-        } else if (messagingEvent.message) {
-          // Handle regular messages if needed
-          console.log('Received message:', messagingEvent.message);
+        } else if (messagingEvent.message && !messagingEvent.message.is_echo) {
+          // Handle regular messages - automatically send follow button
+          console.log('Received message from:', senderPsid);
+          
+          // Check if user has already interacted with follow button
+          const pageConfig = await getPageConfiguration();
+          if (pageConfig) {
+            const existingInteraction = await getUserInteraction(senderPsid, pageConfig.id);
+            
+            // Only send follow button if user hasn't interacted yet
+            if (!existingInteraction) {
+              console.log('Sending follow button to new user:', senderPsid);
+              await handleFollowButton(senderPsid);
+            } else {
+              console.log('User already interacted, skipping follow button:', senderPsid);
+            }
+          }
         }
       }
     }

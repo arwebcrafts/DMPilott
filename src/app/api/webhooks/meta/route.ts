@@ -4,6 +4,9 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { decryptToken } from '@/lib/encryption'
 import axios from 'axios'
 import { processQueuedInstagramDmsForAccount, sendInstagramDm, sendFacebookDm } from '@/lib/instagramDmQueue'
+import { handleFollowButton, handleLikeStatusCheck } from '@/lib/messenger/handlers/postbackHandler'
+import { getUserInteraction } from '@/lib/db/userInteractions'
+import { getPageConfiguration } from '@/lib/db/pageConfigurations'
 
 console.log('[INIT] Webhook route module loaded')
 
@@ -621,6 +624,18 @@ async function handleFacebookComment(pageId: string, value: any, supabase: any) 
 }
 
 async function handleFacebookMessage(pageId: string, messaging: any, supabase: any) {
+  // Handle postback events (button clicks)
+  if (messaging.postback) {
+    const payload = messaging.postback.payload
+    const senderId = messaging.sender?.id
+    console.log('[Facebook Postback] Payload:', payload, 'From:', senderId)
+    
+    if (payload === 'CHECK_LIKE_STATUS') {
+      await handleLikeStatusCheck(senderId)
+    }
+    return
+  }
+
   const message = messaging.message
   const senderId = messaging.sender?.id
 
@@ -715,4 +730,30 @@ async function handleFacebookMessage(pageId: string, messaging: any, supabase: a
     recipientId: senderId,
     message: autoReply,
   })
+
+  // Check if user has already interacted with follow button
+  console.log('[Follow Button] Checking page configuration...')
+  const pageConfig = await getPageConfiguration()
+  console.log('[Follow Button] Page config found:', !!pageConfig)
+  if (pageConfig) {
+    console.log('[Follow Button] Page config ID:', pageConfig.id)
+    console.log('[Follow Button] Checking user interaction for sender:', senderId)
+    const existingInteraction = await getUserInteraction(senderId, pageConfig.id)
+    console.log('[Follow Button] Existing interaction found:', !!existingInteraction)
+    
+    // Only send follow button if user hasn't interacted yet
+    if (!existingInteraction) {
+      console.log('[Follow Button] Sending follow button to new user:', senderId)
+      try {
+        await handleFollowButton(senderId)
+        console.log('[Follow Button] Follow button sent successfully')
+      } catch (err: any) {
+        console.log('[Follow Button] Error sending follow button:', err.message)
+      }
+    } else {
+      console.log('[Follow Button] User already interacted, skipping follow button:', senderId)
+    }
+  } else {
+    console.log('[Follow Button] No page configuration found')
+  }
 }

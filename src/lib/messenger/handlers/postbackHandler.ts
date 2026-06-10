@@ -18,7 +18,7 @@ export async function handlePostback(psid: string, postback: any) {
 /**
  * Handle follow button click - send page link
  */
-async function handleFollowButton(psid: string) {
+export async function handleFollowButton(psid: string) {
   const pageConfig = await getPageConfiguration();
   
   if (!pageConfig) {
@@ -55,7 +55,7 @@ async function handleFollowButton(psid: string) {
 /**
  * Handle like status check - trust user's self-report
  */
-async function handleLikeStatusCheck(psid: string) {
+export async function handleLikeStatusCheck(psid: string) {
   const pageConfig = await getPageConfiguration();
   
   if (!pageConfig) {

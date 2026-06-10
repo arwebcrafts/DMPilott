@@ -83,13 +83,13 @@
 
   /* Border radius - mursa.me */
   --radius-none: 0;
-  --radius-xs: 1rem;      /* 16px */
-  --radius-sm: 1.5rem;    /* 24px */
-  --radius-md: 9999px;    /* full pill */
-  --radius-lg: 9999px;
-  --radius-xl: 9999px;
-  --radius-2xl: 9999px;
-  --radius-3xl: 9999px;
+  --radius-xs: 0.5rem;    /* 8px */
+  --radius-sm: 0.75rem;   /* 12px */
+  --radius-md: 1rem;      /* 16px */
+  --radius-lg: 1rem;      /* 16px */
+  --radius-xl: 0.75rem;   /* 12px */
+  --radius-2xl: 1rem;     /* 16px */
+  --radius-3xl: 1.5rem;   /* 24px */
   --radius-full: 9999px;
 
   /* Shadows - mursa.me */

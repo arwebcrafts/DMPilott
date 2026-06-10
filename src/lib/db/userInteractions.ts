@@ -1,6 +1,6 @@
-import { createClient } from '@/lib/supabase/client';
+import { createServiceClient } from '@/lib/supabase/server';
 
-const supabase = createClient();
+const supabase = createServiceClient();
 
 export interface UserPageInteraction {
   id: string;

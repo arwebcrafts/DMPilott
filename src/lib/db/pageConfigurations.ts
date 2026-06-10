@@ -1,6 +1,7 @@
-import { createClient } from '@/lib/supabase/client';
+import { createServiceClient } from '@/lib/supabase/server';
+import { SupabaseClient } from '@supabase/supabase-js';
 
-const supabase = createClient();
+const supabase = createServiceClient();
 
 export interface PageConfiguration {
   id: string;
@@ -41,9 +42,11 @@ export interface UpdatePageConfigurationInput {
  * Create a new page configuration
  */
 export async function createPageConfiguration(
-  input: CreatePageConfigurationInput
+  input: CreatePageConfigurationInput,
+  client?: SupabaseClient
 ): Promise<PageConfiguration> {
-  const { data, error } = await supabase
+  const db = client || supabase;
+  const { data, error } = await db
     .from('page_configurations')
     .insert({
       ...input,
