@@ -1,4 +1,5 @@
-import { getMetaAppCredentials } from '@/lib/db/metaCredentials';
+import { createServiceClient } from '@/lib/supabase/server';
+import { decryptToken } from '@/lib/encryption';
 
 export interface SendMessageOptions {
   recipient: {
@@ -20,18 +21,30 @@ export async function sendMessage(
   recipientId: string,
   message: SendMessageOptions['message']
 ): Promise<any> {
-  const credentials = await getMetaAppCredentials();
+  const supabase = createServiceClient();
 
-  if (!credentials) {
-    throw new Error('Meta app credentials not configured');
+  // Get Facebook page access token from connected_accounts
+  const { data: account, error } = await supabase
+    .from('connected_accounts')
+    .select('access_token_encrypted')
+    .eq('platform', 'facebook')
+    .eq('is_active', true)
+    .limit(1)
+    .single();
+
+  if (error || !account) {
+    throw new Error('Facebook account not connected. Please connect your Facebook page in the dashboard.');
   }
+
+  // Decrypt the access token
+  const pageAccessToken = decryptToken(account.access_token_encrypted);
 
   const response = await fetch(
     `https://graph.facebook.com/v25.0/me/messages`,
     {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${credentials.page_access_token}`,
+        'Authorization': `Bearer ${pageAccessToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

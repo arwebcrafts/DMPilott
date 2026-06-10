@@ -13,7 +13,7 @@ function verifySignature(req: NextRequest, body: any): boolean {
   if (algorithm !== 'sha256') return false;
   
   const expectedHash = crypto
-    .createHmac('sha256', process.env.FACEBOOK_APP_SECRET!)
+    .createHmac('sha256', process.env.META_APP_SECRET!)
     .update(JSON.stringify(body))
     .digest('hex');
   
@@ -61,8 +61,8 @@ export async function GET(req: NextRequest) {
   const challenge = searchParams.get('hub.challenge');
   
   // Verify the token matches our configured verify token
-  if (mode === 'subscribe' && token === process.env.FACEBOOK_VERIFY_TOKEN) {
-    return NextResponse.text(challenge);
+  if (mode === 'subscribe' && token === process.env.META_WEBHOOK_VERIFY_TOKEN) {
+    return new NextResponse(challenge);
   }
   
   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
