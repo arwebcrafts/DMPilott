@@ -63,13 +63,22 @@ export async function handleLikeStatusCheck(psid: string) {
     return;
   }
   
-  // Track interaction (self-reported follow)
-  await createUserInteraction({
-    page_configuration_id: pageConfig.id,
-    messenger_psid: psid,
-    interaction_type: 'page_visited',
-    self_reported_followed: true,
-  });
+  // Update existing interaction or create new one
+  const existingInteraction = await getUserInteraction(psid, pageConfig.id);
+  
+  if (existingInteraction) {
+    await updateUserInteraction(psid, pageConfig.id, {
+      interaction_type: 'page_visited',
+      self_reported_followed: true,
+    });
+  } else {
+    await createUserInteraction({
+      page_configuration_id: pageConfig.id,
+      messenger_psid: psid,
+      interaction_type: 'page_visited',
+      self_reported_followed: true,
+    });
+  }
   
   // Trust user's self-report and send gift link
   await sendGiftLink(psid, pageConfig);
