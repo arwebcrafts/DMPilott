@@ -364,6 +364,87 @@ p {
   color: #ffffff !important;
 }
 
+/* Phone visualization - light theme */
+.phone-frame {
+  background: #1a1a1a;
+}
+
+.dark .phone-frame {
+  background: var(--text-primary);
+}
+
+.phone-notch {
+  background: #000000;
+}
+
+.phone-screen {
+  background: #ffffff;
+}
+
+.dark .phone-screen {
+  background: var(--surface-1);
+}
+
+.phone-time {
+  color: #1a1a1a;
+}
+
+.dark .phone-time {
+  color: var(--text-primary);
+}
+
+.phone-date {
+  color: #6b6b6b;
+}
+
+.dark .phone-date {
+  color: var(--text-muted);
+}
+
+.notif-app {
+  color: #6b6b6b;
+}
+
+.dark .notif-app {
+  color: var(--text-muted);
+}
+
+.notif-time {
+  color: #6b6b6b;
+}
+
+.dark .notif-time {
+  color: var(--text-muted);
+}
+
+.notif-title {
+  color: #1a1a1a;
+}
+
+.dark .notif-title {
+  color: var(--text-primary);
+}
+
+.badge-new {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.dark .badge-new {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+.badge-missed {
+  background: var(--surface-2);
+  color: #6b6b6b;
+}
+
+.dark .badge-missed {
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+
 /* Force hero h1 to be black in light theme */
 #hero h1 {
   color: #000000 !important;
