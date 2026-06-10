@@ -34,7 +34,7 @@ export async function GET(request: Request) {
     const authUrl = new URL('https://www.instagram.com/oauth/authorize')
     authUrl.searchParams.set('client_id', instagramAppId!)
     authUrl.searchParams.set('redirect_uri', instagramRedirectUri)
-    authUrl.searchParams.set('scope', 'instagram_business_basic,instagram_business_manage_messages')
+    authUrl.searchParams.set('scope', 'instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_insights')
     authUrl.searchParams.set('response_type', 'code')
     authUrl.searchParams.set('state', state)
     
@@ -49,12 +49,11 @@ export async function GET(request: Request) {
   }
 
   // Facebook Login — for Facebook Pages
-  // Note: pages_messaging and pages_read_engagement not approved in app review
-  // Only pages_show_list and pages_manage_metadata are approved
+  // pages_read_engagement is now ready for testing
   const authUrl = new URL('https://www.facebook.com/v21.0/dialog/oauth')
   authUrl.searchParams.set('client_id', process.env.META_APP_ID!)
   authUrl.searchParams.set('redirect_uri', redirectUri)
-  authUrl.searchParams.set('scope', 'pages_show_list,pages_manage_metadata')
+  authUrl.searchParams.set('scope', 'pages_show_list,pages_manage_metadata,pages_read_engagement')
   authUrl.searchParams.set('state', state)
   return NextResponse.redirect(authUrl.toString())
 }
