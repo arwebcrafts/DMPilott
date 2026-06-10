@@ -287,6 +287,14 @@ p {
   transform: translateY(-2px);
 }
 
+.dark .card-warm {
+  background: var(--surface-1);
+}
+
+.dark .card-warm:hover {
+  box-shadow: var(--shadow-md);
+}
+
 /* Marquee */
 .marquee-track {
   display: flex;

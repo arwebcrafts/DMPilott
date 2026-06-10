@@ -23,8 +23,8 @@ export function Values() {
         >
           {/* Document styling */}
           <div className="border-b-2 pb-4 mb-6" style={{ borderColor: 'var(--surface-3)' }}>
-            <h2 className="text-3xl md:text-4xl font-bold mb-2 text-gray-900 dark:text-gray-100" style={{ fontFamily: 'var(--font-display)' }}>Five Commitments</h2>
-            <p className="text-sm uppercase tracking-widest text-gray-600 dark:text-gray-300">THE MANIFESTO</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-2" style={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>Five Commitments</h2>
+            <p className="text-sm uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>THE MANIFESTO</p>
           </div>
 
           <div className="space-y-6">
@@ -40,7 +40,7 @@ export function Values() {
                 <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white" style={{ background: 'var(--accent)' }}>
                   {index + 1}
                 </div>
-                <p className="text-base leading-relaxed flex-1 pt-1 text-gray-600 dark:text-gray-300">
+                <p className="text-base leading-relaxed flex-1 pt-1" style={{ color: 'var(--text-secondary)' }}>
                   {commitment}
                 </p>
               </motion.div>
@@ -48,7 +48,7 @@ export function Values() {
           </div>
 
           <div className="mt-8 pt-6 border-t" style={{ borderColor: 'var(--surface-3)' }}>
-            <p className="text-sm italic text-gray-600 dark:text-gray-300">
+            <p className="text-sm italic" style={{ color: 'var(--text-secondary)' }}>
               These aren't marketing claims. They're the foundation of how we build DMPilot.
             </p>
           </div>

@@ -34,17 +34,17 @@ export function NotificationVisualization() {
   return (
     <div ref={ref} className="max-w-sm mx-auto">
       {/* iPhone frame */}
-      <div className="rounded-[3rem] p-3 shadow-2xl" style={{ background: '#1a1a1a' }}>
+      <div className="rounded-[3rem] p-3 shadow-2xl" style={{ background: 'var(--text-primary)' }}>
         {/* Notch */}
         <div className="flex justify-center mb-1">
-          <div className="w-28 h-6 rounded-full bg-black" />
+          <div className="w-28 h-6 rounded-full" style={{ background: '#000000' }} />
         </div>
         {/* Screen */}
-        <div className="rounded-[2.4rem] overflow-hidden bg-white p-5">
+        <div className="rounded-[2.4rem] overflow-hidden p-5" style={{ background: 'var(--surface-1)' }}>
           {/* Status bar */}
           <div className="flex justify-between items-center mb-4">
-            <span className="text-sm font-semibold" style={{ color: '#1a1a1a' }}>9:41 AM</span>
-            <span className="text-sm" style={{ color: '#6b6b6b' }}>Tuesday, May 5</span>
+            <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>9:41 AM</span>
+            <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Tuesday, May 5</span>
           </div>
 
           {/* Notifications */}
@@ -66,10 +66,10 @@ export function NotificationVisualization() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{notif.app}</span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">{notif.time}</span>
+                      <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>{notif.app}</span>
+                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{notif.time}</span>
                     </div>
-                    <div className="text-sm font-medium truncate text-gray-900 dark:text-gray-100">{notif.title}</div>
+                    <div className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{notif.title}</div>
                   </div>
                 </div>
               </div>
@@ -78,8 +78,8 @@ export function NotificationVisualization() {
 
           {/* Footer badges */}
           <div className="flex justify-between mt-4 pt-3" style={{ borderTop: '1px solid var(--surface-2)' }}>
-            <span className="text-xs font-bold px-2 py-1 rounded-full" style={{ background: '#fee2e2', color: '#dc2626' }}>+ 3 NEW</span>
-            <span className="text-xs font-bold px-2 py-1 rounded-full text-gray-500 dark:text-gray-400" style={{ background: 'var(--surface-2)' }}>47 missed</span>
+            <span className="text-xs font-bold px-2 py-1 rounded-full" style={{ background: 'var(--accent-light)', color: 'var(--accent)' }}>+ 3 NEW</span>
+            <span className="text-xs font-bold px-2 py-1 rounded-full" style={{ background: 'var(--surface-2)', color: 'var(--text-muted)' }}>47 missed</span>
           </div>
         </div>
       </div>

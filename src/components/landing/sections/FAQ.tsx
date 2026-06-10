@@ -25,8 +25,8 @@ export function FAQ() {
             <span className="text-white font-bold">D</span>
           </div>
           <div className="flex-1">
-            <div className="font-semibold text-gray-900 dark:text-gray-100">DMPilot</div>
-            <div className="text-sm text-gray-600 dark:text-gray-300">Online · Usually replies instantly</div>
+            <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>DMPilot</div>
+            <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Online · Usually replies instantly</div>
           </div>
         </div>
 
@@ -44,12 +44,13 @@ export function FAQ() {
               <div
                 className={`max-w-[80%] p-4 rounded-2xl ${
                   msg.type === 'user'
-                    ? 'text-white'
-                    : 'text-gray-900'
+                    ? ''
+                    : ''
                 }`}
                 style={{
                   background: msg.type === 'user' ? 'var(--accent)' : 'var(--surface-1)',
                   borderRadius: msg.type === 'user' ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
+                  color: msg.type === 'user' ? '#ffffff' : 'var(--text-primary)',
                 }}
               >
                 <p className="text-sm leading-relaxed">{msg.text}</p>
@@ -63,7 +64,8 @@ export function FAQ() {
           <input
             type="text"
             placeholder="Ask anything..."
-            className="flex-1 bg-transparent outline-none text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+            className="flex-1 bg-transparent outline-none text-sm"
+            style={{ color: 'var(--text-primary)' }}
           />
           <button className="p-2 rounded-full" style={{ background: 'var(--accent)' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
@@ -80,7 +82,7 @@ export function FAQ() {
           className="mt-8 text-center"
         >
           <p className="text-base mb-2" style={{ color: 'var(--text-secondary)' }}>
-            Still have questions?xt-gay-600dk:gr-300"
+            Still have questions?
           </p>
           <a
             href="mailto:support@dmpilot.com"
