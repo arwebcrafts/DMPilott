@@ -22,10 +22,205 @@ interface Automation {
   connected_accounts?: { username: string }
 }
 
+interface PageConfiguration {
+  id: string
+  page_name: string
+  page_url: string
+  facebook_page_id: string
+  gift_link_url: string
+  gift_link_title: string | null
+  created_at: string
+}
+
+function FacebookPageConfigModal({
+  onClose,
+  onSaved,
+  fbAccounts,
+}: {
+  onClose: () => void
+  onSaved: () => void
+  fbAccounts: any[]
+}) {
+  const [selectedAccountId, setSelectedAccountId] = useState('')
+  const [pageUrl, setPageUrl] = useState('')
+  const [giftLinkUrl, setGiftLinkUrl] = useState('')
+  const [giftLinkTitle, setGiftLinkTitle] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  // Auto-select first Facebook account and set page URL
+  useEffect(() => {
+    if (fbAccounts.length > 0 && !selectedAccountId) {
+      const firstAccount = fbAccounts[0]
+      setSelectedAccountId(firstAccount.id)
+      setPageUrl(`https://www.facebook.com/profile.php?id=${firstAccount.platform_account_id}`)
+    }
+  }, [fbAccounts, selectedAccountId])
+
+  // Update page URL when account changes
+  function handleAccountChange(accountId: string) {
+    setSelectedAccountId(accountId)
+    const account = fbAccounts.find(a => a.id === accountId)
+    if (account) {
+      setPageUrl(`https://www.facebook.com/profile.php?id=${account.platform_account_id}`)
+    }
+  }
+
+  // Extract page ID from URL
+  function extractPageId(url: string): string {
+    const match = url.match(/\/profile\.php\?id=(\d+)/) || url.match(/facebook\.com\/(\d+)/)
+    return match ? match[1] : ''
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!pageUrl || !giftLinkUrl) {
+      alert('Please fill in all required fields')
+      return
+    }
+
+    const facebookPageId = extractPageId(pageUrl)
+    if (!facebookPageId) {
+      alert('Could not extract page ID from URL. Please use a valid Facebook page URL.')
+      return
+    }
+
+    setLoading(true)
+
+    const res = await fetch('/api/page-configurations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        page_name: 'FB Gift Offer',
+        page_url: pageUrl,
+        facebook_page_id: facebookPageId,
+        gift_link_url: giftLinkUrl,
+        gift_link_title: giftLinkTitle,
+        gift_link_description: '',
+      }),
+    })
+
+    const data = await res.json()
+
+    if (res.ok) {
+      alert('FB Gift Offer saved successfully!')
+      onSaved()
+      onClose()
+    } else {
+      alert(data.error || 'Failed to save FB Gift Offer')
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto border shadow-xl"
+        style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}
+      >
+        <div className="p-6 border-b" style={{ borderColor: 'var(--surface-3)' }}>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">FB Gift Offer</h2>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Account Selection */}
+          {fbAccounts.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+                Facebook Account
+              </label>
+              <select
+                value={selectedAccountId}
+                onChange={e => handleAccountChange(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-[#1877F2]/50 bg-white dark:bg-gray-800"
+                style={{ borderColor: 'var(--surface-3)' }}
+              >
+                {fbAccounts.map(acc => (
+                  <option key={acc.id} value={acc.id}>
+                    @{acc.username} (ID: {acc.platform_account_id})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Page URL */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+              Page URL <span className="text-[#FA3E3E]">*</span>
+            </label>
+            <input
+              type="url"
+              value={pageUrl}
+              onChange={e => setPageUrl(e.target.value)}
+              placeholder="https://www.facebook.com/profile.php?id=100071444676871"
+              className="w-full px-3 py-2 border rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-[#1877F2]/50 bg-white dark:bg-gray-800 placeholder-gray-400 dark:placeholder-gray-500"
+              style={{ borderColor: 'var(--surface-3)' }}
+            />
+            <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">Page ID will be automatically extracted from URL</p>
+          </div>
+
+          {/* Gift Link URL */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+              Gift Link URL <span className="text-[#FA3E3E]">*</span>
+            </label>
+            <input
+              type="url"
+              value={giftLinkUrl}
+              onChange={e => setGiftLinkUrl(e.target.value)}
+              placeholder="https://your-gift-link.com"
+              className="w-full px-3 py-2 border rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-[#1877F2]/50 bg-white dark:bg-gray-800 placeholder-gray-400 dark:placeholder-gray-500"
+              style={{ borderColor: 'var(--surface-3)' }}
+            />
+          </div>
+
+          {/* Gift Link Title */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+              Gift Link Title
+            </label>
+            <input
+              type="text"
+              value={giftLinkTitle}
+              onChange={e => setGiftLinkTitle(e.target.value)}
+              placeholder="e.g. Get Your Free Gift"
+              className="w-full px-3 py-2 border rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-[#1877F2]/50 bg-white dark:bg-gray-800 placeholder-gray-400 dark:placeholder-gray-500"
+              style={{ borderColor: 'var(--surface-3)' }}
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2.5 border rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+              style={{ borderColor: 'var(--surface-3)' }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 py-2.5 rounded-lg text-sm font-medium text-white disabled:opacity-50 bg-[#1877F2]"
+            >
+              {loading ? 'Saving...' : 'Save Configuration'}
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  )
+}
+
 export default function AutomationsPage() {
   const [automations, setAutomations] = useState<Automation[]>([])
+  const [pageConfigs, setPageConfigs] = useState<PageConfiguration[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
+  const [showPageConfig, setShowPageConfig] = useState(false)
   const { user } = useUserStore()
   const supabase = createClient()
   const [accounts, setAccounts] = useState<any[]>([])
@@ -34,6 +229,7 @@ export default function AutomationsPage() {
 
   useEffect(() => {
     fetchAutomations()
+    fetchPageConfigs()
     fetchAccounts()
   }, [])
 
@@ -62,6 +258,18 @@ export default function AutomationsPage() {
       .order('created_at', { ascending: false })
 
     setAutomations(data || [])
+  }
+
+  async function fetchPageConfigs() {
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    if (!authUser) return
+
+    const { data } = await supabase
+      .from('page_configurations')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    setPageConfigs(data || [])
     setLoading(false)
   }
 
@@ -85,6 +293,12 @@ export default function AutomationsPage() {
     setAutomations(prev => prev.filter(a => a.id !== id))
   }
 
+  async function deletePageConfig(id: string) {
+    if (!confirm('Delete this FB Gift Offer?')) return
+    await supabase.from('page_configurations').delete().eq('id', id)
+    setPageConfigs(prev => prev.filter(c => c.id !== id))
+  }
+
   const igAccounts = accounts.filter(a => a.platform === 'instagram')
   const fbAccounts = accounts.filter(a => a.platform === 'facebook')
 
@@ -95,15 +309,25 @@ export default function AutomationsPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Automations</h1>
           <p className="text-gray-600 dark:text-gray-300 text-sm">Manage your DM automations for Instagram & Facebook</p>
         </div>
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm text-white"
-          style={{ background: 'var(--accent)' }}
-        >
-          <Plus className="w-4 h-4" /> New Automation
-        </motion.button>
+        <div className="flex gap-2">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowPageConfig(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm text-white border-2 border-[#1877F2] bg-[#1877F2]/20 text-[#1877F2]"
+          >
+            <FacebookIcon className="w-4 h-4" /> FB Gift Offer
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm text-white"
+            style={{ background: 'var(--accent)' }}
+          >
+            <Plus className="w-4 h-4" /> New Automation
+          </motion.button>
+        </div>
       </div>
 
       {loading ? (
@@ -213,6 +437,54 @@ export default function AutomationsPage() {
         </div>
       )}
 
+      {/* FB Gift Offers */}
+      {pageConfigs.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">FB Gift Offers</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {pageConfigs.map((config, index) => (
+              <motion.div
+                key={config.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="rounded-xl border overflow-hidden shadow-sm"
+                style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}
+              >
+                <div className="h-1 bg-[#1877F2]" />
+                <div className="p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <FacebookIcon className="w-4 h-4 text-[#1877F2]" />
+                      <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--surface-1)', color: 'var(--text-muted)' }}>
+                        Gift Offer
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => deletePageConfig(config.id)}
+                      className="p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                    >
+                      <Trash2 className="w-4 h-4 text-[#FA3E3E]" />
+                    </button>
+                  </div>
+
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">{config.page_name}</h3>
+                  <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">
+                    Page ID: {config.facebook_page_id}
+                  </p>
+
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-300 truncate flex-1 mr-2">
+                      {config.gift_link_title || config.gift_link_url}
+                    </span>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Create Automation Modal */}
       {showCreate && (
         <CreateAutomationModal
@@ -223,6 +495,15 @@ export default function AutomationsPage() {
             setAutomations(prev => [newAuto, ...prev])
             setShowCreate(false)
           }}
+        />
+      )}
+
+      {/* Facebook Page Configuration Modal */}
+      {showPageConfig && (
+        <FacebookPageConfigModal
+          onClose={() => setShowPageConfig(false)}
+          onSaved={() => fetchPageConfigs()}
+          fbAccounts={fbAccounts}
         />
       )}
     </div>

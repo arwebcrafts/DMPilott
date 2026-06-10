@@ -631,7 +631,13 @@ async function handleFacebookMessage(pageId: string, messaging: any, supabase: a
     console.log('[Facebook Postback] Payload:', payload, 'From:', senderId)
     
     if (payload === 'CHECK_LIKE_STATUS') {
-      await handleLikeStatusCheck(senderId)
+      try {
+        console.log('[Facebook Postback] Calling handleLikeStatusCheck for:', senderId)
+        await handleLikeStatusCheck(senderId)
+        console.log('[Facebook Postback] handleLikeStatusCheck completed')
+      } catch (error) {
+        console.error('[Facebook Postback] Error in handleLikeStatusCheck:', error)
+      }
     }
     return
   }
