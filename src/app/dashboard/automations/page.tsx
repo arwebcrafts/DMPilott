@@ -221,6 +221,7 @@ export default function AutomationsPage() {
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [showPageConfig, setShowPageConfig] = useState(false)
+  const [editingAutomation, setEditingAutomation] = useState<Automation | null>(null)
   const { user } = useUserStore()
   const supabase = createClient()
   const [accounts, setAccounts] = useState<any[]>([])
@@ -420,7 +421,10 @@ export default function AutomationsPage() {
                     {auto.total_dms_sent} DMs sent
                   </span>
                   <div className="flex items-center gap-2">
-                    <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded">
+                    <button 
+                      onClick={() => setEditingAutomation(auto)}
+                      className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+                    >
                       <Edit2 className="w-4 h-4 text-gray-600 dark:text-gray-300" />
                     </button>
                     <button
@@ -498,6 +502,20 @@ export default function AutomationsPage() {
         />
       )}
 
+      {/* Edit Automation Modal */}
+      {editingAutomation && (
+        <CreateAutomationModal
+          igAccounts={igAccounts}
+          fbAccounts={fbAccounts}
+          onClose={() => setEditingAutomation(null)}
+          onCreated={(updatedAuto) => {
+            setAutomations(prev => prev.map(a => a.id === updatedAuto.id ? updatedAuto : a))
+            setEditingAutomation(null)
+          }}
+          editData={editingAutomation}
+        />
+      )}
+
       {/* Facebook Page Configuration Modal */}
       {showPageConfig && (
         <FacebookPageConfigModal
@@ -515,19 +533,21 @@ function CreateAutomationModal({
   fbAccounts,
   onClose,
   onCreated,
+  editData,
 }: {
   igAccounts: any[]
   fbAccounts: any[]
   onClose: () => void
   onCreated: (a: Automation) => void
+  editData?: Automation
 }) {
   const [platform, setPlatform] = useState<'instagram' | 'facebook'>(
-    igAccounts.length > 0 ? 'instagram' : fbAccounts.length > 0 ? 'facebook' : 'instagram'
+    editData?.platform || (igAccounts.length > 0 ? 'instagram' : fbAccounts.length > 0 ? 'facebook' : 'instagram')
   )
-  const [triggerType, setTriggerType] = useState('comment_keyword')
-  const [keywords, setKeywords] = useState<string[]>([])
+  const [triggerType, setTriggerType] = useState(editData?.trigger_type || 'comment_keyword')
+  const [keywords, setKeywords] = useState<string[]>(editData?.keywords || [])
   const [keywordInput, setKeywordInput] = useState('')
-  const [dmMessage, setDmMessage] = useState('')
+  const [dmMessage, setDmMessage] = useState(editData?.dm_message || '')
   const [followFacebookUrl, setFollowFacebookUrl] = useState('')
   const [followInstagramUrl, setFollowInstagramUrl] = useState('')
   const [commentReplyEnabled, setCommentReplyEnabled] = useState(true)
@@ -542,7 +562,7 @@ function CreateAutomationModal({
     if (availableAccounts.length > 0 && !accountId) {
       setAccountId(availableAccounts[0].id)
     }
-  }, [platform])
+  }, [platform, availableAccounts])
 
   function addKeyword() {
     const kw = keywordInput.trim().toUpperCase()
@@ -560,40 +580,42 @@ function CreateAutomationModal({
     setLoading(true)
 
     const selectedAccount = availableAccounts.find(a => a.id === accountId)
-    console.log('[Client] Creating automation for account:', {
+    const payload = {
+      accountId,
+      name: triggerType === 'dm_received'
+        ? 'DM auto-reply'
+        : `${triggerType.replace('_', ' ')} - ${keywords[0] || 'auto'}`,
+      platform,
+      triggerType,
+      keywords: triggerType === 'comment_keyword' ? keywords : [],
+      dmMessage,
+      followFacebookUrl: followFacebookUrl.trim() || null,
+      followInstagramUrl: followInstagramUrl.trim() || null,
+      commentReplyEnabled,
+      commentReplyText: commentReplyEnabled ? commentReplyText : null,
+    }
+
+    console.log('[Client]', editData ? 'Updating' : 'Creating', 'automation for account:', {
       accountId,
       username: selectedAccount?.username,
       platform_account_id: selectedAccount?.platform_account_id,
       platform,
     })
 
-    const res = await fetch('/api/automations', {
-      method: 'POST',
+    const res = await fetch(editData ? `/api/automations/${editData.id}` : '/api/automations', {
+      method: editData ? 'PATCH' : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        accountId,
-        name: triggerType === 'dm_received'
-          ? 'DM auto-reply'
-          : `${triggerType.replace('_', ' ')} - ${keywords[0] || 'auto'}`,
-        platform,
-        triggerType,
-        keywords: triggerType === 'comment_keyword' ? keywords : [],
-        dmMessage,
-        followFacebookUrl: followFacebookUrl.trim() || null,
-        followInstagramUrl: followInstagramUrl.trim() || null,
-        commentReplyEnabled,
-        commentReplyText: commentReplyEnabled ? commentReplyText : null,
-      }),
+      body: JSON.stringify(payload),
     })
 
     const data = await res.json()
 
     if (res.ok) {
-      console.log('[Client] ✓ Automation created successfully:', data.automation)
+      console.log('[Client] ✓ Automation', editData ? 'updated' : 'created', 'successfully:', data.automation)
       onCreated(data.automation)
     } else {
-      console.error('[Client] ❌ Failed to create automation:', data.error)
-      alert(data.error || 'Failed to create automation')
+      console.error('[Client] ❌ Failed to', editData ? 'update' : 'create', 'automation:', data.error)
+      alert(data.error || `Failed to ${editData ? 'update' : 'create'} automation`)
     }
     setLoading(false)
   }
@@ -607,7 +629,7 @@ function CreateAutomationModal({
         style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}
       >
         <div className="p-6 border-b" style={{ borderColor: 'var(--surface-3)' }}>
-          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Create Automation</h2>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">{editData ? 'Edit Automation' : 'Create Automation'}</h2>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -825,7 +847,7 @@ function CreateAutomationModal({
               className="flex-1 py-2.5 rounded-lg text-sm font-medium text-white disabled:opacity-50"
               style={{ background: 'var(--accent)' }}
             >
-              {loading ? 'Creating...' : 'Create Automation'}
+              {loading ? (editData ? 'Updating...' : 'Creating...') : (editData ? 'Update Automation' : 'Create Automation')}
             </button>
           </div>
         </form>
