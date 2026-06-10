@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 import { User } from '@supabase/supabase-js'
 import { Loader2, User as UserIcon, Mail, LogOut } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { PageConfiguration } from '@/components/dashboard/PageConfiguration'
+import { MetaAppCredentials } from '@/components/dashboard/MetaAppCredentials'
 
 export default function SettingsPage() {
   const [user, setUser] = useState<User | null>(null)
@@ -104,11 +106,29 @@ export default function SettingsPage() {
         </div>
       </motion.div>
 
-      {/* Sign Out */}
+      {/* Facebook Page Configuration */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
+      >
+        <PageConfiguration />
+      </motion.div>
+
+      {/* Meta App Credentials */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <MetaAppCredentials />
+      </motion.div>
+
+      {/* Sign Out */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
         className="rounded-xl border p-6 shadow-sm"
         style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}
       >
