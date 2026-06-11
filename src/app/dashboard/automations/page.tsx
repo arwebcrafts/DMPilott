@@ -1036,22 +1036,18 @@ function CreateAutomationModal({
                 <label className="block text-sm font-medium text-gray-900 dark:text-gray-100">
                   Auto-reply on comment
                 </label>
-                {platform === 'instagram' ? (
-                  <span className="text-xs text-[#ff6b6b]">Unavailable for Instagram</span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setCommentReplyEnabled(prev => !prev)}
-                    className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
-                  >
-                    {commentReplyEnabled
-                      ? <ToggleRight className="w-6 h-6 text-[#22c55e]" />
-                      : <ToggleLeft className="w-6 h-6 text-gray-400 dark:text-gray-500" />
-                    }
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setCommentReplyEnabled(prev => !prev)}
+                  className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
+                >
+                  {commentReplyEnabled
+                    ? <ToggleRight className="w-6 h-6 text-[#22c55e]" />
+                    : <ToggleLeft className="w-6 h-6 text-gray-400 dark:text-gray-500" />
+                  }
+                </button>
               </div>
-              {platform === 'facebook' && commentReplyEnabled && (
+              {commentReplyEnabled && (
                 <input
                   type="text"
                   value={commentReplyText}

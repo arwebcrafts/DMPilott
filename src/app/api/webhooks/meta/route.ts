@@ -471,6 +471,39 @@ async function handleInstagramComment(igAccountId: string, value: any, supabase:
 
   console.log('[Comment] Matched automation:', matchedAutomation.name)
 
+  // Send comment reply if enabled
+  if (matchedAutomation.comment_reply_enabled && matchedAutomation.comment_reply_text) {
+    try {
+      const commentReplyText = matchedAutomation.comment_reply_text
+        .replace(/{name}/g, commenterUsername || 'there')
+        .replace(/{username}/g, '@' + (commenterUsername || 'user'))
+      
+      console.log('[Comment] Sending comment reply:', commentReplyText)
+      
+      // Instagram Graph API for comment replies
+      const replyUrl = `https://graph.instagram.com/v25.0/${commentId}/replies`
+      
+      const accessToken = account.access_token_encrypted 
+        ? decryptToken(account.access_token_encrypted)
+        : null
+      
+      if (accessToken) {
+        await axios.post(replyUrl, null, {
+          params: { 
+            access_token: accessToken,
+            message: commentReplyText
+          },
+          headers: { 'Content-Type': 'application/json' }
+        })
+        console.log('[Comment] ✓ Comment reply sent successfully')
+      } else {
+        console.log('[Comment] ⚠️ No access token for comment reply')
+      }
+    } catch (err: any) {
+      console.log('[Comment] ❌ Failed to send comment reply:', err?.response?.data?.error?.message || err?.message)
+    }
+  }
+
   // Queue DM job and let queue processor enforce 200/hour.
   console.log('[Comment] Queueing DM for @' + commenterUsername)
   const personalizedMessage = matchedAutomation.dm_message
