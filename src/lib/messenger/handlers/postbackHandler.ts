@@ -1,4 +1,4 @@
-import { sendButtonTemplate, sendTextMessage } from '../api/sendMessage';
+import { sendMessage, sendButtonTemplate, sendTextMessage } from '../api/sendMessage';
 import { sendInstagramDm } from '@/lib/instagramDmQueue';
 import { getPageConfiguration, getInstagramGiftOffer, createInstagramUserInteraction, getInstagramUserInteraction, updateInstagramUserInteraction } from '@/lib/db/pageConfigurations';
 import { createUserInteraction, getUserInteraction, updateUserInteraction } from '@/lib/db/userInteractions';
@@ -127,7 +127,7 @@ export async function handleInstagramFollowButton(psid: string, accountUsername:
 }
 
 /**
- * Handle follow button click - send page link
+ * Handle follow button click - send webview with Facebook Page Plugin
  */
 export async function handleFollowButton(psid: string) {
   const pageConfig = await getPageConfiguration();
@@ -144,23 +144,29 @@ export async function handleFollowButton(psid: string) {
     interaction_type: 'button_clicked',
   });
   
-  // Send page link with follow button
-  await sendButtonTemplate(
-    psid,
-    'Follow our page to get exclusive access!',
-    [
-      {
-        type: 'web_url',
-        url: pageConfig.page_url,
-        title: 'Visit Our Page',
-      },
-      {
-        type: 'postback',
-        title: "I've Liked the Page",
-        payload: 'CHECK_LIKE_STATUS',
-      },
-    ]
-  );
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL 
+    ? `https://${process.env.VERCEL_URL}` 
+    : 'http://localhost:3000');
+  
+  // Send webview button with Messenger Extensions
+  await sendMessage(psid, {
+    attachment: {
+      type: 'template',
+      payload: {
+        template_type: 'button',
+        text: `Follow our page to unlock your exclusive gift! 🎁`,
+        buttons: [
+          {
+            type: 'web_url',
+            url: `${baseUrl}/webview/unlock?configId=${pageConfig.id}&psid=${psid}`,
+            title: 'Unlock Gift',
+            webview_height_ratio: 'tall',
+            messenger_extensions: true
+          }
+        ]
+      }
+    }
+  });
 }
 
 /**

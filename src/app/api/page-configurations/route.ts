@@ -2,6 +2,34 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { createPageConfiguration, getPageConfigurationByUserId } from '@/lib/db/pageConfigurations';
+import { decryptToken } from '@/lib/encryption';
+
+/**
+ * Whitelist domain for Messenger Extensions
+ */
+async function whitelistDomain(pageAccessToken: string, domain: string) {
+  try {
+    const response = await fetch(`https://graph.facebook.com/v25.0/me/messenger_profile?access_token=${pageAccessToken}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        whitelisted_domains: [domain]
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (!response.ok) {
+      console.error('[Domain Whitelist] Failed to whitelist domain:', result);
+      throw new Error(result.error?.message || 'Failed to whitelist domain');
+    }
+    
+    console.log('[Domain Whitelist] Domain whitelisted successfully:', domain, result);
+  } catch (error) {
+    console.error('[Domain Whitelist] Error whitelisting domain:', error);
+    throw error;
+  }
+}
 
 /**
  * POST - Create or update page configuration
@@ -50,6 +78,23 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
       
+      // Whitelist domain for Messenger Extensions
+      const { data: account } = await serviceSupabase
+        .from('connected_accounts')
+        .select('access_token_encrypted')
+        .eq('platform', 'facebook')
+        .eq('is_active', true)
+        .limit(1)
+        .single();
+      
+      if (account) {
+        const pageAccessToken = decryptToken(account.access_token_encrypted);
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL 
+          ? `https://${process.env.VERCEL_URL}` 
+          : 'http://localhost:3000');
+        await whitelistDomain(pageAccessToken, baseUrl);
+      }
+      
       return NextResponse.json(data);
     } else {
       // Create new configuration
@@ -63,6 +108,23 @@ export async function POST(req: NextRequest) {
         gift_link_title: body.gift_link_title,
         gift_link_description: body.gift_link_description,
       }, serviceSupabase);
+      
+      // Whitelist domain for Messenger Extensions
+      const { data: account } = await serviceSupabase
+        .from('connected_accounts')
+        .select('access_token_encrypted')
+        .eq('platform', 'facebook')
+        .eq('is_active', true)
+        .limit(1)
+        .single();
+      
+      if (account) {
+        const pageAccessToken = decryptToken(account.access_token_encrypted);
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL 
+          ? `https://${process.env.VERCEL_URL}` 
+          : 'http://localhost:3000');
+        await whitelistDomain(pageAccessToken, baseUrl);
+      }
       
       return NextResponse.json(config);
     }
@@ -78,8 +140,22 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const supabase = await createClient();
+    const searchParams = req.nextUrl.searchParams;
+    const configId = searchParams.get('id');
     
-    // Get user from session
+    // If configId is provided, get configuration by ID (for webview)
+    if (configId) {
+      const { getPageConfigurationById } = await import('@/lib/db/pageConfigurations');
+      const config = await getPageConfigurationById(configId);
+      
+      if (!config) {
+        return NextResponse.json({ error: 'Configuration not found' }, { status: 404 });
+      }
+      
+      return NextResponse.json(config);
+    }
+    
+    // Otherwise, get user's page configuration
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {

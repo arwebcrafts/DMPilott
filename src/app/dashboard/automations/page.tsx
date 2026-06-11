@@ -60,7 +60,7 @@ function FacebookPageConfigModal({
     if (fbAccounts.length > 0 && !selectedAccountId) {
       const firstAccount = fbAccounts[0]
       setSelectedAccountId(firstAccount.id)
-      setPageUrl(`https://www.facebook.com/profile.php?id=${firstAccount.platform_account_id}`)
+      setPageUrl(`https://www.facebook.com/leerolir/`) // Use custom username URL
     }
   }, [fbAccounts, selectedAccountId])
 
@@ -69,14 +69,14 @@ function FacebookPageConfigModal({
     setSelectedAccountId(accountId)
     const account = fbAccounts.find(a => a.id === accountId)
     if (account) {
-      setPageUrl(`https://www.facebook.com/profile.php?id=${account.platform_account_id}`)
+      setPageUrl(`https://www.facebook.com/leerolir/`) // Use custom username URL
     }
   }
 
-  // Extract page ID from URL
-  function extractPageId(url: string): string {
-    const match = url.match(/\/profile\.php\?id=(\d+)/) || url.match(/facebook\.com\/(\d+)/)
-    return match ? match[1] : ''
+  // Get page ID from selected account
+  function getPageId(): string {
+    const account = fbAccounts.find(a => a.id === selectedAccountId)
+    return account?.platform_account_id || ''
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -86,9 +86,9 @@ function FacebookPageConfigModal({
       return
     }
 
-    const facebookPageId = extractPageId(pageUrl)
+    const facebookPageId = getPageId()
     if (!facebookPageId) {
-      alert('Could not extract page ID from URL. Please use a valid Facebook page URL.')
+      alert('Could not get page ID from selected account.')
       return
     }
 
@@ -100,7 +100,7 @@ function FacebookPageConfigModal({
       body: JSON.stringify({
         page_name: 'FB Gift Offer',
         page_url: pageUrl,
-        facebook_page_id: facebookPageId,
+        page_id: facebookPageId,
         gift_link_url: giftLinkUrl,
         gift_link_title: giftLinkTitle,
         gift_link_description: '',
@@ -162,11 +162,11 @@ function FacebookPageConfigModal({
               type="url"
               value={pageUrl}
               onChange={e => setPageUrl(e.target.value)}
-              placeholder="https://www.facebook.com/profile.php?id=100071444676871"
+              placeholder="https://www.facebook.com/your-page-name"
               className="w-full px-3 py-2 border rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-[#1877F2]/50 bg-white dark:bg-gray-800 placeholder-gray-400 dark:placeholder-gray-500"
               style={{ borderColor: 'var(--surface-3)' }}
             />
-            <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">Page ID will be automatically extracted from URL</p>
+            <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">Page ID will be automatically set from your selected Facebook account</p>
           </div>
 
           {/* Gift Link URL */}
