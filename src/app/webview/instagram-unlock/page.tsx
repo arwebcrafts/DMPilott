@@ -27,14 +27,16 @@ function InstagramUnlockWebviewContent() {
   const fetchGiftOffer = async () => {
     try {
       const response = await fetch(`/api/instagram-gift-offers?id=${offerId}`);
-      if (response.ok) {
-        const data = await response.json();
+      const data = await response.json();
+      
+      if (response.ok && data) {
         setGiftOffer(data);
       } else {
-        setError('Failed to load gift offer');
+        setError('Gift offer not found or has been removed.');
       }
     } catch (err) {
-      setError('Error loading gift offer');
+      console.error('Error loading gift offer:', err);
+      setError('Error loading gift offer. Please try again.');
     } finally {
       setLoading(false);
     }

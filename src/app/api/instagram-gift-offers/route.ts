@@ -46,17 +46,22 @@ export async function GET(request: NextRequest) {
 
   // If ID is provided, fetch single gift offer (for webview - public access)
   if (id) {
-    const supabase = await createClient()
+    const { createServiceClient } = await import('@/lib/supabase/server')
+    const supabase = await createServiceClient()
     try {
       const { data, error } = await supabase
         .from('instagram_gift_offers')
         .select('*')
         .eq('id', id)
-        .single()
+        .maybeSingle()
 
       if (error) {
         console.error('[Instagram Gift Offers] Fetch error:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      if (!data) {
+        return NextResponse.json({ error: 'Gift offer not found' }, { status: 404 })
       }
 
       return NextResponse.json(data)
