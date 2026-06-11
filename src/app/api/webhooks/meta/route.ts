@@ -234,7 +234,7 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
       // Send follow-up message with "I've Followed" button
       try {
         const { sendInstagramButtonMessage } = await import('@/lib/messenger/handlers/postbackHandler')
-        await sendInstagramButtonMessage(senderId, accountUsername, account, true)
+        await sendInstagramButtonMessage(senderId, accountUsername, account)
         console.log('[Instagram Postback] Sent follow-up message with Follow button')
       } catch (error: any) {
         console.error('[Instagram Postback] Error sending follow-up message:', error)

@@ -117,25 +117,17 @@ async function sendInstagramGiftLink(psid: string, giftOffer: any, account?: any
 /**
  * Send Instagram button message using Generic Template
  */
-export async function sendInstagramButtonMessage(igSid: string, accountUsername: string, account: any, showFollowButton: boolean = false) {
-  const url = `https://graph.instagram.com/v25.0/me/messages`;
+export async function sendInstagramButtonMessage(igSid: string, accountUsername: string, account: any, webviewUrl?: string) {
+  // Use Instagram account ID in the path, not /me
+  const url = `https://graph.instagram.com/v25.0/${account.platform_account_id}/messages`;
 
   const buttons: any[] = [
     {
       type: 'web_url',
-      url: `https://instagram.com/${accountUsername}`,
-      title: 'Visit Instagram'
+      url: webviewUrl || `https://instagram.com/${accountUsername}`,
+      title: 'Unlock Gift'
     }
   ];
-
-  // Only show "I've Followed" button if user has visited Instagram
-  if (showFollowButton) {
-    buttons.push({
-      type: 'postback',
-      title: "I've Followed",
-      payload: `IG_CHECK_FOLLOW_STATUS:${accountUsername}`
-    });
-  }
 
   const payload = {
     recipient: { id: igSid },
@@ -147,7 +139,7 @@ export async function sendInstagramButtonMessage(igSid: string, accountUsername:
           elements: [
             {
               title: 'Follow us on Instagram! 🌟',
-              subtitle: showFollowButton ? 'Great! Now tap "I\'ve Followed" to get your gift.' : 'Follow our account to unlock your exclusive gift.',
+              subtitle: 'Follow our account to unlock your exclusive gift.',
               buttons
             }
           ]
@@ -196,7 +188,7 @@ export async function handleInstagramFollowButton(psid: string, accountUsername:
     interaction_type: 'button_clicked',
   });
 
-  // Send webview button instead of Generic Template
+  // Send webview button using Generic Template
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL 
     ? `https://${process.env.VERCEL_URL}` 
     : 'http://localhost:3000');
@@ -204,11 +196,7 @@ export async function handleInstagramFollowButton(psid: string, accountUsername:
   const webviewUrl = `${baseUrl}/webview/instagram-unlock?offerId=${giftOffer.id}&psid=${psid}`;
 
   try {
-    await sendInstagramDm({
-      account,
-      recipientId: psid,
-      message: `Follow our Instagram account to unlock your exclusive gift! 🎁\n\n👉 ${webviewUrl}`,
-    });
+    await sendInstagramButtonMessage(psid, accountUsername, account, webviewUrl);
   } catch (err) {
     // Fallback to text message if button template fails
     console.log('[Instagram Buttons] Button template failed, falling back to text message');
