@@ -10,6 +10,7 @@ function InstagramUnlockWebviewContent() {
   const [error, setError] = useState<string | null>(null);
   const [giftOffer, setGiftOffer] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [visitedInstagram, setVisitedInstagram] = useState(false);
 
   useEffect(() => {
     // Load the Messenger Extensions SDK
@@ -43,6 +44,11 @@ function InstagramUnlockWebviewContent() {
   };
 
   const handleClaim = async () => {
+    if (!visitedInstagram) {
+      setError('Please visit the Instagram profile first by tapping the button above.');
+      return;
+    }
+
     setClaiming(true);
     setError(null);
     try {
@@ -130,9 +136,10 @@ function InstagramUnlockWebviewContent() {
               href={`https://instagram.com/${giftOffer?.account_username || ''}`}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => setVisitedInstagram(true)}
               className="inline-block bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white font-bold py-3 px-6 rounded-lg hover:opacity-90 transition"
             >
-              Visit Instagram Profile
+              {visitedInstagram ? '✓ Visited' : 'Visit Instagram Profile'}
             </a>
           </div>
         </div>
@@ -146,13 +153,19 @@ function InstagramUnlockWebviewContent() {
             <h2 className="text-base font-bold text-gray-900">Reveal Your Gift</h2>
           </div>
           <p className="text-xs text-gray-500 mb-4">
-            Once you&apos;ve followed @{giftOffer?.account_username || 'our Instagram account'}, tap the button below to unlock your reward.
+            {visitedInstagram 
+              ? 'Thanks for visiting! Tap the button below to unlock your reward.'
+              : 'Please visit the Instagram profile first by tapping the button above.'}
           </p>
 
           <button
             onClick={handleClaim}
-            disabled={claiming}
-            className="w-full bg-green-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-green-700 active:scale-[0.99] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            disabled={claiming || !visitedInstagram}
+            className={`w-full font-bold py-4 rounded-xl shadow-lg active:scale-[0.99] transition disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+              visitedInstagram 
+                ? 'bg-green-600 text-white hover:bg-green-700 disabled:opacity-50' 
+                : 'bg-gray-400 text-gray-600'
+            }`}
           >
             {claiming ? (
               <>

@@ -10,6 +10,8 @@ function UnlockWebviewContent() {
   const [error, setError] = useState<string | null>(null);
   const [pageConfig, setPageConfig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [followed, setFollowed] = useState(false);
+  const [overlayVisible, setOverlayVisible] = useState(true);
 
   useEffect(() => {
     // Load the Messenger Extensions SDK
@@ -41,6 +43,11 @@ function UnlockWebviewContent() {
   };
 
   const handleClaim = async () => {
+    if (!followed) {
+      setError('Please confirm you have followed the page first by tapping the button above.');
+      return;
+    }
+
     setClaiming(true);
     setError(null);
     try {
@@ -114,7 +121,7 @@ function UnlockWebviewContent() {
       </div>
 
       {/* Facebook Page Plugin Iframe (the "real" page) */}
-      <div className="flex justify-center px-2 pt-4 pb-[220px]">
+      <div className="flex justify-center px-2 pt-4 pb-[220px] relative">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden" style={{ width: '340px' }}>
           <iframe
             src={`https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(pageConfig?.page_url || 'https://www.facebook.com/facebook')}&tabs=timeline&width=340&height=500&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true&appId=4552936261602709`}
@@ -126,6 +133,20 @@ function UnlockWebviewContent() {
             allowFullScreen={true}
             allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
           ></iframe>
+          {overlayVisible && (
+            <div
+              onClick={() => {
+                setFollowed(true);
+                setOverlayVisible(false);
+              }}
+              className="absolute inset-0 cursor-pointer flex items-center justify-center bg-white/30 hover:bg-white/20 transition"
+              style={{ top: 0, left: 0, right: 0, bottom: 0, width: '340px', height: '500px', margin: '0 auto' }}
+            >
+              <div className="bg-[#1877F2] text-white px-4 py-2 rounded-lg shadow-lg text-sm font-semibold">
+                Tap to Follow
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -137,13 +158,19 @@ function UnlockWebviewContent() {
             <h2 className="text-base font-bold text-gray-900">Reveal Your Gift</h2>
           </div>
           <p className="text-xs text-gray-500 mb-4">
-            Once you&apos;ve tapped <span className="font-semibold text-gray-700">Follow</span> on the page above, tap the button below to unlock your reward.
+            {followed 
+              ? 'Thanks for following! Tap the button below to unlock your reward.'
+              : 'Tap the Facebook page above to follow, then tap the button below to unlock your reward.'}
           </p>
 
           <button
             onClick={handleClaim}
-            disabled={claiming}
-            className="w-full bg-green-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-green-700 active:scale-[0.99] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            disabled={claiming || !followed}
+            className={`w-full font-bold py-4 rounded-xl shadow-lg active:scale-[0.99] transition disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+              followed 
+                ? 'bg-green-600 text-white hover:bg-green-700 disabled:opacity-50' 
+                : 'bg-gray-400 text-gray-600'
+            }`}
           >
             {claiming ? (
               <>
