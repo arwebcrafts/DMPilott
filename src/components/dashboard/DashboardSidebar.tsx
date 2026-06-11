@@ -11,6 +11,7 @@ const navItems = [
   { href: '/dashboard', label: 'Overview', icon: '🏠' },
   { href: '/dashboard/automations', label: 'Automations', icon: '⚡' },
   { href: '/dashboard/analytics', label: 'Analytics', icon: '📊' },
+  { href: '/dashboard/link-in-bio', label: 'Link in Bio', icon: '🔗' },
   { href: '/dashboard/giveaways', label: 'Giveaways', icon: '🎁' },
   { href: '/dashboard/accounts', label: 'Accounts', icon: '👥' },
   { href: '/dashboard/billing', label: 'Billing', icon: '💳' },

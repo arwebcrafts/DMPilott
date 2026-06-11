@@ -8,6 +8,11 @@ export interface PlanLimits {
   hasAI: boolean
   hasEmailLeads: boolean
   hasAPI: boolean
+  maxBioBlocks: number
+  maxBioSocialLinks: number
+  bioThemePresets: number
+  maxBioProducts: number
+  hasBioEmailCapture: boolean
 }
 
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
@@ -19,6 +24,11 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     hasAI: false,
     hasEmailLeads: false,
     hasAPI: false,
+    maxBioBlocks: 5,
+    maxBioSocialLinks: 3,
+    bioThemePresets: 2,
+    maxBioProducts: 0,
+    hasBioEmailCapture: false,
   },
   creator: {
     dmsPerMonth: 3000,
@@ -28,6 +38,11 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     hasAI: false,
     hasEmailLeads: false,
     hasAPI: false,
+    maxBioBlocks: 15,
+    maxBioSocialLinks: 6,
+    bioThemePresets: 4,
+    maxBioProducts: 3,
+    hasBioEmailCapture: false,
   },
   pro: {
     dmsPerMonth: Infinity,
@@ -37,6 +52,11 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     hasAI: true,
     hasEmailLeads: true,
     hasAPI: true,
+    maxBioBlocks: Infinity,
+    maxBioSocialLinks: 6,
+    bioThemePresets: 4,
+    maxBioProducts: Infinity,
+    hasBioEmailCapture: true,
   },
 }
 
@@ -54,6 +74,18 @@ export function canCreateGiveaway(plan: Plan, current: number): boolean {
 
 export function canUseAI(plan: Plan): boolean {
   return PLAN_LIMITS[plan].hasAI
+}
+
+export function canAddBioBlock(plan: Plan, current: number): boolean {
+  return current < PLAN_LIMITS[plan].maxBioBlocks
+}
+
+export function canAddBioProduct(plan: Plan, current: number): boolean {
+  return current < PLAN_LIMITS[plan].maxBioProducts
+}
+
+export function canUseBioEmailCapture(plan: Plan): boolean {
+  return PLAN_LIMITS[plan].hasBioEmailCapture
 }
 
 export function getRemainingDMs(plan: Plan, used: number): number {

@@ -46,6 +46,11 @@ export const useUserStore = create<UserStore>((set, get) => ({
     hasAI: false,
     hasEmailLeads: false,
     hasAPI: false,
+    maxBioBlocks: 5,
+    maxBioSocialLinks: 3,
+    bioThemePresets: 2,
+    maxBioProducts: 0,
+    hasBioEmailCapture: false,
   },
 
   fetchUser: async () => {
