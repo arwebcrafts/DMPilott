@@ -50,10 +50,11 @@ export async function GET(request: Request) {
 
   // Facebook Login — for Facebook Pages
   // pages_read_engagement is now ready for testing
+  // pages_manage_engagement is required for comment replies
   const authUrl = new URL('https://www.facebook.com/v21.0/dialog/oauth')
   authUrl.searchParams.set('client_id', process.env.META_APP_ID!)
   authUrl.searchParams.set('redirect_uri', redirectUri)
-  authUrl.searchParams.set('scope', 'pages_show_list,pages_manage_metadata,pages_read_engagement')
+  authUrl.searchParams.set('scope', 'pages_show_list,pages_manage_metadata,pages_read_engagement,pages_manage_engagement')
   authUrl.searchParams.set('state', state)
   return NextResponse.redirect(authUrl.toString())
 }

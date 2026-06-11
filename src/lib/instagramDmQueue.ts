@@ -148,10 +148,26 @@ async function sendInstagramCommentReply(params: {
   replyText: string
 }) {
   const { account, commentId, replyText } = params
-  // Instagram comment replies require instagram_business_manage_comments permission
-  // This permission was rejected by Meta, so we log a warning instead
-  console.log('[Instagram Comment Reply] Skipped - instagram_business_manage_comments permission not approved')
-  return
+  const accessToken = decryptToken(account.access_token_encrypted)
+
+  try {
+    // Instagram Graph API for comment replies
+    const replyUrl = `https://graph.instagram.com/v25.0/${commentId}/replies`
+    
+    await axios.post(replyUrl, null, {
+      params: {
+        access_token: accessToken,
+        message: replyText
+      },
+      headers: { 'Content-Type': 'application/json' }
+    })
+    
+    console.log('[Instagram Comment Reply] ✓ Comment reply sent successfully')
+    return { success: true }
+  } catch (err: any) {
+    console.log('[Instagram Comment Reply] ❌ Failed to send comment reply:', err?.response?.data?.error?.message || err?.message)
+    return { success: false, error: err?.message }
+  }
 }
 
 async function sendFacebookCommentReply(params: {
@@ -163,7 +179,11 @@ async function sendFacebookCommentReply(params: {
   const accessToken = decryptToken(account.access_token_encrypted)
 
   try {
-    await axios.post(
+    console.log('[Facebook Comment Reply] Sending reply to comment:', commentId)
+    console.log('[Facebook Comment Reply] Reply text:', replyText)
+    console.log('[Facebook Comment Reply] Access token length:', accessToken?.length)
+    
+    const response = await axios.post(
       `https://graph.facebook.com/${FACEBOOK_MESSAGING_API_VERSION}/${commentId}/comments`,
       { message: replyText },
       {
@@ -172,11 +192,20 @@ async function sendFacebookCommentReply(params: {
         timeout: 10000,
       }
     )
+    console.log('[Facebook Comment Reply] ✓ Comment reply sent successfully')
     return { success: true }
   } catch (err: any) {
     const errorCode = err?.response?.data?.error?.code
     const errorMessage = err?.response?.data?.error?.message || err.message
-    console.log('[Facebook Comment Reply] Error:', errorCode, errorMessage)
+    const errorType = err?.response?.data?.error?.type
+    const errorSubcode = err?.response?.data?.error?.error_subcode
+    console.log('[Facebook Comment Reply] Error details:', {
+      code: errorCode,
+      message: errorMessage,
+      type: errorType,
+      subcode: errorSubcode,
+      fullResponse: err?.response?.data
+    })
     return { success: false, error: `${errorCode}: ${errorMessage}` }
   }
 }
