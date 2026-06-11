@@ -206,6 +206,25 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
   // Log full messaging structure for debugging
   console.log('[Message] Full messaging object:', JSON.stringify(messaging, null, 2))
 
+  // Handle postback events (button clicks)
+  if (messaging.postback) {
+    const payload = messaging.postback.payload
+    console.log('[Instagram Postback] Payload:', payload, 'From:', senderId)
+
+    // Handle Instagram follow status check
+    if (payload && payload.startsWith('IG_CHECK_FOLLOW_STATUS:')) {
+      const accountUsername = payload.replace('IG_CHECK_FOLLOW_STATUS:', '')
+      console.log('[Instagram Postback] Calling handleInstagramFollowStatusCheck for:', accountUsername)
+      try {
+        await handleInstagramFollowStatusCheck(senderId, accountUsername)
+        console.log('[Instagram Postback] handleInstagramFollowStatusCheck completed')
+      } catch (error: any) {
+        console.error('[Instagram Postback] Error in handleInstagramFollowStatusCheck:', error)
+      }
+    }
+    return
+  }
+
   // Extract message text - handle different possible structures
   const messageText = message?.text || message?.content?.text || message?.message?.text
   const isEcho = message?.is_echo || message?.content?.is_echo || false
@@ -242,22 +261,6 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
     console.log('[IG Follow Button] Checking user interaction for sender:', senderId)
     const existingInteraction = await getInstagramUserInteraction(senderId, giftOffer.id)
     console.log('[IG Follow Button] Existing interaction found:', !!existingInteraction)
-
-    // Check if user replied with "done" to get gift link
-    if (existingInteraction && messageText && messageText.toLowerCase().trim() === 'done') {
-      console.log('[IG Follow Button] User replied with "done", sending gift link')
-      if (!existingInteraction?.gift_claimed_at) {
-        try {
-          await handleInstagramFollowStatusCheck(senderId, account.username, account)
-          console.log('[IG Follow Button] Gift link sent successfully')
-        } catch (err: any) {
-          console.log('[IG Follow Button] Error sending gift link:', err.message)
-        }
-      } else {
-        console.log('[IG Follow Button] Gift already claimed')
-      }
-      return
-    }
 
     // Only send follow button if user hasn't interacted yet
     if (!existingInteraction) {
