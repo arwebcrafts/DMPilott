@@ -6,7 +6,7 @@ import axios from 'axios'
 import { processQueuedInstagramDmsForAccount, sendInstagramDm, sendFacebookDm } from '@/lib/instagramDmQueue'
 import { handleFollowButton, handleLikeStatusCheck, handleInstagramFollowButton, handleInstagramFollowStatusCheck } from '@/lib/messenger/handlers/postbackHandler'
 import { getUserInteraction } from '@/lib/db/userInteractions'
-import { getPageConfiguration, getInstagramGiftOffer, getInstagramUserInteraction } from '@/lib/db/pageConfigurations'
+import { getPageConfiguration, getInstagramGiftOffer, getInstagramUserInteraction, updateInstagramUserInteraction } from '@/lib/db/pageConfigurations'
 
 console.log('[INIT] Webhook route module loaded')
 
@@ -210,6 +210,37 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
   if (messaging.postback) {
     const payload = messaging.postback.payload
     console.log('[Instagram Postback] Payload:', payload, 'From:', senderId)
+
+    // Handle Instagram visit Instagram button
+    if (payload && payload.startsWith('IG_VISIT_INSTAGRAM:')) {
+      const accountUsername = payload.replace('IG_VISIT_INSTAGRAM:', '')
+      console.log('[Instagram Postback] User clicked Visit Instagram for:', accountUsername)
+
+      // Find the connected account
+      const account = await findIgAccount(igAccountId, supabase)
+      if (!account) {
+        console.log('[Instagram Postback] No matching IG account found for:', igAccountId)
+        return
+      }
+
+      // Update interaction to mark as visited
+      const giftOffer = await getInstagramGiftOffer(accountUsername)
+      if (giftOffer) {
+        await updateInstagramUserInteraction(senderId, giftOffer.id, {
+          interaction_type: 'visited_instagram'
+        })
+      }
+
+      // Send follow-up message with "I've Followed" button
+      try {
+        const { sendInstagramButtonMessage } = await import('@/lib/messenger/handlers/postbackHandler')
+        await sendInstagramButtonMessage(senderId, accountUsername, account, true)
+        console.log('[Instagram Postback] Sent follow-up message with Follow button')
+      } catch (error: any) {
+        console.error('[Instagram Postback] Error sending follow-up message:', error)
+      }
+      return
+    }
 
     // Handle Instagram follow status check
     if (payload && payload.startsWith('IG_CHECK_FOLLOW_STATUS:')) {

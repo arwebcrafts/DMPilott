@@ -117,8 +117,25 @@ async function sendInstagramGiftLink(psid: string, giftOffer: any, account?: any
 /**
  * Send Instagram button message using Generic Template
  */
-async function sendInstagramButtonMessage(igSid: string, accountUsername: string, account: any) {
+export async function sendInstagramButtonMessage(igSid: string, accountUsername: string, account: any, showFollowButton: boolean = false) {
   const url = `https://graph.instagram.com/v25.0/me/messages`;
+
+  const buttons: any[] = [
+    {
+      type: 'web_url',
+      url: `https://instagram.com/${accountUsername}`,
+      title: 'Visit Instagram'
+    }
+  ];
+
+  // Only show "I've Followed" button if user has visited Instagram
+  if (showFollowButton) {
+    buttons.push({
+      type: 'postback',
+      title: "I've Followed",
+      payload: `IG_CHECK_FOLLOW_STATUS:${accountUsername}`
+    });
+  }
 
   const payload = {
     recipient: { id: igSid },
@@ -130,19 +147,8 @@ async function sendInstagramButtonMessage(igSid: string, accountUsername: string
           elements: [
             {
               title: 'Follow us on Instagram! 🌟',
-              subtitle: 'Follow our account to unlock your exclusive gift.',
-              buttons: [
-                {
-                  type: 'web_url',
-                  url: `https://instagram.com/${accountUsername}`,
-                  title: 'Visit Instagram'
-                },
-                {
-                  type: 'postback',
-                  title: "I've Followed",
-                  payload: `IG_CHECK_FOLLOW_STATUS:${accountUsername}`
-                }
-              ]
+              subtitle: showFollowButton ? 'Great! Now tap "I\'ve Followed" to get your gift.' : 'Follow our account to unlock your exclusive gift.',
+              buttons
             }
           ]
         }
