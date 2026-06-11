@@ -196,9 +196,19 @@ export async function handleInstagramFollowButton(psid: string, accountUsername:
     interaction_type: 'button_clicked',
   });
 
-  // Send Generic Template with buttons using Instagram API endpoint
+  // Send webview button instead of Generic Template
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL 
+    ? `https://${process.env.VERCEL_URL}` 
+    : 'http://localhost:3000');
+
+  const webviewUrl = `${baseUrl}/webview/instagram-unlock?offerId=${giftOffer.id}&psid=${psid}`;
+
   try {
-    await sendInstagramButtonMessage(psid, accountUsername, account);
+    await sendInstagramDm({
+      account,
+      recipientId: psid,
+      message: `Follow our Instagram account to unlock your exclusive gift! 🎁\n\n👉 ${webviewUrl}`,
+    });
   } catch (err) {
     // Fallback to text message if button template fails
     console.log('[Instagram Buttons] Button template failed, falling back to text message');

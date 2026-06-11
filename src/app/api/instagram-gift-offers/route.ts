@@ -41,6 +41,32 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
+
+  // If ID is provided, fetch single gift offer (for webview - public access)
+  if (id) {
+    const supabase = await createClient()
+    try {
+      const { data, error } = await supabase
+        .from('instagram_gift_offers')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      if (error) {
+        console.error('[Instagram Gift Offers] Fetch error:', error)
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      return NextResponse.json(data)
+    } catch (error) {
+      console.error('[Instagram Gift Offers] Error:', error)
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    }
+  }
+
+  // Otherwise fetch all gift offers for user (requires auth)
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
