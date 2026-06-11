@@ -134,8 +134,11 @@ function UnlockWebviewContent() {
             allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
           ></iframe>
           {overlayVisible && (
-            <div
-              onClick={() => {
+            <a
+              href={pageConfig?.page_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => {
                 setFollowed(true);
                 setOverlayVisible(false);
               }}
@@ -145,7 +148,7 @@ function UnlockWebviewContent() {
               <div className="bg-[#1877F2] text-white px-4 py-2 rounded-lg shadow-lg text-sm font-semibold">
                 Tap to Follow
               </div>
-            </div>
+            </a>
           )}
         </div>
       </div>
