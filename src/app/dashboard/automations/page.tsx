@@ -1059,9 +1059,9 @@ function CreateAutomationModal({
                 />
               )}
               <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
-                {platform === 'instagram' 
-                  ? 'Instagram comment replies require additional Meta approval (currently pending)'
-                  : 'Public reply posted on the comment after DM is sent'
+                {platform === 'instagram'
+                  ? 'Posts a public reply under the comment after the DM is sent (e.g. "Check your DMs!")'
+                  : 'Posts a public reply under the comment after the DM is sent'
                 }
               </p>
             </div>

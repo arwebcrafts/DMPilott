@@ -131,19 +131,19 @@ export async function POST(request: Request) {
 
     // Post comment reply (Instagram only — after DM succeeds)
     if (platform === 'instagram' && commentId && automation.comment_reply_enabled) {
-      const replyText = automation.comment_reply_text || 'Check your DMs! 📩'
+      const replyText = automation.comment_reply_text || 'Check your DMs!'
       try {
         await axios.post(
-          `https://graph.facebook.com/v21.0/${commentId}/replies`,
+          `https://graph.instagram.com/v25.0/${commentId}/replies`,
           null,
           {
             params: { message: replyText, access_token: accessToken },
           }
         )
-        console.log('[SendDM] ✅ Comment reply posted:', replyText)
+        console.log('[SendDM] Comment reply posted:', replyText)
       } catch (replyErr: any) {
         // Non-fatal: DM was sent, reply failed
-        console.log('[SendDM] ⚠️ Comment reply failed:', replyErr.response?.data?.error?.message || replyErr.message)
+        console.log('[SendDM] Comment reply failed:', replyErr.response?.data?.error?.message || replyErr.message)
       }
     }
 

@@ -49,13 +49,31 @@ async function getTokenUserId(token: string): Promise<string | null> {
   }
 }
 
+function resolveInstagramCredentials(account: ConnectedAccount) {
+  const useDevOverride =
+    process.env.NODE_ENV === 'development' && process.env.USE_DEV_INSTAGRAM_TOKENS === 'true'
+
+  if (useDevOverride && process.env.IG_ACCESS_TOKEN) {
+    return {
+      accessToken: process.env.IG_ACCESS_TOKEN,
+      accountId: process.env.IG_BUSINESS_ACCOUNT_ID || account.platform_account_id,
+      source: 'dev-env' as const,
+    }
+  }
+
+  return {
+    accessToken: decryptToken(account.access_token_encrypted),
+    accountId: account.platform_account_id,
+    source: 'connected-account' as const,
+  }
+}
+
 async function sendWithHostAndIdFallback(
   account: ConnectedAccount,
   requestBody: Record<string, unknown>
 ) {
-  // Instagram messaging API requires Facebook Page access token, not Instagram access token
-  const accessToken = process.env.FACEBOOK_PAGE_ACCESS_TOKEN || decryptToken(account.access_token_encrypted)
-  const configuredAccountId = process.env.IG_BUSINESS_ACCOUNT_ID || account.platform_account_id
+  const { accessToken, accountId: configuredAccountId, source } = resolveInstagramCredentials(account)
+  console.log('[DM] Using token source:', source, '| account:', account.username)
   const tokenUserId = await getTokenUserId(accessToken)
   const accountIdsToTry = [configuredAccountId, tokenUserId].filter(id => id && id !== configuredAccountId)
 

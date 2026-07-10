@@ -1,7 +1,34 @@
 # App Review Submission Guide for DMPilot
 
 ## Overview
-This guide walks through the complete process to get your Meta app approved for public access, specifically for the "Human Agent" permission which is currently blocking public access.
+This guide walks through the complete process to get your Meta app approved for public access, specifically for the `instagram_business_manage_comments` permission.
+
+---
+
+## Where is "Live Mode"? (Your app is already Published)
+
+Meta renamed this. There is no separate "Go Live" button in the old location.
+
+**Your app is already live.** In the left sidebar, click **Publish**. You should see a green **Published** badge next to it (as in your dashboard screenshot).
+
+| What you see | What it means |
+|--------------|---------------|
+| **Publish → Published** | App is live. Any user can attempt OAuth (if permissions have Advanced Access). |
+| **Review → Testing** | API test call checklist before/during App Review. Not the same as Live/Published. |
+| **Testing in progress** | You still need to complete required API test calls for some permissions. |
+| **Completed** (green dot) | Required test API calls done for that permission. |
+
+**If Publish does NOT say Published:**
+1. Left sidebar → **Publish**
+2. Click **Publish** (or **Switch to Live** if shown)
+3. Confirm any checklist items Meta requires first
+
+**For random users to connect Instagram without being a Meta test user:**
+- App must be **Published** (you have this)
+- Permission must have **Advanced Access** (Approved/Renewed in App Review)
+- `instagram_business_manage_comments` must be **Approved** (currently rejected; resubmit with screencast)
+
+**Test users** (left sidebar → App roles → Test users) are only needed when the app is in Development mode, or for reviewer login during App Review.
 
 ---
 
@@ -70,9 +97,10 @@ Based on the rejection feedback for "instagram_business_manage_comments":
    - Show user accepting permissions
 
 3. **End-to-end experience of the use case**
-   - Show creating an automation
-   - Show automation triggering (comment → DM)
-   - Show DM being sent
+   - Show creating an automation with **Auto-reply on comment** enabled
+   - Show automation triggering (comment on post or reel)
+   - Show **public reply visible under the comment on Instagram** (required for `instagram_business_manage_comments`)
+   - Show DM being sent to the commenter
 
 4. **Navigation instructions**
    - Show how to navigate to dashboard
@@ -118,9 +146,12 @@ TESTING INSTRUCTIONS:
    e. Select the connected Instagram account
    f. Set trigger type to "Any Comment"
    g. Enter a test DM message
-   h. Click "Create Automation"
-   i. Have someone comment on a post from the connected Instagram account
-   j. The automation should automatically send a DM to the commenter
+   h. Enable "Auto-reply on comment" and enter reply text (e.g. "Check your DMs!")
+   i. Click "Create Automation"
+   j. Have someone comment on a post or reel from the connected Instagram account
+   k. Show the public reply under the comment on Instagram
+   l. Show the DM received in Instagram inbox
+   m. Show the activity log in DMPilot dashboard
 
 ADDITIONAL NOTES:
 - The app allows users to automate Instagram DMs based on comment triggers
