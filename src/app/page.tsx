@@ -5,9 +5,9 @@ import { SideNavigation } from '@/components/landing/shared/SideNavigation';
 import { Hero } from '@/components/landing/sections/Hero';
 
 export const metadata: Metadata = {
-  title: 'DMPilot - Turn Instagram Comments into Customers with AI-Powered DM Automation',
-  description: 'Automate your Instagram DMs with DMPilot. Respond to comments instantly, increase conversions by 3x, and save 10+ hours per week. Trusted by 500+ creators.',
-  keywords: ['Instagram DM automation', 'Instagram comment to DM', 'Instagram marketing tool', 'creator automation', 'Instagram DM bot', 'auto DM Instagram'],
+  title: 'DMPilot - Turn Instagram Comments into Customers with DM Automation',
+  description: 'Automate Instagram and Facebook DMs when someone comments on your posts or reels. Built-in Link in Bio. Official Meta APIs. Free to start.',
+  keywords: ['Instagram DM automation', 'comment to DM', 'Link in Bio', 'Instagram marketing', 'Facebook DM automation', 'Linktree alternative'],
   authors: [{ name: 'DMPilot' }],
   creator: 'DMPilot',
   publisher: 'DMPilot',
@@ -45,7 +45,7 @@ const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
   name: 'DMPilot',
-  description: 'AI-powered Instagram DM automation tool that turns comments into customers',
+  description: 'Instagram and Facebook comment-to-DM automation with built-in Link in Bio',
   url: 'https://dmpilot.com',
   applicationCategory: 'BusinessApplication',
   operatingSystem: 'Web',
@@ -61,11 +61,12 @@ const jsonLd = {
     ratingCount: '500',
   },
   featureList: [
-    'Automated DM responses',
-    'AI-powered conversation',
-    'Instagram integration',
-    'Analytics dashboard',
-    'Custom workflows',
+    'Comment-to-DM automation',
+    'Instagram and Facebook support',
+    'Public comment auto-reply',
+    'Link in Bio page builder',
+    'DM analytics dashboard',
+    'Keyword and any-comment triggers',
   ],
 };
 
@@ -77,6 +78,21 @@ const SoundFamiliar = dynamic(() => import('@/components/landing/sections/SoundF
 
 const CostOfManual = dynamic(() => import('@/components/landing/sections/CostOfManual').then(m => m.CostOfManual), {
   loading: () => <div className="h-96 bg-gray-100 animate-pulse" />,
+  ssr: true,
+});
+
+const Features = dynamic(() => import('@/components/landing/sections/Features').then(m => m.Features), {
+  loading: () => <div className="h-96 animate-pulse" style={{ background: 'var(--surface-1)' }} />,
+  ssr: true,
+});
+
+const LinkInBioShowcase = dynamic(() => import('@/components/landing/sections/LinkInBioShowcase').then(m => m.LinkInBioShowcase), {
+  loading: () => <div className="h-96 animate-pulse" style={{ background: 'var(--surface-0)' }} />,
+  ssr: true,
+});
+
+const Roadmap = dynamic(() => import('@/components/landing/sections/Roadmap').then(m => m.Roadmap), {
+  loading: () => <div className="h-96 animate-pulse" style={{ background: 'var(--section-warm)' }} />,
   ssr: true,
 });
 
@@ -105,10 +121,6 @@ const HonestComparison = dynamic(() => import('@/components/landing/sections/Hon
   ssr: true,
 });
 
-const MeetsYouWhere = dynamic(() => import('@/components/landing/sections/MeetsYouWhere').then(m => m.MeetsYouWhere), {
-  loading: () => <div className="h-96 bg-gray-100 animate-pulse" />,
-  ssr: true,
-});
 
 const SocialProof = dynamic(() => import('@/components/landing/sections/SocialProof').then(m => m.SocialProof), {
   loading: () => <div className="h-96 bg-gray-100 animate-pulse" />,
@@ -148,13 +160,15 @@ export default function LandingPage() {
         <SideNavigation />
         <Hero />
         <SoundFamiliar />
-        <CostOfManual />
+        <Features />
+        <LinkInBioShowcase />
         <WhatDMPilotDoes />
         <DayInDMPilot />
+        <CostOfManual />
         <Values />
         <TargetAudience />
         <HonestComparison />
-        <MeetsYouWhere />
+        <Roadmap />
         <SocialProof />
         <FAQ />
         <FinalCTA />

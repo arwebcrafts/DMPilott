@@ -24,26 +24,39 @@ const events: TimelineEvent[] = [
   { time: '12:00 PM', activity: 'Lunch', duration: '45m', category: 'lunch' },
 ];
 
-const categoryColors = {
-  focus: 'bg-blue-100 text-blue-700',
-  meetings: 'bg-purple-100 text-purple-700',
-  slack: 'bg-orange-100 text-orange-700',
-  email: 'bg-green-100 text-green-700',
-  lunch: 'bg-gray-100 text-gray-700',
-  refocus: 'bg-red-100 text-red-700',
+const categoryColors: Record<TimelineEvent['category'], string> = {
+  focus: 'bg-blue-500/15 text-blue-600 dark:text-blue-300',
+  meetings: 'bg-purple-500/15 text-purple-600 dark:text-purple-300',
+  slack: 'bg-orange-500/15 text-orange-600 dark:text-orange-300',
+  email: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300',
+  lunch: 'bg-[color:var(--surface-2)] text-[color:var(--text-secondary)]',
+  refocus: 'bg-red-500/15 text-red-600 dark:text-red-300',
 };
+
+function StatBlock({ value, label, meta, accent }: { value: string; label: string; meta: string; accent?: boolean }) {
+  return (
+    <div className="text-center">
+      <div
+        className="text-2xl font-bold"
+        style={{ color: accent ? 'var(--error)' : 'var(--text-primary)' }}
+      >
+        {value}
+      </div>
+      <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>{label}</div>
+      <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{meta}</div>
+    </div>
+  );
+}
 
 export function TimelineVisualization() {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-8">
-        <span className="text-sm font-medium text-gray-600">9 AM</span>
-        <span className="text-sm font-medium text-gray-600">10</span>
-        <span className="text-sm font-medium text-gray-600">11</span>
-        <span className="text-sm font-medium text-gray-600">12</span>
-        <span className="text-sm font-medium text-gray-600">1 PM</span>
+        {['9 AM', '10', '11', '12', '1 PM'].map((t) => (
+          <span key={t} className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>{t}</span>
+        ))}
       </div>
-      
+
       <div className="space-y-2">
         {events.map((event, index) => (
           <motion.div
@@ -60,28 +73,12 @@ export function TimelineVisualization() {
           </motion.div>
         ))}
       </div>
-      
+
       <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="text-center">
-          <div className="text-2xl font-bold text-gray-900">2h 36m</div>
-          <div className="text-sm text-gray-600">ACTUAL FOCUS</div>
-          <div className="text-xs text-gray-400">33% of the day</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-gray-900">2h</div>
-          <div className="text-sm text-gray-600">MEETINGS</div>
-          <div className="text-xs text-gray-400">25% of the day</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-gray-900">1h 7m</div>
-          <div className="text-sm text-gray-600">SLACK + EMAIL</div>
-          <div className="text-xs text-gray-400">14% of the day</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-red-600">47m</div>
-          <div className="text-sm text-gray-600">LOST TO REFOCUS</div>
-          <div className="text-xs text-gray-400">10% of the day</div>
-        </div>
+        <StatBlock value="2h 36m" label="ACTUAL FOCUS" meta="33% of the day" />
+        <StatBlock value="2h" label="MEETINGS" meta="25% of the day" />
+        <StatBlock value="1h 7m" label="SLACK + EMAIL" meta="14% of the day" />
+        <StatBlock value="47m" label="LOST TO REFOCUS" meta="10% of the day" accent />
       </div>
     </div>
   );

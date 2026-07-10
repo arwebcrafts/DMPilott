@@ -1,14 +1,15 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/client'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { AuthShell } from '@/components/auth/AuthShell'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,60 +45,41 @@ export default function ForgotPasswordPage() {
 
   if (sent) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--background)' }}>
-        <Card className="w-full max-w-md text-center border shadow-xl" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
-          <CardHeader>
-            <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'var(--surface-1)' }}>
-                <span className="text-3xl text-[#22c55e]">✓</span>
-              </div>
-            </div>
-            <CardTitle className="text-2xl text-gray-900 dark:text-gray-100">Check your email</CardTitle>
-            <CardDescription className="text-gray-600 dark:text-gray-300">
-              We sent a password reset link to your email address.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
+      <AuthShell title="Check your email" subtitle="We sent a password reset link to your email address.">
+        <div className="flex justify-center">
+          <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'var(--surface-2)' }}>
+            <span className="text-3xl text-[#22c55e]">✓</span>
+          </div>
+        </div>
+      </AuthShell>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--background)' }}>
-      <Card className="w-full max-w-md border shadow-xl" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold text-gray-900 dark:text-gray-100">Reset password</CardTitle>
-          <CardDescription className="text-gray-600 dark:text-gray-300">Enter your email to receive a reset link</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 text-sm p-3 rounded-md dark:bg-red-900/20 dark:border-red-800 dark:text-red-400">
-                {error}
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-gray-900 dark:text-gray-100">Email</Label>
-              <Input 
-                id="email" 
-                type="email" 
-                placeholder="you@example.com" 
-                {...register('email')} 
-                className="border-gray-300 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-800 focus:border-[#e85d3a]"
-              />
-              {errors.email && <p className="text-sm text-red-600 dark:text-red-400">{errors.email.message}</p>}
-            </div>
-            <Button
-              type="submit"
-              className="w-full text-white font-semibold"
-              style={{ background: 'var(--accent)' }}
-              disabled={loading}
-            >
-              {loading ? 'Sending...' : 'Send Reset Link'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+    <AuthShell title="Reset password" subtitle="Enter your email to receive a reset link">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-600 text-sm p-3 rounded-md dark:bg-red-900/20 dark:border-red-800 dark:text-red-400">
+            {error}
+          </div>
+        )}
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input id="email" type="email" placeholder="you@example.com" {...register('email')} />
+          {errors.email && <p className="text-sm text-red-600 dark:text-red-400">{errors.email.message}</p>}
+        </div>
+        <Button
+          type="submit"
+          className="w-full text-white font-semibold"
+          style={{ background: 'var(--accent)' }}
+          disabled={loading}
+        >
+          {loading ? 'Sending...' : 'Send Reset Link'}
+        </Button>
+        <p className="text-center text-sm auth-subtitle">
+          <Link href="/login" className="text-[#e85d3a] hover:underline">Back to sign in</Link>
+        </p>
+      </form>
+    </AuthShell>
   )
 }

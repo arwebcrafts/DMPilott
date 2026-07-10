@@ -3,29 +3,40 @@
 import { useState, useEffect } from 'react';
 import { Moon, Sun } from 'lucide-react';
 
+const THEME_KEY = 'dmpilot-theme';
+
+export function getStoredTheme(): 'light' | 'dark' | null {
+  if (typeof window === 'undefined') return null;
+  const stored = localStorage.getItem(THEME_KEY);
+  return stored === 'dark' || stored === 'light' ? stored : null;
+}
+
+export function applyTheme(theme: 'light' | 'dark') {
+  document.documentElement.classList.toggle('dark', theme === 'dark');
+  localStorage.setItem(THEME_KEY, theme);
+}
+
 export function DarkModeToggle() {
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
-    // Check system preference
+    const stored = getStoredTheme();
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    setIsDark(prefersDark);
-    
-    // Apply class
-    if (prefersDark) {
-      document.documentElement.classList.add('dark');
-    }
+    const dark = stored ? stored === 'dark' : prefersDark;
+    setIsDark(dark);
+    document.documentElement.classList.toggle('dark', dark);
   }, []);
 
   const toggle = () => {
-    setIsDark(!isDark);
-    document.documentElement.classList.toggle('dark');
+    const next = !isDark;
+    setIsDark(next);
+    applyTheme(next ? 'dark' : 'light');
   };
 
   return (
     <button
       onClick={toggle}
-      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+      className="nav-icon-btn p-2 rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/10"
       aria-label="Toggle dark mode"
       style={{ color: 'var(--foreground)' }}
     >

@@ -49,7 +49,7 @@ export function TargetAudience() {
   ];
 
   return (
-    <SectionContainer padding="xl" id="audience" className="section-neutral">
+    <SectionContainer padding="lg" id="audience" className="section-neutral">
       <SectionHeader
         title="Built for You, If..."
         subtitle="You're one of these"

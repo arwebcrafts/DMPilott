@@ -3,13 +3,13 @@
 import { useState, useEffect } from 'react';
 
 const sections = [
-  { id: 'hero', label: 'HOME' },
-  { id: 'sound-familiar', label: 'PROBLEM' },
-  { id: 'what-dmpilot-does', label: 'SOLUTION' },
-  { id: 'day-in-dmpilot', label: 'HOW IT WORKS' },
-  { id: 'social-proof', label: 'STORIES' },
+  { id: 'hero', label: 'Home' },
+  { id: 'features', label: 'Features' },
+  { id: 'link-in-bio', label: 'Bio' },
+  { id: 'what-dmpilot-does', label: 'How' },
+  { id: 'roadmap', label: 'Roadmap' },
   { id: 'faq', label: 'FAQ' },
-  { id: 'join', label: 'JOIN' },
+  { id: 'join', label: 'Join' },
 ];
 
 export function SideNavigation() {
@@ -17,16 +17,13 @@ export function SideNavigation() {
 
   useEffect(() => {
     const handleScroll = () => {
-      const scrollPosition = window.scrollY + 100;
-      
-      for (const section of sections) {
-        const element = document.getElementById(section.id);
-        if (element) {
-          const { offsetTop, offsetHeight } = element;
-          if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
-            setActiveSection(section.id);
-            break;
-          }
+      const scrollPosition = window.scrollY + 120;
+
+      for (let i = sections.length - 1; i >= 0; i--) {
+        const element = document.getElementById(sections[i].id);
+        if (element && scrollPosition >= element.offsetTop) {
+          setActiveSection(sections[i].id);
+          break;
         }
       }
     };
@@ -37,26 +34,33 @@ export function SideNavigation() {
   }, []);
 
   const scrollToSection = (id: string) => {
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
-    <div className="fixed left-4 top-1/2 -translate-y-1/2 z-40 hidden lg:flex flex-col gap-2">
+    <div className="fixed left-4 top-1/2 -translate-y-1/2 z-40 hidden xl:flex flex-col gap-1.5">
       {sections.map((section) => (
         <button
           key={section.id}
           onClick={() => scrollToSection(section.id)}
-          className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-colors ${
-            activeSection === section.id
-              ? 'bg-[#e85d3a] text-white scale-110 shadow-md'
-              : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)]'
+          title={section.label}
+          className={`group flex items-center gap-2 transition-all ${
+            activeSection === section.id ? 'opacity-100' : 'opacity-40 hover:opacity-70'
           }`}
-          aria-label={`Navigate to ${section.label}`}
+          aria-label={`Go to ${section.label}`}
         >
-          {section.label[0]}
+          <div
+            className={`w-2 h-2 rounded-full transition-all ${
+              activeSection === section.id ? 'scale-125' : ''
+            }`}
+            style={{ background: activeSection === section.id ? 'var(--accent)' : 'var(--text-muted)' }}
+          />
+          <span
+            className="text-[10px] font-medium uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
+            style={{ color: 'var(--text-secondary)' }}
+          >
+            {section.label}
+          </span>
         </button>
       ))}
     </div>

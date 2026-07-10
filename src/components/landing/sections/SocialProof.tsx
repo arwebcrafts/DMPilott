@@ -50,7 +50,7 @@ export function SocialProof() {
   ];
 
   return (
-    <SectionContainer padding="xl" id="social-proof">
+    <SectionContainer padding="lg" id="social-proof">
       <SectionHeader
         title="From the Calm Crew"
         subtitle="Already in beta"

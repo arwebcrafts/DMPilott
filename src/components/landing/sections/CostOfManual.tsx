@@ -4,45 +4,40 @@ import { SectionContainer } from '@/components/landing/shared/SectionContainer';
 import { SectionHeader } from '@/components/landing/shared/SectionHeader';
 import { TimelineVisualization } from '@/components/landing/visual-storytelling/TimelineVisualization';
 
+function BottomStat({ value, label, meta }: { value: string; label: string; meta: string }) {
+  return (
+    <div>
+      <div className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>{value}</div>
+      <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>{label}</div>
+      <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{meta}</div>
+    </div>
+  );
+}
+
 export function CostOfManual() {
   return (
-    <SectionContainer padding="xl" id="cost-of-manual">
+    <SectionContainer padding="lg" id="cost-of-manual">
       <SectionHeader
         title="The Cost of Manual"
         subtitle="Your 8 hours, on paper."
         description="We tracked one creator's typical day, minute by minute. Here's where it actually went."
         align="center"
         size="lg"
-        className="custom-black-title"
       />
       <div className="mt-12">
         <TimelineVisualization />
       </div>
       <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-        <div>
-          <div className="text-3xl font-bold text-gray-900">1,200</div>
-          <div className="text-sm text-gray-600">APP SWITCHES / DAY</div>
-          <div className="text-xs text-gray-400 mt-1">Instagram, 2024</div>
-        </div>
-        <div>
-          <div className="text-3xl font-bold text-gray-900">23 min</div>
-          <div className="text-sm text-gray-600">TO REFOCUS</div>
-          <div className="text-xs text-gray-400 mt-1">UC Irvine</div>
-        </div>
-        <div>
-          <div className="text-3xl font-bold text-gray-900">67%</div>
-          <div className="text-sm text-gray-600">BURNT OUT BY FRIDAY</div>
-          <div className="text-xs text-gray-400 mt-1">Gallup, 2024</div>
-        </div>
-        <div>
-          <div className="text-3xl font-bold text-gray-900">45%</div>
-          <div className="text-sm text-gray-600">DMs GO UNANSWERED</div>
-          <div className="text-xs text-gray-400 mt-1">Our data</div>
-        </div>
+        <BottomStat value="1,200" label="APP SWITCHES / DAY" meta="Instagram, 2024" />
+        <BottomStat value="23 min" label="TO REFOCUS" meta="UC Irvine" />
+        <BottomStat value="67%" label="BURNT OUT BY FRIDAY" meta="Gallup, 2024" />
+        <BottomStat value="45%" label="DMs GO UNANSWERED" meta="Our data" />
       </div>
       <div className="mt-12 text-center">
-        <p className="text-xl font-medium text-gray-900">It's not a willpower problem.</p>
-        <p className="text-gray-600">It's a tool problem.</p>
+        <p className="text-xl font-medium" style={{ color: 'var(--text-primary)' }}>
+          It&apos;s not a willpower problem.
+        </p>
+        <p style={{ color: 'var(--text-secondary)' }}>It&apos;s a tool problem.</p>
       </div>
     </SectionContainer>
   );

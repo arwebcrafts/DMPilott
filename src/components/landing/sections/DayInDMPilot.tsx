@@ -3,134 +3,88 @@
 import { SectionContainer } from '@/components/landing/shared/SectionContainer';
 import { SectionHeader } from '@/components/landing/shared/SectionHeader';
 import { motion } from 'framer-motion';
+import { Link2, Zap, MessageSquare, CheckCircle2 } from 'lucide-react';
 
-const timeBlocks = [
-  { type: 'RITUAL', time: '06:30', title: 'Morning ritual', desc: 'A 5-minute ritual lands you in your day before the world does.' },
-  { type: 'DEEP', time: '09:00', title: 'Deep block', desc: 'Notifications off automatically. Instagram stays away. Plant grows on screen.' },
-  { type: 'ADMIN', time: '11:15', title: 'Reply queue', desc: 'Triage in 90 seconds. Email + Instagram DMs.' },
-  { type: 'REST', time: '13:00', title: 'Lunch', desc: 'Actual lunch. No notifications.' },
-  { type: 'DEEP', time: '14:00', title: 'Deep block', desc: 'Content creation. Notifications off. Plant growing.' },
-  { type: 'REVIEW', time: '16:15', title: 'Wins logged', desc: 'The day\'s done logs itself. You see what moved before you close.' },
-  { type: 'CLOSE', time: '17:00', title: 'Close', desc: 'Tomorrow\'s three are already drafted. Inbox quiet. Laptop shut.' },
+const steps = [
+  {
+    icon: Link2,
+    step: '1',
+    title: 'Connect your account',
+    desc: 'Link your Instagram Business or Facebook Page through official Meta OAuth. Takes under 2 minutes.',
+  },
+  {
+    icon: Zap,
+    step: '2',
+    title: 'Create an automation',
+    desc: 'Pick a trigger: any comment, a keyword like "LINK", or incoming DMs. Write your message template.',
+  },
+  {
+    icon: MessageSquare,
+    step: '3',
+    title: 'Someone comments',
+    desc: 'A follower comments on your post or reel. DMPilot catches it instantly via Meta webhooks.',
+  },
+  {
+    icon: CheckCircle2,
+    step: '4',
+    title: 'DM sent automatically',
+    desc: 'They get your personalized DM. Optionally, a public reply appears under their comment.',
+  },
 ];
-
-const typeColors: Record<string, string> = {
-  RITUAL: '#e85d3a',
-  DEEP: '#3b82f6',
-  ADMIN: '#8b5cf6',
-  REST: '#22c55e',
-  REVIEW: '#eab308',
-  CLOSE: '#6b7280',
-};
 
 export function DayInDMPilot() {
   return (
-    <SectionContainer padding="xl" id="day-in-dmpilot">
+    <SectionContainer padding="lg" id="how-it-works">
       <SectionHeader
-        title="A Day in DMPilot"
-        subtitle="Your Tuesday, already calmer."
-        description="Three deep blocks. Two short rituals. One quiet day. Here's what a DMPilot day actually looks like."
+        title="How it works"
+        subtitle="4 steps"
+        description="From signup to your first automated DM in minutes."
         align="center"
         size="lg"
       />
-      <div className="mt-12 max-w-6xl mx-auto">
-        <div className="grid lg:grid-cols-5 gap-8">
-          {/* Left: Visual Calendar (3/5 width) */}
-          <div className="lg:col-span-3">
-            {/* Calendar header */}
-            <div className="flex items-center justify-between mb-4 p-4 rounded-xl" style={{ background: 'var(--surface-1)' }}>
-              <div>
-                <span className="text-xs font-bold tracking-wider uppercase text-gray-500 dark:text-gray-400">TODAY</span>
-                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">Tuesday, May 5</div>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 font-medium">On track</span>
-                <span className="text-xs text-gray-500 dark:text-gray-400">3 deep · 2 rituals</span>
-              </div>
-            </div>
-            {/* Time axis + colored blocks */}
-            <div className="space-y-2">
-              {timeBlocks.map((block, i) => (
+      <div className="mt-14 max-w-3xl mx-auto">
+        <div className="relative">
+          <div
+            className="absolute left-6 top-4 bottom-4 w-px hidden md:block"
+            style={{ background: 'linear-gradient(to bottom, #DD2A7B, #8134AF)' }}
+          />
+          <div className="space-y-8">
+            {steps.map((item, index) => {
+              const Icon = item.icon;
+              return (
                 <motion.div
-                  key={i}
+                  key={item.step}
                   initial={{ opacity: 0, x: -20 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                  className="flex items-center gap-4 p-3 rounded-xl border"
-                  style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}
+                  transition={{ delay: index * 0.1 }}
+                  className="relative flex gap-6 md:pl-16"
                 >
-                  <div className="flex-shrink-0 text-sm font-mono text-gray-500 dark:text-gray-400">{block.time}</div>
-                  <div className="flex-1 h-12 rounded-lg" style={{ background: typeColors[block.type], opacity: 0.8 }} />
-                  <div className="flex-shrink-0">
-                    <span className="text-xs font-bold px-2 py-1 rounded" style={{ background: typeColors[block.type], color: 'white' }}>{block.type}</span>
+                  <div
+                    className="hidden md:flex absolute left-0 w-12 h-12 rounded-xl items-center justify-center text-white font-bold text-sm z-10"
+                    style={{ background: 'linear-gradient(135deg, #F58529, #DD2A7B)' }}
+                  >
+                    {item.step}
+                  </div>
+                  <div
+                    className="flex-1 rounded-2xl border p-6 flex gap-4"
+                    style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-2)' }}
+                  >
+                    <Icon className="w-6 h-6 text-[#DD2A7B] flex-shrink-0 mt-0.5 md:hidden" />
+                    <div>
+                      <h3 className="font-semibold text-lg mb-2" style={{ color: 'var(--text-primary)' }}>
+                        {item.title}
+                      </h3>
+                      <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                        {item.desc}
+                      </p>
+                    </div>
                   </div>
                 </motion.div>
-              ))}
-            </div>
-          </div>
-
-          {/* Right: Annotations (2/5 width) */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Annotation cards with ← arrows */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1 }}
-              className="p-4 rounded-xl border-l-4"
-              style={{ borderColor: '#e85d3a', background: 'var(--surface-1)' }}
-            >
-              <div className="text-xs font-bold" style={{ color: '#e85d3a' }}>← 06:30 · RITUAL</div>
-              <p className="text-sm mt-1 text-gray-600 dark:text-gray-300">
-                A 5-minute ritual lands you in your day before the world does.
-              </p>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2 }}
-              className="p-4 rounded-xl border-l-4"
-              style={{ borderColor: '#3b82f6', background: 'var(--surface-1)' }}
-            >
-              <div className="text-xs font-bold" style={{ color: '#3b82f6' }}>← 09:00 · DEEP</div>
-              <p className="text-sm mt-1 text-gray-600 dark:text-gray-300">
-                Notifications off automatically. Instagram stays away. Plant grows on screen.
-              </p>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.3 }}
-              className="p-4 rounded-xl border-l-4"
-              style={{ borderColor: '#22c55e', background: 'var(--surface-1)' }}
-            >
-              <div className="text-xs font-bold" style={{ color: '#22c55e' }}>← 13:00 · REST</div>
-              <p className="text-sm mt-1 text-gray-600 dark:text-gray-300">
-                Actual lunch. No notifications.
-              </p>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.4 }}
-              className="p-4 rounded-xl border-l-4"
-              style={{ borderColor: '#6b7280', background: 'var(--surface-1)' }}
-            >
-              <div className="text-xs font-bold" style={{ color: '#6b7280' }}>← 17:00 · CLOSE</div>
-              <p className="text-sm mt-1 text-gray-600 dark:text-gray-300">
-                Tomorrow's three are already drafted. Inbox quiet. Laptop shut.
-              </p>
-            </motion.div>
+              );
+            })}
           </div>
         </div>
-      </div>
-      <div className="mt-12 text-center">
-        <p className="text-lg font-medium text-gray-900 dark:text-gray-100">Six small moments.</p>
-        <p className="text-gray-500 dark:text-gray-400">One quiet day.</p>
       </div>
     </SectionContainer>
   );

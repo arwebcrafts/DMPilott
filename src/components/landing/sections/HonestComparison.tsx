@@ -6,7 +6,7 @@ import { PositioningMatrix } from '@/components/landing/visual-storytelling/Posi
 
 export function HonestComparison() {
   return (
-    <SectionContainer padding="xl" id="honest-comparison" className="bg-gray-50">
+    <SectionContainer padding="lg" id="honest-comparison" className="section-cool">
       <SectionHeader
         title="Honest Comparison"
         subtitle="Where each tool sits."
@@ -18,8 +18,8 @@ export function HonestComparison() {
         <PositioningMatrix />
       </div>
       <div className="mt-12 text-center">
-        <p className="text-lg font-medium text-gray-900">Not a replacement.</p>
-        <p className="text-gray-600">The calm wrapper around your DM strategy.</p>
+        <p className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>Not a replacement.</p>
+        <p style={{ color: 'var(--text-secondary)' }}>The calm wrapper around your DM strategy.</p>
       </div>
     </SectionContainer>
   );

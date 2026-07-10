@@ -5,7 +5,7 @@ import { NotificationVisualization } from '@/components/landing/visual-storytell
 
 export function SoundFamiliar() {
   return (
-    <SectionContainer padding="xl" id="sound-familiar" className="section-warm">
+    <SectionContainer padding="lg" id="sound-familiar" className="section-warm">
       <div className="max-w-3xl mx-auto text-center">
         <p className="text-xs font-medium tracking-[0.2em] uppercase mb-4 text-gray-500 dark:text-gray-400">SOUND FAMILIAR?</p>
         <h2 className="text-4xl md:text-5xl font-bold mb-4 text-gray-900 dark:text-gray-100" style={{ fontFamily: 'var(--font-display)' }}>

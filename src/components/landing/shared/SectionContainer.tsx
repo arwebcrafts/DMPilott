@@ -20,10 +20,10 @@ const variants = {
 };
 
 const paddings = {
-  sm: 'py-12 md:py-16',
-  md: 'py-16 md:py-24',
-  lg: 'py-20 md:py-32',
-  xl: 'py-24 md:py-40',
+  sm: 'py-10 md:py-14',
+  md: 'py-14 md:py-20',
+  lg: 'py-16 md:py-24',
+  xl: 'py-16 md:py-24',
 };
 
 const maxWidths = {
