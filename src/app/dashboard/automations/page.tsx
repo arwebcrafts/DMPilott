@@ -55,12 +55,19 @@ function FacebookPageConfigModal({
   const [giftLinkTitle, setGiftLinkTitle] = useState('')
   const [loading, setLoading] = useState(false)
 
+  function facebookPageUrl(account: { username?: string | null; platform_account_id?: string }) {
+    if (account.username) {
+      return `https://www.facebook.com/${account.username.replace(/^@/, '')}/`
+    }
+    return `https://www.facebook.com/${account.platform_account_id}`
+  }
+
   // Auto-select first Facebook account and set page URL
   useEffect(() => {
     if (fbAccounts.length > 0 && !selectedAccountId) {
       const firstAccount = fbAccounts[0]
       setSelectedAccountId(firstAccount.id)
-      setPageUrl(`https://www.facebook.com/leerolir/`) // Use custom username URL
+      setPageUrl(facebookPageUrl(firstAccount))
     }
   }, [fbAccounts, selectedAccountId])
 
@@ -69,7 +76,7 @@ function FacebookPageConfigModal({
     setSelectedAccountId(accountId)
     const account = fbAccounts.find(a => a.id === accountId)
     if (account) {
-      setPageUrl(`https://www.facebook.com/leerolir/`) // Use custom username URL
+      setPageUrl(facebookPageUrl(account))
     }
   }
 

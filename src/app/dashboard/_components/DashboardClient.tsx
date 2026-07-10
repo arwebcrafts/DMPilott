@@ -414,10 +414,10 @@ function QuickActions() {
       style: { background: 'var(--accent)' },
     },
     {
-      href: '/dashboard/giveaways',
-      icon: <Gift className="w-5 h-5 text-[#22c55e]" />,
-      label: 'Create Giveaway',
-      className: 'text-[#22c55e] border border-[#22c55e]/30 hover:bg-[#22c55e]/10',
+      href: '/dashboard/link-in-bio',
+      icon: <BarChart2 className="w-5 h-5 text-[#DD2A7B]" />,
+      label: 'Link in Bio',
+      className: 'text-[#DD2A7B] border border-[#DD2A7B]/30 hover:bg-[#DD2A7B]/10',
       style: { background: 'var(--surface-1)' },
     },
     {
@@ -430,7 +430,7 @@ function QuickActions() {
     {
       href: '/dashboard/accounts',
       icon: <UserPlus className="w-5 h-5 text-gray-600 dark:text-gray-300" />,
-      label: 'Add Account',
+      label: 'Connect Account',
       className: 'text-gray-600 dark:text-gray-300 border hover:bg-gray-100 dark:hover:bg-gray-800',
       style: { background: 'var(--surface-1)', borderColor: 'var(--surface-3)' },
     },
@@ -493,9 +493,44 @@ export default function DashboardClient({
   const dmsPercent = isUnlimited ? 0 : Math.min((dmsUsed / dmsLimit) * 100, 100)
 
   const firstName = profileName?.split(' ')[0] || 'there'
+  const totalAccounts = igAccounts + fbAccounts
+  const showSetupGuide = totalAccounts === 0 || activeAutomations === 0
 
   return (
     <div className="space-y-5">
+      {showSetupGuide && (
+        <div
+          className="rounded-2xl border p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+          style={{ background: 'linear-gradient(135deg, rgba(221,42,123,0.08) 0%, rgba(129,52,175,0.08) 100%)', borderColor: 'var(--surface-3)' }}
+        >
+          <div>
+            <h2 className="font-semibold text-gray-900 dark:text-gray-100">Get started with comment-to-DM automation</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+              {totalAccounts === 0
+                ? 'Connect your Instagram account, then create an automation to reply when someone comments.'
+                : 'Create your first automation to send DMs when users comment on your posts or reels.'}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {totalAccounts === 0 && (
+              <a
+                href="/dashboard/accounts"
+                className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF]"
+              >
+                Connect Instagram
+              </a>
+            )}
+            <a
+              href="/dashboard/automations"
+              className="px-4 py-2 rounded-xl text-sm font-medium border hover:bg-white/50 dark:hover:bg-gray-800 transition-colors"
+              style={{ borderColor: 'var(--surface-3)' }}
+            >
+              Create Automation
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

@@ -42,16 +42,26 @@ export default function GiveawaysClient({
         </div>
         {canCreateMore && (
           <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => alert('Giveaways are coming soon. Use Automations with a keyword trigger for comment-to-enter campaigns today.')}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white opacity-60 cursor-not-allowed"
             style={{ background: 'var(--accent)' }}
+            disabled
           >
             <Plus className="w-4 h-4" />
-            Create Giveaway
+            Coming Soon
           </motion.button>
         )}
+      </div>
+
+      {/* Coming soon notice */}
+      <div className="rounded-xl border p-4" style={{ background: 'rgba(221,42,123,0.06)', borderColor: 'rgba(221,42,123,0.2)' }}>
+        <p className="text-sm text-gray-700 dark:text-gray-300">
+          <strong className="text-[#DD2A7B]">Giveaways launching soon.</strong> For now, use{' '}
+          <a href="/dashboard/automations" className="text-[#DD2A7B] underline font-medium">Automations</a>{' '}
+          with a keyword trigger (e.g. &quot;GIVEAWAY&quot;) to auto-DM everyone who comments.
+        </p>
       </div>
 
       {/* Plan limit notice */}

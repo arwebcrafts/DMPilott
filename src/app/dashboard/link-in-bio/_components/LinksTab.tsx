@@ -43,6 +43,7 @@ export function LinksTab({ blocks, onRefresh }: LinksTabProps) {
   const [editingBlock, setEditingBlock] = useState<BioBlock | null>(null)
   const [loading, setLoading] = useState(false)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const [overIndex, setOverIndex] = useState<number | null>(null)
   const [form, setForm] = useState({
     title: '',
     url: '',
@@ -210,15 +211,22 @@ export function LinksTab({ blocks, onRefresh }: LinksTabProps) {
             <div
               key={block.id}
               draggable
-              onDragStart={() => setDragIndex(index)}
-              onDragOver={(e) => {
-                e.preventDefault()
-                if (dragIndex === null || dragIndex === index) return
-                handleReorder(dragIndex, index)
+              onDragStart={() => {
                 setDragIndex(index)
+                setOverIndex(index)
               }}
-              onDragEnd={() => setDragIndex(null)}
-              className={`rounded-xl border p-3 flex items-center gap-3 cursor-grab active:cursor-grabbing ${!block.is_active ? 'opacity-50' : ''}`}
+              onDragEnter={() => setOverIndex(index)}
+              onDragOver={(e) => e.preventDefault()}
+              onDragEnd={async () => {
+                if (dragIndex !== null && overIndex !== null && dragIndex !== overIndex) {
+                  await handleReorder(dragIndex, overIndex)
+                }
+                setDragIndex(null)
+                setOverIndex(null)
+              }}
+              className={`rounded-xl border p-3 flex items-center gap-3 cursor-grab active:cursor-grabbing transition-shadow ${
+                !block.is_active ? 'opacity-50' : ''
+              } ${overIndex === index && dragIndex !== null ? 'ring-2 ring-[#DD2A7B]/30' : ''}`}
               style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}
             >
               <GripVertical className="w-4 h-4 text-gray-400 flex-shrink-0" />

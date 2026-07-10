@@ -53,7 +53,7 @@ export default function AccountsPage() {
 
   const igCount = accounts.filter(a => a.platform === 'instagram').length
   const fbCount = accounts.filter(a => a.platform === 'facebook').length
-  const canAddMore = true // Allow unlimited account connections
+  const canAddMore = planLimits.maxAccounts === Infinity || (igCount + fbCount) < planLimits.maxAccounts
 
   return (
     <div className="space-y-6">
@@ -85,7 +85,7 @@ export default function AccountsPage() {
       )}
 
       {/* Progress bar - hidden since account limits are removed */}
-      {false && planLimits.maxAccounts !== Infinity && (
+      {planLimits.maxAccounts !== Infinity && (
         <div className="rounded-lg p-4 border shadow-sm" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
           <div className="flex justify-between text-sm mb-2">
             <span className="text-gray-600 dark:text-gray-300">Accounts used</span>

@@ -5,7 +5,7 @@ import type { BioPage, BioTheme, SocialLink, BackgroundType, LinkStyle } from '@
 import { THEME_PRESETS, SOCIAL_PLATFORMS, LINK_BUTTON_STYLES, DEFAULT_LINK_STYLE } from '@/lib/bio/types'
 import { useUserStore } from '@/stores/userStore'
 import { PLAN_LIMITS } from '@/lib/planGating'
-import { Loader2, Copy, Check, Image, Palette } from 'lucide-react'
+import { Loader2, Image, Palette } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 interface DesignTabProps {
@@ -33,8 +33,6 @@ export function DesignTab({ page, onUpdate, onThemeChange, saving }: DesignTabPr
   const [avatarUrl, setAvatarUrl] = useState(page.avatar_url || '')
   const [theme, setTheme] = useState<BioTheme>(page.theme)
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>(page.social_links || [])
-  const [isPublished, setIsPublished] = useState(page.is_published)
-  const [copied, setCopied] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const allowedPresets = (['minimal', 'gradient', 'dark', 'instagram'] as const).slice(0, limits.bioThemePresets)
@@ -84,44 +82,14 @@ export function DesignTab({ page, onUpdate, onThemeChange, saving }: DesignTabPr
         avatar_url: avatarUrl,
         theme: { ...theme, preset: theme.preset === 'custom' ? 'custom' : theme.preset },
         social_links: socialLinks.slice(0, limits.maxBioSocialLinks),
-        is_published: isPublished,
       } as Partial<BioPage>)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save')
     }
   }
 
-  function copyUrl() {
-    const url = `${window.location.origin}/${slug}`
-    navigator.clipboard.writeText(url)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
   return (
     <div className="space-y-6">
-      {/* Slug */}
-      <div className="rounded-xl border p-5" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
-        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">Your URL</h3>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">{typeof window !== 'undefined' ? window.location.origin : ''}/</span>
-          <input
-            value={slug}
-            onChange={(e) => setSlug(e.target.value.toLowerCase())}
-            className="flex-1 px-3 py-2 rounded-lg border text-sm bg-white dark:bg-gray-900"
-            style={{ borderColor: 'var(--surface-3)' }}
-            placeholder="yourname"
-          />
-          <button
-            onClick={copyUrl}
-            className="p-2 rounded-lg border hover:bg-gray-50 dark:hover:bg-gray-800"
-            style={{ borderColor: 'var(--surface-3)' }}
-          >
-            {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-          </button>
-        </div>
-      </div>
-
       {/* Profile */}
       <div className="rounded-xl border p-5 space-y-4" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
         <h3 className="font-semibold text-gray-900 dark:text-gray-100">Profile</h3>
@@ -319,20 +287,6 @@ export function DesignTab({ page, onUpdate, onThemeChange, saving }: DesignTabPr
             ))}
           </div>
         </div>
-      </div>
-
-      {/* Publish */}
-      <div className="rounded-xl border p-5 flex items-center justify-between" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
-        <div>
-          <h3 className="font-semibold text-gray-900 dark:text-gray-100">Publish</h3>
-          <p className="text-xs text-gray-500 mt-0.5">Make your page visible to the public</p>
-        </div>
-        <button
-          onClick={() => setIsPublished(!isPublished)}
-          className={`relative w-12 h-6 rounded-full transition-colors ${isPublished ? 'bg-[#DD2A7B]' : 'bg-gray-300 dark:bg-gray-600'}`}
-        >
-          <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${isPublished ? 'translate-x-6' : 'translate-x-0.5'}`} />
-        </button>
       </div>
 
       {error && <p className="text-sm text-red-500">{error}</p>}
