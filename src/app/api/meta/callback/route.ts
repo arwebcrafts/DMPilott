@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { encryptToken } from '@/lib/encryption'
+import { buildAccountsRedirect } from '@/lib/oauth/redirect'
 import axios from 'axios'
 
 export async function GET(request: Request) {
@@ -10,151 +11,79 @@ export async function GET(request: Request) {
   const error = searchParams.get('error')
 
   if (error) {
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard/accounts?error=${error}`)
+    return buildAccountsRedirect({ error, platform: 'facebook' })
   }
 
   if (!code || !state) {
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard/accounts?error=missing_params`)
+    return buildAccountsRedirect({ error: 'missing_params', platform: 'facebook' })
   }
 
-  let stateData: { userId: string; platform: string }
+  let stateData: { userId: string; platform: string; popup?: boolean }
   try {
     stateData = JSON.parse(Buffer.from(state, 'base64').toString())
   } catch {
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard/accounts?error=invalid_state`)
+    return buildAccountsRedirect({ error: 'invalid_state', platform: 'facebook' })
+  }
+
+  if (stateData.platform !== 'facebook') {
+    return buildAccountsRedirect(
+      { error: 'invalid_platform', message: 'Use Instagram connect for Instagram accounts.', platform: 'facebook' },
+      stateData
+    )
   }
 
   const supabase = createServiceClient()
   const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/meta/callback`
 
   try {
-    let accessToken: string
-    let platformAccountId: string | null = null
-    let username: string | null = null
-    let displayName: string | null = null
-    let profilePictureUrl: string | null = null
-    let followerCount = 0
-    let tokenExpiresAt: string | null = null
-    // subscribeBase tracks which Graph API to use for webhook subscription
-    let subscribeBase = 'https://graph.facebook.com/v21.0'
+    const tokenRes = await axios.get('https://graph.facebook.com/v21.0/oauth/access_token', {
+      params: {
+        client_id: process.env.META_APP_ID,
+        client_secret: process.env.META_APP_SECRET,
+        redirect_uri: redirectUri,
+        code,
+      },
+    })
 
-    if (stateData.platform === 'instagram') {
-      // ── Instagram Business Login via Instagram OAuth ────────────────────────
-      // Instagram requires its own app ID and uses api.instagram.com for token exchange
-      
-      // Step 1: exchange code for short-lived token via Instagram OAuth
-      const igAppId = process.env.INSTAGRAM_APP_ID || process.env.META_APP_ID
-      const igAppSecret = process.env.INSTAGRAM_APP_SECRET || process.env.META_APP_SECRET
-      
-      const shortRes = await axios.post(
-        'https://api.instagram.com/oauth/access_token',
-        null,
-        {
-          params: {
-            client_id: igAppId,
-            client_secret: igAppSecret,
-            grant_type: 'authorization_code',
-            redirect_uri: redirectUri,
-            code,
-          },
-        }
+    const shortLivedToken: string = tokenRes.data.access_token
+
+    const longLivedRes = await axios.get('https://graph.facebook.com/v21.0/oauth/access_token', {
+      params: {
+        grant_type: 'fb_exchange_token',
+        client_id: process.env.META_APP_ID,
+        client_secret: process.env.META_APP_SECRET,
+        fb_exchange_token: shortLivedToken,
+      },
+    })
+
+    const userLongLivedToken: string = longLivedRes.data.access_token
+
+    const pagesRes = await axios.get('https://graph.facebook.com/v21.0/me/accounts', {
+      params: {
+        access_token: userLongLivedToken,
+        fields: 'id,name,access_token,picture,fan_count',
+      },
+    })
+
+    if (!pagesRes.data.data?.length) {
+      return buildAccountsRedirect(
+        { error: 'no_account', message: 'No Facebook Page found on this account.', platform: 'facebook' },
+        stateData
       )
-
-      const shortLivedToken: string = shortRes.data.access_token
-
-      // Step 2: exchange for long-lived token via graph.instagram.com
-      // Instagram Graph API requires GET with access_token as query parameter
-      accessToken = shortLivedToken
-      tokenExpiresAt = new Date(Date.now() + 55 * 60 * 1000).toISOString()
-
-      try {
-        const longRes = await axios.get('https://graph.instagram.com/access_token', {
-          params: {
-            grant_type: 'ig_exchange_token',
-            client_secret: igAppSecret,
-            access_token: shortLivedToken,
-          },
-        })
-
-        if (longRes.data?.access_token) {
-          accessToken = longRes.data.access_token
-          tokenExpiresAt = new Date(Date.now() + (longRes.data.expires_in || 0) * 1000).toISOString()
-          console.log('[Callback] Long-lived Instagram token obtained')
-        }
-      } catch (longErr: any) {
-        console.warn('[Callback] Long-lived IG token exchange failed (using short-lived):',
-          longErr?.response?.data?.error?.message || longErr.message)
-      }
-
-      // Step 3: get account details using user_id (IG professional account ID)
-      // Instagram Graph API requires access_token as query parameter
-      const meRes = await axios.get('https://graph.instagram.com/me', {
-        params: {
-          fields: 'id,user_id,username,name,profile_picture_url,followers_count,account_type',
-          access_token: accessToken,
-        },
-      })
-
-      platformAccountId = meRes.data.user_id || meRes.data.id
-      username = meRes.data.username
-      displayName = meRes.data.name || meRes.data.username
-      profilePictureUrl = meRes.data.profile_picture_url ?? null
-      followerCount = meRes.data.followers_count || 0
-      subscribeBase = 'https://graph.instagram.com/v21.0'
-
-      console.log('[Callback] Instagram Login — account:', username, 'id:', platformAccountId)
-    } else {
-      // ── Facebook Page Login (unchanged) ──────────────────────────────────────
-
-      // Exchange code for short-lived token
-      const tokenRes = await axios.get('https://graph.facebook.com/v21.0/oauth/access_token', {
-        params: {
-          client_id: process.env.META_APP_ID,
-          client_secret: process.env.META_APP_SECRET,
-          redirect_uri: redirectUri,
-          code,
-        },
-      })
-
-      const shortLivedToken: string = tokenRes.data.access_token
-
-      // Exchange for long-lived user token
-      const longLivedRes = await axios.get('https://graph.facebook.com/v21.0/oauth/access_token', {
-        params: {
-          grant_type: 'fb_exchange_token',
-          client_id: process.env.META_APP_ID,
-          client_secret: process.env.META_APP_SECRET,
-          fb_exchange_token: shortLivedToken,
-        },
-      })
-
-      const userLongLivedToken: string = longLivedRes.data.access_token
-
-      // Get the Facebook Pages the user manages (each page has its own access token)
-      const pagesRes = await axios.get('https://graph.facebook.com/v21.0/me/accounts', {
-        params: { access_token: userLongLivedToken },
-      })
-
-      if (pagesRes.data.data?.length > 0) {
-        const page = pagesRes.data.data[0]
-        platformAccountId = page.id
-        username = page.name
-        displayName = page.name
-        // Use the Page access token (required for Page DMs, not the user token)
-        accessToken = page.access_token ?? userLongLivedToken
-        tokenExpiresAt = longLivedRes.data.expires_in
-          ? new Date(Date.now() + longLivedRes.data.expires_in * 1000).toISOString()
-          : null
-      } else {
-        accessToken = userLongLivedToken
-      }
-
-      console.log('[Callback] Facebook Login — page:', username, 'id:', platformAccountId)
     }
 
-    if (!platformAccountId) {
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard/accounts?error=no_account`)
-    }
+    const page = pagesRes.data.data[0]
+    const platformAccountId = page.id as string
+    const username = page.name as string
+    const displayName = page.name as string
+    const profilePictureUrl = page.picture?.data?.url ?? null
+    const followerCount = page.fan_count || 0
+    const accessToken = page.access_token ?? userLongLivedToken
+    const tokenExpiresAt = longLivedRes.data.expires_in
+      ? new Date(Date.now() + longLivedRes.data.expires_in * 1000).toISOString()
+      : null
+
+    console.log('[Facebook Callback] Page connected:', username, 'id:', platformAccountId)
 
     const encryptedToken = encryptToken(accessToken)
 
@@ -162,7 +91,7 @@ export async function GET(request: Request) {
       .from('connected_accounts')
       .upsert({
         user_id: stateData.userId,
-        platform: stateData.platform,
+        platform: 'facebook',
         platform_account_id: platformAccountId,
         username,
         display_name: displayName,
@@ -176,41 +105,41 @@ export async function GET(request: Request) {
       })
 
     if (upsertError) {
-      console.error('[Callback] Failed to save account:', upsertError)
+      console.error('[Facebook Callback] Failed to save account:', upsertError)
     }
 
-    // Subscribe to webhook events (comments + messages)
-    const subscribeFields = stateData.platform === 'instagram' ? 'comments,messages' : 'feed,messages'
     try {
       await axios.post(
-        `${subscribeBase}/${platformAccountId}/subscribed_apps`,
+        `https://graph.facebook.com/v21.0/${platformAccountId}/subscribed_apps`,
         null,
         {
           params: {
-            subscribed_fields: subscribeFields,
+            subscribed_fields: 'feed,messages',
             access_token: accessToken,
           },
         }
       )
-      console.log('[Callback] ✓ Subscribed to webhook fields:', subscribeFields)
 
       await supabase
         .from('connected_accounts')
         .update({ webhook_subscribed: true })
         .eq('user_id', stateData.userId)
-        .eq('platform', stateData.platform)
+        .eq('platform', 'facebook')
         .eq('platform_account_id', platformAccountId)
+
+      console.log('[Facebook Callback] Webhook subscription active')
     } catch (subErr: any) {
-      console.error('[Callback] Webhook subscription failed:', subErr?.response?.data || subErr.message)
+      console.error('[Facebook Callback] Webhook subscription failed:', subErr?.response?.data || subErr.message)
     }
 
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard/accounts?connected=true`)
+    return buildAccountsRedirect({ connected: 'true', platform: 'facebook' }, stateData)
   } catch (err: any) {
-    console.error('[Callback] OAuth error:', err?.response?.data || err.message || err)
+    console.error('[Facebook Callback] OAuth error:', err?.response?.data || err.message || err)
     const errorCode = err?.response?.data?.error?.code || err?.response?.data?.error_type || 'oauth_failed'
     const errorMessage = err?.response?.data?.error?.message || err?.response?.data?.error_message || ''
-    return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/accounts?error=${errorCode}&message=${encodeURIComponent(errorMessage)}`
+    return buildAccountsRedirect(
+      { error: String(errorCode), message: errorMessage, platform: 'facebook' },
+      stateData
     )
   }
 }

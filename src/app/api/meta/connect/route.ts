@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const platform = searchParams.get('platform')
+  const popup = searchParams.get('popup') === '1'
 
   if (!platform || !['instagram', 'facebook'].includes(platform)) {
     return NextResponse.json({ error: 'Invalid platform' }, { status: 400 })
@@ -21,6 +22,7 @@ export async function GET(request: Request) {
   const state = Buffer.from(JSON.stringify({
     userId: user.id,
     platform,
+    popup,
     nonce: Math.random().toString(36).substring(7),
   })).toString('base64')
 

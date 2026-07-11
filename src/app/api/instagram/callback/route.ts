@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { encryptToken } from '@/lib/encryption'
+import { buildAccountsRedirect } from '@/lib/oauth/redirect'
 import axios from 'axios'
 
 // Instagram OAuth callback handler
@@ -19,21 +20,25 @@ export async function GET(request: Request) {
 
   if (error) {
     console.log('[Instagram Callback] Redirecting due to error param:', error)
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard/accounts?error=${error}`)
+    return buildAccountsRedirect({ error, platform: 'instagram' }, { popup: false })
   }
 
   if (!code || !state) {
     console.log('[Instagram Callback] Missing code or state - code:', !!code, 'state:', !!state)
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard/accounts?error=missing_params`)
+    return buildAccountsRedirect({ error: 'missing_params', platform: 'instagram' }, { popup: false })
   }
 
-  let stateData: { userId: string; platform: string }
+  let stateData: { userId: string; platform: string; popup?: boolean }
   try {
     stateData = JSON.parse(Buffer.from(state, 'base64').toString())
     console.log('[Instagram Callback] State decoded:', JSON.stringify(stateData))
   } catch (e) {
     console.log('[Instagram Callback] Failed to decode state:', state)
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard/accounts?error=invalid_state`)
+    return buildAccountsRedirect({ error: 'invalid_state', platform: 'instagram' }, { popup: false })
+  }
+
+  if (stateData.platform !== 'instagram') {
+    return buildAccountsRedirect({ error: 'invalid_platform', platform: 'instagram' }, stateData)
   }
 
   const supabase = createServiceClient()
@@ -201,7 +206,7 @@ export async function GET(request: Request) {
 
     if (!platformAccountId) {
       console.log('[Instagram Callback] No platformAccountId found')
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard/accounts?error=no_account`)
+      return buildAccountsRedirect({ error: 'no_account', platform: 'instagram' }, stateData)
     }
 
     // Fallback profile enrichment using the numeric IG user ID (some tokens reject /me but accept /<id>)
@@ -291,7 +296,7 @@ export async function GET(request: Request) {
     }
 
     console.log('[Instagram Callback] ===== SUCCESS =====')
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard/accounts?connected=true`)
+    return buildAccountsRedirect({ connected: 'true', platform: 'instagram' }, stateData)
   } catch (err: any) {
     console.error('[Instagram Callback] ===== ERROR =====')
     console.error('[Instagram Callback] Error message:', err.message)
@@ -303,8 +308,9 @@ export async function GET(request: Request) {
     const errorMessage = err?.response?.data?.error?.message || err?.response?.data?.error_message || err.message || 'Unknown error'
     
     console.error('[Instagram Callback] Redirecting with error:', errorCode, '-', errorMessage)
-    return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/accounts?error=${errorCode}&message=${encodeURIComponent(errorMessage)}`
+    return buildAccountsRedirect(
+      { error: String(errorCode), message: errorMessage, platform: 'instagram' },
+      stateData
     )
   }
 }
