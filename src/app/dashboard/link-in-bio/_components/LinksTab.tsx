@@ -90,10 +90,10 @@ export function LinksTab({ blocks, onRefresh }: LinksTabProps) {
     setShowAddMenu(false)
     try {
       const defaults: Record<string, unknown> = {
-        link: { title: 'My Link', url: 'https://' },
+        link: { title: 'My Link' },
         header: { title: 'My Category', metadata: { alignment: 'center', showLine: true } },
-        video: { title: 'Featured Video', url: 'https://www.youtube.com/watch?v=' },
-        product: { title: 'My Product', url: 'https://' },
+        video: { title: 'Featured Video' },
+        product: { title: 'My Product' },
         email_capture: { title: 'Subscribe', metadata: { successMessage: 'Thanks for subscribing!' } },
       }
 

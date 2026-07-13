@@ -22,7 +22,7 @@ export function BioPublicView({ page, blocks, preview = false }: BioPublicViewPr
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center px-4 py-10"
+      className={`flex flex-col items-center px-4 py-8 ${preview ? 'min-h-0' : 'min-h-screen py-10'}`}
       style={{
         ...getPageBackgroundStyle(theme),
         fontFamily: theme.fontFamily || 'system-ui',

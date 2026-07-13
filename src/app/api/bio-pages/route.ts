@@ -80,7 +80,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ page })
   } catch (error) {
     console.error('[Bio Pages POST]', error)
-    return NextResponse.json({ error: 'Failed to create bio page' }, { status: 500 })
+    const message = error instanceof Error ? error.message : 'Failed to create bio page'
+    if (message.includes('bio_pages') && message.includes('does not exist')) {
+      return NextResponse.json(
+        { error: 'Bio pages database is not set up. Run migration 010_bio_pages.sql in Supabase.' },
+        { status: 503 }
+      )
+    }
+    if (message.includes('duplicate key') || message.includes('unique constraint')) {
+      return NextResponse.json({ error: 'You already have a bio page or this username is taken.' }, { status: 409 })
+    }
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
 

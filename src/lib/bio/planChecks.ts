@@ -9,11 +9,15 @@ export async function getAuthenticatedUserPlan(): Promise<{
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('users')
     .select('plan')
     .eq('id', user.id)
-    .single()
+    .maybeSingle()
+
+  if (profileError) {
+    console.error('[planChecks] profile lookup failed:', profileError.message)
+  }
 
   return {
     userId: user.id,

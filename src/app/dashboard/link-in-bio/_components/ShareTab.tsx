@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { BioPage } from '@/lib/bio/types'
 import { Copy, Check, Download, QrCode } from 'lucide-react'
 import { InstagramIcon } from '@/components/ui/brand-icons'
@@ -13,6 +13,11 @@ interface ShareTabProps {
 export function ShareTab({ page }: ShareTabProps) {
   const [copied, setCopied] = useState(false)
   const [qrUrl, setQrUrl] = useState<string | null>(null)
+  const [qrLoading, setQrLoading] = useState(false)
+
+  useEffect(() => {
+    if (page) loadQr()
+  }, [page?.slug])
 
   if (!page) {
     return (
@@ -31,29 +36,35 @@ export function ShareTab({ page }: ShareTabProps) {
   }
 
   async function loadQr() {
-    const res = await fetch('/api/bio/qr')
-    if (res.ok) {
-      const blob = await res.blob()
-      setQrUrl(URL.createObjectURL(blob))
+    setQrLoading(true)
+    try {
+      const res = await fetch('/api/bio/qr?format=svg')
+      if (res.ok) {
+        const svg = await res.text()
+        const blob = new Blob([svg], { type: 'image/svg+xml' })
+        setQrUrl(URL.createObjectURL(blob))
+      }
+    } finally {
+      setQrLoading(false)
     }
   }
 
   async function downloadQr() {
     if (!page) return
-    const res = await fetch('/api/bio/qr')
+    const res = await fetch('/api/bio/qr?format=svg')
     if (!res.ok) return
-    const blob = await res.blob()
+    const svg = await res.text()
+    const blob = new Blob([svg], { type: 'image/svg+xml' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `dmpilot-${page.slug}-qr.png`
+    a.download = `dmpilot-${page.slug}-qr.svg`
     a.click()
     URL.revokeObjectURL(url)
   }
 
   return (
     <div className="space-y-6">
-      {/* Public URL */}
       <div className="rounded-xl border p-5" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
         <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">Your Link in Bio URL</h3>
         <div className="flex items-center gap-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-900 border" style={{ borderColor: 'var(--surface-3)' }}>
@@ -68,44 +79,45 @@ export function ShareTab({ page }: ShareTabProps) {
           </motion.button>
         </div>
         {!page.is_published && (
-          <p className="text-xs text-amber-600 mt-2">⚠ Page is not published yet — visitors will see a 404</p>
+          <p className="text-xs text-amber-600 mt-2">Page is not published yet. Visitors will see a 404 until you turn on publish.</p>
         )}
       </div>
 
-      {/* QR Code */}
       <div className="rounded-xl border p-5" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
-        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">QR Code</h3>
-        <p className="text-sm text-gray-500 mb-4">Download a QR code to share offline — on business cards, posters, or events.</p>
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">Premium QR Code</h3>
+        <p className="text-sm text-gray-500 mb-5">
+          Branded QR with your username. Great for business cards, posters, or events.
+        </p>
 
-        <div className="flex flex-col items-center gap-4">
-          {qrUrl ? (
-            <img src={qrUrl} alt="QR Code" className="w-48 h-48 rounded-lg border" style={{ borderColor: 'var(--surface-3)' }} />
-          ) : (
-            <div className="w-48 h-48 rounded-lg border flex items-center justify-center bg-gray-50 dark:bg-gray-900" style={{ borderColor: 'var(--surface-3)' }}>
-              <QrCode className="w-12 h-12 text-gray-300" />
-            </div>
-          )}
-
-          <div className="flex gap-2">
-            <button
-              onClick={loadQr}
-              className="px-4 py-2 rounded-lg border text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
-              style={{ borderColor: 'var(--surface-3)' }}
-            >
-              Preview QR
-            </button>
-            <button
-              onClick={downloadQr}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF]"
-            >
-              <Download className="w-4 h-4" />
-              Download PNG
-            </button>
+        <div className="flex flex-col items-center gap-5">
+          <div className="rounded-2xl overflow-hidden shadow-xl">
+            {qrUrl ? (
+              <img src={qrUrl} alt={`QR code for @${page.slug}`} className="w-64 h-80" />
+            ) : (
+              <div className="w-64 h-80 bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#8134AF] flex items-center justify-center">
+                {qrLoading ? (
+                  <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <QrCode className="w-16 h-16 text-white/40" />
+                )}
+              </div>
+            )}
           </div>
+
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            @{page.slug}
+          </p>
+
+          <button
+            onClick={downloadQr}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF]"
+          >
+            <Download className="w-4 h-4" />
+            Download QR (SVG)
+          </button>
         </div>
       </div>
 
-      {/* Instagram tip */}
       <div className="rounded-xl border p-5" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] flex items-center justify-center flex-shrink-0">
@@ -117,7 +129,7 @@ export function ShareTab({ page }: ShareTabProps) {
               <li>Copy your link above</li>
               <li>Open Instagram → Edit Profile</li>
               <li>Paste your DMPilot link in the Website field</li>
-              <li>Save — all your links are now one tap away</li>
+              <li>Save. All your links are now one tap away.</li>
             </ol>
           </div>
         </div>

@@ -90,15 +90,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if ((body.type === 'link' || body.type === 'product') && body.url) {
-      const urlCheck = validateUrl(body.url, true)
-      if (!urlCheck.valid) {
-        return NextResponse.json({ error: urlCheck.error }, { status: 400 })
-      }
-    }
-
-    if (body.type === 'video') {
-      const urlCheck = validateUrl(body.url, true)
+    // URL is optional on create — user fills it in the edit modal
+    if ((body.type === 'link' || body.type === 'product' || body.type === 'video') && body.url?.trim()) {
+      const urlCheck = validateUrl(body.url, false)
       if (!urlCheck.valid) {
         return NextResponse.json({ error: urlCheck.error }, { status: 400 })
       }

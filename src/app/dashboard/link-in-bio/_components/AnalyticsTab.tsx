@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useUserStore } from '@/stores/userStore'
 import { PLAN_LIMITS } from '@/lib/planGating'
-import { Loader2, Eye, MousePointerClick, Users, TrendingUp } from 'lucide-react'
+import { Loader2, Eye, MousePointerClick, Mail, TrendingUp } from 'lucide-react'
 
 interface AnalyticsTabProps {
   hasPage: boolean
@@ -64,66 +64,79 @@ export function AnalyticsTab({ hasPage }: AnalyticsTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* Period toggle */}
       <div className="flex gap-2">
         {dayOptions.map((d) => (
           <button
             key={d}
             onClick={() => setDays(d)}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               days === d
                 ? 'bg-[#DD2A7B] text-white'
                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'
             }`}
           >
-            {d}D
+            Last {d} days
           </button>
         ))}
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+        <div className="flex justify-center py-16">
+          <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
         </div>
       ) : data ? (
         <>
-          {/* Stats cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {[
-              { label: 'Total Views', value: data.pageViews, icon: Eye },
-              { label: 'Period Clicks', value: data.totalClicks, icon: MousePointerClick },
-              { label: 'Subscribers', value: data.subscriberCount, icon: Users },
-              { label: 'CTR', value: `${data.ctr.toFixed(1)}%`, icon: TrendingUp },
-            ].map(({ label, value, icon: Icon }) => (
+              { label: 'Total Page Views', value: data.pageViews, icon: Eye, sub: 'All time' },
+              { label: 'Views This Period', value: data.periodViews, icon: Eye, sub: `${data.periodDays} days` },
+              { label: 'Link Clicks', value: data.totalClicks, icon: MousePointerClick, sub: `${data.periodDays} days` },
+              { label: 'Email Signups', value: data.subscriberCount, icon: Mail, sub: 'From email blocks' },
+            ].map(({ label, value, icon: Icon, sub }) => (
               <div
                 key={label}
-                className="rounded-xl border p-4"
+                className="rounded-2xl border p-6 min-h-[140px] flex flex-col justify-between"
                 style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}
               >
-                <Icon className="w-4 h-4 text-gray-400 mb-2" />
-                <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{value}</div>
-                <div className="text-xs text-gray-500 mt-1">{label}</div>
+                <div className="flex items-center justify-between">
+                  <Icon className="w-6 h-6 text-[#DD2A7B]" />
+                  <span className="text-xs text-gray-400">{sub}</span>
+                </div>
+                <div>
+                  <div className="text-4xl font-bold text-gray-900 dark:text-gray-100">{value}</div>
+                  <div className="text-sm text-gray-500 mt-2">{label}</div>
+                </div>
               </div>
             ))}
           </div>
 
-          {/* Per-link breakdown */}
+          <div
+            className="rounded-2xl border p-6 flex items-center gap-4"
+            style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}
+          >
+            <TrendingUp className="w-8 h-8 text-[#DD2A7B] flex-shrink-0" />
+            <div>
+              <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{data.ctr.toFixed(1)}%</div>
+              <div className="text-sm text-gray-500">Click-through rate (clicks ÷ views)</div>
+            </div>
+          </div>
+
           {data.blockStats.length > 0 && (
             <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--surface-3)' }}>
-              <div className="px-4 py-3 border-b font-semibold text-sm" style={{ borderColor: 'var(--surface-3)', background: 'var(--surface-1)' }}>
-                Link Performance ({data.periodDays}D)
+              <div className="px-5 py-4 border-b font-semibold text-sm" style={{ borderColor: 'var(--surface-3)', background: 'var(--surface-1)' }}>
+                Link Performance ({data.periodDays} days)
               </div>
               <div className="divide-y" style={{ borderColor: 'var(--surface-3)' }}>
                 {data.blockStats.map((block) => (
-                  <div key={block.id} className="px-4 py-3 flex items-center justify-between">
+                  <div key={block.id} className="px-5 py-4 flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                         {block.title || 'Untitled'}
                       </div>
-                      <div className="text-xs text-gray-500 capitalize">{block.type}</div>
+                      <div className="text-xs text-gray-500 capitalize">{block.type.replace('_', ' ')}</div>
                     </div>
-                    <div className="text-sm font-semibold text-[#DD2A7B]">
-                      {block.clicks} clicks
+                    <div className="text-lg font-semibold text-[#DD2A7B]">
+                      {block.clicks}
                     </div>
                   </div>
                 ))}
@@ -132,7 +145,7 @@ export function AnalyticsTab({ hasPage }: AnalyticsTabProps) {
           )}
         </>
       ) : (
-        <p className="text-sm text-gray-500 text-center py-8">No analytics data yet</p>
+        <p className="text-sm text-gray-500 text-center py-12">No analytics data yet. Share your page to get views.</p>
       )}
     </div>
   )

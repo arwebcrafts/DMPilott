@@ -1,96 +1,132 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import type { BioPage, BioBlock, BioTheme } from '@/lib/bio/types'
+import { DEFAULT_BIO_THEME } from '@/lib/bio/types'
+import { validateSlug, normalizeSlug } from '@/lib/bio/validation'
 import { useUserStore } from '@/stores/userStore'
-import type { BioPage, BioBlock } from '@/lib/bio/types'
-import {
-  Loader2, Link2, LayoutGrid, Palette, BarChart3, Share2, Smartphone, X,
-} from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import type { BioTab } from '@/components/dashboard/LinkInBioSidebarNav'
+import { BIO_TABS } from '@/components/dashboard/LinkInBioSidebarNav'
+import { BioPreview } from './BioPreview'
 import { OverviewTab } from './OverviewTab'
-import { DesignTab } from './DesignTab'
 import { LinksTab } from './LinksTab'
+import { DesignTab } from './DesignTab'
 import { AnalyticsTab } from './AnalyticsTab'
 import { ShareTab } from './ShareTab'
-import { BioPreview } from './BioPreview'
+import { Loader2, Smartphone } from 'lucide-react'
+import { motion } from 'framer-motion'
 
-type Tab = 'overview' | 'links' | 'design' | 'analytics' | 'share'
+const VALID_TABS: BioTab[] = ['overview', 'links', 'design', 'analytics', 'share']
 
-const TABS: { id: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { id: 'overview', label: 'Overview', icon: LayoutGrid },
-  { id: 'links', label: 'Links', icon: Link2 },
-  { id: 'design', label: 'Design', icon: Palette },
-  { id: 'analytics', label: 'Insights', icon: BarChart3 },
-  { id: 'share', label: 'Share', icon: Share2 },
-]
+const TAB_TITLES: Record<BioTab, string> = {
+  overview: 'Overview',
+  links: 'Links',
+  design: 'Design',
+  analytics: 'Insights',
+  share: 'Share',
+}
 
-export function LinkInBioClient() {
+function LinkInBioClientInner() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
   const { user, accounts, fetchUser, fetchAccounts } = useUserStore()
-  const [activeTab, setActiveTab] = useState<Tab>('overview')
   const [page, setPage] = useState<BioPage | null>(null)
   const [blocks, setBlocks] = useState<BioBlock[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const [creating, setCreating] = useState(false)
+  const [previewTheme, setPreviewTheme] = useState<BioTheme>(DEFAULT_BIO_THEME)
   const [slugInput, setSlugInput] = useState('')
-  const [previewTheme, setPreviewTheme] = useState<BioPage['theme'] | null>(null)
-  const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
 
-  const loadData = useCallback(async () => {
-    setLoading(true)
+  const tabParam = searchParams.get('tab') as BioTab | null
+  const activeView: BioTab = tabParam && VALID_TABS.includes(tabParam) ? tabParam : 'overview'
+
+  const slugNormalized = normalizeSlug(slugInput)
+  const slugValidation = slugNormalized ? validateSlug(slugNormalized) : null
+  const canCreate = Boolean(slugNormalized && slugValidation?.valid && !creating)
+
+  const fetchData = useCallback(async () => {
+    setLoadError(null)
     try {
-      const res = await fetch('/api/bio-pages')
-      if (res.ok) {
-        const data = await res.json()
-        setPage(data.page)
-        setBlocks(data.blocks || [])
-        if (data.page) setSlugInput(data.page.slug)
+      const res = await fetch('/api/bio-pages', { credentials: 'same-origin' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setLoadError(data.error || 'Failed to load your bio page')
+        return
       }
+      setPage(data.page ?? null)
+      setBlocks(data.blocks || [])
+      if (data.page?.theme) setPreviewTheme(data.page.theme)
+    } catch {
+      setLoadError('Network error while loading. Refresh and try again.')
     } finally {
       setLoading(false)
     }
   }, [])
 
   useEffect(() => {
+    fetchData()
     fetchUser()
     fetchAccounts()
-    loadData()
-  }, [fetchUser, fetchAccounts, loadData])
+  }, [fetchData, fetchUser, fetchAccounts])
 
   useEffect(() => {
-    if (!page && accounts.length > 0 && !slugInput) {
-      const igAccount = accounts.find((a) => a.platform === 'instagram' && a.username)
-      if (igAccount?.username) {
-        setSlugInput(igAccount.username.toLowerCase().replace(/[^a-z0-9_-]/g, ''))
-      }
-    }
-  }, [accounts, page, slugInput])
+    if (page || slugInput) return
+    const fromIg = accounts.find((a) => a.platform === 'instagram' && a.username)?.username
+    const fromEmail = user?.email?.split('@')[0]
+    const raw = fromIg || fromEmail || ''
+    const suggestion = normalizeSlug(raw).replace(/[^a-z0-9_-]/g, '').slice(0, 30)
+    if (suggestion.length >= 3) setSlugInput(suggestion)
+  }, [user, accounts, page, slugInput])
 
-  async function createPage() {
-    if (!slugInput.trim()) return
+  async function createPage(e?: React.FormEvent) {
+    e?.preventDefault()
+    setCreateError(null)
+
+    if (!slugNormalized) {
+      setCreateError('Choose a username for your page URL')
+      return
+    }
+    if (!slugValidation?.valid) {
+      setCreateError(slugValidation?.error || 'Invalid username')
+      return
+    }
+
     setCreating(true)
     try {
       const res = await fetch('/api/bio-pages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({
-          slug: slugInput,
-          display_name: user?.fullName || slugInput,
+          slug: slugNormalized,
+          display_name: user?.fullName || slugNormalized,
         }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        alert(data.error || 'Failed to create page')
+        setCreateError(data.error || `Could not create page (${res.status})`)
+        return
+      }
+      if (!data.page) {
+        setCreateError('Unexpected server response. Refresh and try again.')
         return
       }
       setPage(data.page)
-      await loadData()
+      setBlocks([])
+      setPreviewTheme(data.page.theme)
+      router.replace('/dashboard/link-in-bio?tab=overview')
+    } catch {
+      setCreateError('Network error. Check your connection and try again.')
     } finally {
       setCreating(false)
     }
   }
 
-  async function updatePage(updates: Partial<BioPage>) {
+  async function updatePage(updates: Partial<BioPage>): Promise<void> {
     setSaving(true)
     try {
       const res = await fetch('/api/bio-pages', {
@@ -101,18 +137,22 @@ export function LinkInBioClient() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to save')
       setPage(data.page)
-      setPreviewTheme(null)
+      if (data.page.theme) setPreviewTheme(data.page.theme)
     } finally {
       setSaving(false)
     }
   }
 
-  const previewPage = page ? { ...page, theme: previewTheme || page.theme } : null
+  function navigateToTab(tab: BioTab) {
+    router.push(`/dashboard/link-in-bio?tab=${tab}`)
+  }
+
+  const previewPage = page ? { ...page, theme: previewTheme } : null
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 animate-spin text-[#DD2A7B]" />
+        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
       </div>
     )
   }
@@ -120,132 +160,155 @@ export function LinkInBioClient() {
   if (!page) {
     return (
       <div className="max-w-lg mx-auto py-12 px-4">
-        <div className="rounded-2xl border p-8 text-center shadow-sm" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] flex items-center justify-center mx-auto mb-6 shadow-lg">
-            <Link2 className="w-8 h-8 text-white" />
+        {loadError && (
+          <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
+            {loadError}
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Your Link in Bio</h2>
-          <p className="text-gray-500 text-sm mb-8 leading-relaxed">
-            One premium link page for Instagram. Share all your links, videos, and products in one tap.
-          </p>
-          <div className="flex items-center gap-2 mb-6 rounded-xl border p-2" style={{ borderColor: 'var(--surface-3)' }}>
-            <span className="text-sm text-gray-400 pl-2">{typeof window !== 'undefined' ? window.location.origin : ''}/</span>
-            <input
-              value={slugInput}
-              onChange={(e) => setSlugInput(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
-              className="flex-1 px-2 py-2 rounded-lg text-sm font-medium bg-transparent outline-none"
-              placeholder="yourname"
-            />
+        )}
+        <div
+          className="rounded-2xl border p-8 text-center space-y-6"
+          style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}
+        >
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] flex items-center justify-center mx-auto">
+            <span className="text-2xl">🔗</span>
           </div>
-          <motion.button
-            whileTap={{ scale: 0.98 }}
-            onClick={createPage}
-            disabled={creating || !slugInput.trim()}
-            className="w-full py-3.5 rounded-xl font-semibold text-white bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] disabled:opacity-50 flex items-center justify-center gap-2 shadow-md"
-          >
-            {creating && <Loader2 className="w-4 h-4 animate-spin" />}
-            Create My Page
-          </motion.button>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Create Your Link in Bio</h2>
+            <p className="text-sm text-gray-500 mt-2">
+              One link for everything. Share it on Instagram, TikTok, or anywhere.
+            </p>
+          </div>
+          <form className="space-y-3 text-left" onSubmit={createPage}>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Your page URL</label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500 whitespace-nowrap">dmpilott.vercel.app/</span>
+                <input
+                  value={slugInput}
+                  onChange={(e) => {
+                    setSlugInput(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))
+                    setCreateError(null)
+                  }}
+                  placeholder="yourname"
+                  autoComplete="off"
+                  className="flex-1 px-3 py-2 rounded-lg border text-sm bg-white dark:bg-gray-900"
+                  style={{ borderColor: 'var(--surface-3)' }}
+                />
+              </div>
+              <p className="text-xs text-gray-400 mt-1.5">
+                3–30 characters. Letters, numbers, underscore, hyphen only.
+              </p>
+              {slugNormalized && !slugValidation?.valid && (
+                <p className="text-xs text-red-500 mt-1">{slugValidation?.error}</p>
+              )}
+            </div>
+
+            {createError && (
+              <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">
+                {createError}
+              </div>
+            )}
+
+            <motion.button
+              type="submit"
+              whileTap={canCreate ? { scale: 0.98 } : undefined}
+              disabled={!canCreate}
+              className="w-full py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {creating ? 'Creating...' : 'Create My Page'}
+            </motion.button>
+          </form>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="pb-20 lg:pb-0">
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Link in Bio</h1>
-          <p className="text-gray-500 text-sm mt-0.5">
-            Premium link page for your Instagram profile
+    <div>
+      {/* Mobile section nav — sidebar is hidden below md */}
+      <nav className="md:hidden mb-5 -mx-1 flex gap-1 overflow-x-auto pb-1 scrollbar-none">
+        {BIO_TABS.map(({ tab, label }) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => navigateToTab(tab)}
+            className={`shrink-0 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+              activeView === tab
+                ? 'bg-[#DD2A7B] text-white'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
+
+      <div className="flex gap-4 lg:gap-6 items-start">
+      {/* Main editor — left */}
+      <div className="flex-1 min-w-0">
+        <div className="mb-6">
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{TAB_TITLES[activeView]}</h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {activeView === 'overview' && 'Status, stats, and quick actions'}
+            {activeView === 'links' && 'Add and organize your links'}
+            {activeView === 'design' && 'Customize how your page looks'}
+            {activeView === 'analytics' && 'Views, clicks, and signups'}
+            {activeView === 'share' && 'Copy your URL and download QR code'}
           </p>
         </div>
-        <button
-          onClick={() => setMobilePreviewOpen(true)}
-          className="lg:hidden flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium"
-          style={{ borderColor: 'var(--surface-3)' }}
-        >
-          <Smartphone className="w-4 h-4" />
-          Preview
-        </button>
-      </div>
 
-      {/* Tab bar */}
-      <div className="flex gap-1 mb-6 p-1 rounded-2xl border overflow-x-auto" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-3)' }}>
-        {TABS.map((tab) => {
-          const Icon = tab.icon
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
-                activeTab === tab.id
-                  ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {tab.label}
-            </button>
-          )
-        })}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="min-w-0">
-          {activeTab === 'overview' && (
-            <OverviewTab
-              page={page}
-              blocks={blocks}
-              onUpdate={updatePage}
-              saving={saving}
-              onNavigate={(tab) => setActiveTab(tab)}
-            />
-          )}
-          {activeTab === 'design' && (
-            <DesignTab page={page} onUpdate={updatePage} onThemeChange={setPreviewTheme} saving={saving} />
-          )}
-          {activeTab === 'links' && <LinksTab blocks={blocks} onRefresh={loadData} />}
-          {activeTab === 'analytics' && <AnalyticsTab hasPage={!!page} />}
-          {activeTab === 'share' && <ShareTab page={page} />}
-        </div>
-
-        <div className="hidden lg:block sticky top-20 self-start">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Live Preview</p>
-          <BioPreview page={previewPage} blocks={blocks} />
-        </div>
-      </div>
-
-      {/* Mobile preview sheet */}
-      <AnimatePresence>
-        {mobilePreviewOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm lg:hidden flex items-end"
-            onClick={() => setMobilePreviewOpen(false)}
-          >
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-              className="w-full max-h-[85vh] rounded-t-2xl p-4 overflow-y-auto"
-              style={{ background: 'var(--surface-0)' }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <span className="font-semibold text-gray-900 dark:text-gray-100">Preview</span>
-                <button onClick={() => setMobilePreviewOpen(false)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <BioPreview page={previewPage} blocks={blocks} />
-            </motion.div>
-          </motion.div>
+        {activeView === 'overview' && (
+          <OverviewTab
+            page={page}
+            blocks={blocks}
+            onUpdate={updatePage}
+            saving={saving}
+            onNavigate={navigateToTab}
+          />
         )}
-      </AnimatePresence>
+        {activeView === 'links' && <LinksTab blocks={blocks} onRefresh={fetchData} />}
+        {activeView === 'design' && (
+          <DesignTab
+            page={page}
+            onUpdate={updatePage}
+            onThemeChange={setPreviewTheme}
+            saving={saving}
+          />
+        )}
+        {activeView === 'analytics' && <AnalyticsTab hasPage={!!page} />}
+        {activeView === 'share' && <ShareTab page={page} />}
+      </div>
+
+      {/* Live preview — sticky on the right, always visible */}
+      <aside className="w-[168px] sm:w-[200px] lg:w-[260px] shrink-0 sticky top-20 self-start z-10">
+        <div
+          className="rounded-2xl border p-3 lg:p-4 shadow-sm"
+          style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}
+        >
+          <div className="flex items-center justify-center gap-1.5 mb-3 lg:mb-4">
+            <Smartphone className="w-3.5 h-3.5 text-[#DD2A7B]" />
+            <p className="text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-gray-500">Live Preview</p>
+          </div>
+          <div className="scale-[0.85] sm:scale-90 lg:scale-100 origin-top">
+            <BioPreview page={previewPage} blocks={blocks} />
+          </div>
+        </div>
+      </aside>
+      </div>
     </div>
+  )
+}
+
+export function LinkInBioClient() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+        </div>
+      }
+    >
+      <LinkInBioClientInner />
+    </Suspense>
   )
 }

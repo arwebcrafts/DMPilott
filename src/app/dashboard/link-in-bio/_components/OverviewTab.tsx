@@ -8,21 +8,28 @@ import {
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 
+import type { BioTab } from '@/components/dashboard/LinkInBioSidebarNav'
+
 interface OverviewTabProps {
   page: BioPage
   blocks: BioBlock[]
   onUpdate: (updates: Partial<BioPage>) => Promise<void>
   saving: boolean
-  onNavigate: (tab: 'links' | 'design' | 'analytics' | 'share') => void
+  onNavigate: (tab: BioTab) => void
 }
 
 export function OverviewTab({ page, blocks, onUpdate, saving, onNavigate }: OverviewTabProps) {
   const [copied, setCopied] = useState(false)
   const [publishing, setPublishing] = useState(false)
-  const [stats, setStats] = useState({ views: 0, clicks: 0, subscribers: 0 })
+  const [published, setPublished] = useState(page.is_published)
+  const [stats, setStats] = useState({ views: 0, clicks: 0, signups: 0 })
 
   const publicUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/${page.slug}`
   const activeBlocks = blocks.filter((b) => b.is_active).length
+
+  useEffect(() => {
+    setPublished(page.is_published)
+  }, [page.is_published])
 
   useEffect(() => {
     fetch('/api/bio-pages/analytics?days=7')
@@ -32,7 +39,7 @@ export function OverviewTab({ page, blocks, onUpdate, saving, onNavigate }: Over
           setStats({
             views: json.analytics.periodViews ?? 0,
             clicks: json.analytics.totalClicks ?? 0,
-            subscribers: json.analytics.subscriberCount ?? 0,
+            signups: json.analytics.subscriberCount ?? 0,
           })
         }
       })
@@ -46,9 +53,14 @@ export function OverviewTab({ page, blocks, onUpdate, saving, onNavigate }: Over
   }
 
   async function togglePublish() {
+    if (publishing || saving) return
+    const next = !published
     setPublishing(true)
+    setPublished(next)
     try {
-      await onUpdate({ is_published: !page.is_published })
+      await onUpdate({ is_published: next })
+    } catch {
+      setPublished(!next)
     } finally {
       setPublishing(false)
     }
@@ -81,23 +93,26 @@ export function OverviewTab({ page, blocks, onUpdate, saving, onNavigate }: Over
           <div className="flex items-center gap-3">
             <span
               className={`text-xs font-semibold px-3 py-1 rounded-full ${
-                page.is_published
+                published
                   ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
                   : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
               }`}
             >
-              {page.is_published ? 'Live' : 'Draft'}
+              {published ? 'Live' : 'Draft'}
             </span>
             <button
+              type="button"
+              role="switch"
+              aria-checked={published}
               onClick={togglePublish}
               disabled={publishing || saving}
-              className={`relative w-12 h-7 rounded-full transition-colors flex-shrink-0 ${
-                page.is_published ? 'bg-[#DD2A7B]' : 'bg-gray-300 dark:bg-gray-600'
+              className={`relative inline-flex w-14 h-8 rounded-full transition-colors flex-shrink-0 ${
+                published ? 'bg-[#DD2A7B]' : 'bg-gray-300 dark:bg-gray-600'
               } disabled:opacity-50`}
             >
               <span
-                className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${
-                  page.is_published ? 'translate-x-5' : 'translate-x-0.5'
+                className={`absolute top-1 left-1 w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-200 ${
+                  published ? 'translate-x-6' : 'translate-x-0'
                 }`}
               />
             </button>
@@ -113,7 +128,7 @@ export function OverviewTab({ page, blocks, onUpdate, saving, onNavigate }: Over
             {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
             {copied ? 'Copied' : 'Copy Link'}
           </motion.button>
-          {page.is_published && (
+          {published && (
             <a
               href={publicUrl}
               target="_blank"
@@ -127,7 +142,7 @@ export function OverviewTab({ page, blocks, onUpdate, saving, onNavigate }: Over
           )}
         </div>
 
-        {!page.is_published && (
+        {!published && (
           <p className="text-xs text-amber-600 dark:text-amber-400 mt-3">
             Turn on publish to make your page visible at {publicUrl}
           </p>
@@ -140,20 +155,20 @@ export function OverviewTab({ page, blocks, onUpdate, saving, onNavigate }: Over
       </div>
 
       {/* Mini stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label: 'Views (7d)', value: stats.views, icon: Eye },
-          { label: 'Clicks', value: stats.clicks, icon: MousePointerClick },
-          { label: 'Subscribers', value: stats.subscribers, icon: Users },
+          { label: 'Link Clicks', value: stats.clicks, icon: MousePointerClick },
+          { label: 'Email Signups', value: stats.signups, icon: Users },
         ].map(({ label, value, icon: Icon }) => (
           <div
             key={label}
-            className="rounded-xl border p-4"
+            className="rounded-2xl border p-5"
             style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}
           >
-            <Icon className="w-4 h-4 text-[#DD2A7B] mb-2" />
-            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{value}</div>
-            <div className="text-xs text-gray-500">{label}</div>
+            <Icon className="w-5 h-5 text-[#DD2A7B] mb-3" />
+            <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{value}</div>
+            <div className="text-sm text-gray-500 mt-1">{label}</div>
           </div>
         ))}
       </div>

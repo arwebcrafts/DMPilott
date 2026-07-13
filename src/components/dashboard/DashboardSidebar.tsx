@@ -1,16 +1,17 @@
 'use client'
 
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { usePathname } from 'next/navigation'
 import { useUserStore } from '@/stores/userStore'
 import { PLAN_LIMITS } from '@/lib/planGating'
 import { cn } from '@/lib/utils'
 import { motion } from 'framer-motion'
+import { LinkInBioSidebarNav } from './LinkInBioSidebarNav'
 import {
   LayoutDashboard,
   Zap,
   BarChart3,
-  Link2,
   Users,
   CreditCard,
   Settings,
@@ -25,7 +26,6 @@ const mainNav = [
 ]
 
 const toolsNav = [
-  { href: '/dashboard/link-in-bio', label: 'Link in Bio', icon: Link2 },
   { href: '/dashboard/giveaways', label: 'Giveaways', icon: Gift, badge: 'Soon' },
 ]
 
@@ -113,6 +113,11 @@ export default function DashboardSidebar() {
 
         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 px-3 mb-2">Tools</p>
         <nav className="space-y-1 mb-6">
+          <Suspense fallback={
+            <div className="px-3 py-2.5 rounded-xl text-sm text-gray-400">Link in Bio...</div>
+          }>
+            <LinkInBioSidebarNav index={navIndex++} />
+          </Suspense>
           {toolsNav.map((item) => (
             <NavLink key={item.href} {...item} isActive={isActive(item.href)} index={navIndex++} />
           ))}

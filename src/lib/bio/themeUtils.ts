@@ -1,9 +1,22 @@
 import type { CSSProperties } from 'react'
 import type { BioTheme, LinkStyle } from './types'
-import { DEFAULT_LINK_STYLE, FONT_SIZE_MAP } from './types'
+import { DEFAULT_LINK_STYLE, FONT_SIZE_MAP, THEME_PRESETS } from './types'
 
 export function getPageBackgroundStyle(theme: BioTheme): CSSProperties {
   const type = theme.backgroundType || (theme.backgroundColor?.includes('gradient') ? 'gradient' : 'solid')
+
+  if (type === 'preset' && theme.preset && theme.preset !== 'custom') {
+    const preset = THEME_PRESETS[theme.preset as keyof typeof THEME_PRESETS]
+    if (preset?.backgroundColor) {
+      if (preset.backgroundColor.includes('gradient') || preset.gradientFrom) {
+        const from = preset.gradientFrom || '#F58529'
+        const to = preset.gradientTo || '#8134AF'
+        const angle = preset.gradientAngle ?? 135
+        return { background: `linear-gradient(${angle}deg, ${from} 0%, ${to} 100%)` }
+      }
+      return { backgroundColor: preset.backgroundColor }
+    }
+  }
 
   if (type === 'image' && theme.backgroundImage) {
     return {
