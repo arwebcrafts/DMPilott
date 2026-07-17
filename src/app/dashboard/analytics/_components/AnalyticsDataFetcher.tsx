@@ -42,7 +42,7 @@ export default async function AnalyticsDataFetcher() {
     supabase.from('dm_logs').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'sent'),
     supabase.from('dm_logs').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'failed'),
     supabase.from('dm_logs').select('created_at, platform, post_id, status').eq('user_id', user.id).gte('created_at', ninetyDaysAgo.toISOString()).limit(5000),
-    supabase.from('dm_logs').select('id, post_id, commenter_username, keyword_matched, platform, status, created_at, error_message, automations(name)').eq('user_id', user.id).order('created_at', { ascending: false }).limit(500),
+    supabase.from('dm_logs').select('id, post_id, commenter_username, keyword_matched, platform, status, created_at, error_message, automations(name)').eq('user_id', user.id).order('created_at', { ascending: false }).limit(2000),
     supabase.from('automations').select('id, name, platform, total_dms_sent').eq('user_id', user.id),
   ])
 

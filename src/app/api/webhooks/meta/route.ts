@@ -455,7 +455,15 @@ async function handleInstagramComment(igAccountId: string, value: any, supabase:
     if (auto.trigger_type === 'comment_keyword') {
       const keywords: string[] = auto.keywords || []
       const commentLower = (commentText || '').toLowerCase().trim()
-      const found = keywords.find(kw => commentLower.includes(kw.toLowerCase()))
+      // Use word-boundary matching to avoid partial matches (e.g. 'INFO' should not match 'information')
+      const found = keywords.find(kw => {
+        try {
+          const escaped = kw.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+          return new RegExp(`\\b${escaped}\\b`, 'i').test(commentLower)
+        } catch {
+          return commentLower === kw.toLowerCase()
+        }
+      })
       if (found) {
         matchedAutomation = auto
         matchedKeyword = found
@@ -479,6 +487,19 @@ async function handleInstagramComment(igAccountId: string, value: any, supabase:
 
   console.log('[Comment] DM message:', personalizedMessage)
   console.log('[Comment] Comment ID for private reply:', commentId)
+
+  // Database-level dedup: check if this comment was already processed
+  const { data: existingDm } = await supabase
+    .from('dm_logs')
+    .select('id')
+    .eq('comment_id', commentId)
+    .limit(1)
+    .maybeSingle()
+
+  if (existingDm) {
+    console.log('[Comment] DM already queued for comment', commentId, '- skipping duplicate')
+    return
+  }
 
   const { error: insertError } = await supabase.from('dm_logs').insert({
     automation_id: matchedAutomation.id,
@@ -658,7 +679,15 @@ async function handleFacebookComment(pageId: string, value: any, supabase: any) 
     if (auto.trigger_type === 'comment_keyword') {
       const keywords: string[] = auto.keywords || []
       const commentLower = commentText.toLowerCase().trim()
-      const found = keywords.find(kw => commentLower.includes(kw.toLowerCase()))
+      // Use word-boundary matching to avoid partial matches
+      const found = keywords.find(kw => {
+        try {
+          const escaped = kw.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+          return new RegExp(`\\b${escaped}\\b`, 'i').test(commentLower)
+        } catch {
+          return commentLower === kw.toLowerCase()
+        }
+      })
       if (found) {
         matchedAutomation = auto
         matchedKeyword = found
@@ -682,6 +711,19 @@ async function handleFacebookComment(pageId: string, value: any, supabase: any) 
 
   console.log('[Facebook Comment] DM message:', personalizedMessage)
   console.log('[Facebook Comment] Comment ID:', commentId)
+
+  // Database-level dedup: check if this comment was already processed
+  const { data: existingFbDm } = await supabase
+    .from('dm_logs')
+    .select('id')
+    .eq('comment_id', commentId)
+    .limit(1)
+    .maybeSingle()
+
+  if (existingFbDm) {
+    console.log('[Facebook Comment] DM already queued for comment', commentId, '- skipping duplicate')
+    return
+  }
 
   const { error: insertError } = await supabase.from('dm_logs').insert({
     automation_id: matchedAutomation.id,

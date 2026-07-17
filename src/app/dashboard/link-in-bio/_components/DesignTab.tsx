@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { BioPage, BioTheme, SocialLink, BackgroundType, LinkStyle } from '@/lib/bio/types'
 import { THEME_PRESETS, SOCIAL_PLATFORMS, LINK_BUTTON_STYLES, DEFAULT_LINK_STYLE } from '@/lib/bio/types'
+import { validateUrl } from '@/lib/bio/validation'
 import { useUserStore } from '@/stores/userStore'
 import { PLAN_LIMITS } from '@/lib/planGating'
 import { Loader2, Palette } from 'lucide-react'
@@ -81,6 +82,36 @@ export function DesignTab({ page, onUpdate, onThemeChange, saving }: DesignTabPr
 
   async function handleSave() {
     setError(null)
+
+    // BUG-029: Validate avatar URL
+    if (avatarUrl.trim()) {
+      const avatarCheck = validateUrl(avatarUrl)
+      if (!avatarCheck.valid) {
+        setError('Invalid avatar URL: ' + (avatarCheck.error || 'Invalid URL'))
+        return
+      }
+    }
+
+    // BUG-030: Validate social links
+    for (const link of socialLinks) {
+      if (link.url.trim()) {
+        const socialCheck = validateUrl(link.url, true)
+        if (!socialCheck.valid) {
+          setError(`Invalid ${link.platform} URL: ${socialCheck.error || 'Invalid URL'}`)
+          return
+        }
+      }
+    }
+
+    // BUG-031: Validate background image URL
+    if (bgType === 'image' && theme.backgroundImage?.trim()) {
+      const bgCheck = validateUrl(theme.backgroundImage)
+      if (!bgCheck.valid) {
+        setError('Invalid background image URL: ' + (bgCheck.error || 'Invalid URL'))
+        return
+      }
+    }
+
     try {
       await onUpdate({
         display_name: displayName,
@@ -101,11 +132,13 @@ export function DesignTab({ page, onUpdate, onThemeChange, saving }: DesignTabPr
         <div>
           <label className="text-xs text-gray-500 mb-1 block">Display Name</label>
           <input value={displayName} onChange={(e) => setDisplayName(e.target.value)}
+            maxLength={100}
             className="w-full px-3 py-2 rounded-lg border text-sm bg-white dark:bg-gray-900" style={{ borderColor: 'var(--surface-3)' }} />
         </div>
         <div>
           <label className="text-xs text-gray-500 mb-1 block">Bio</label>
           <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3}
+            maxLength={500}
             className="w-full px-3 py-2 rounded-lg border text-sm bg-white dark:bg-gray-900 resize-none" style={{ borderColor: 'var(--surface-3)' }} />
         </div>
         <BioImageField label="Avatar" value={avatarUrl} onChange={setAvatarUrl} hint="Upload or paste an image URL" />

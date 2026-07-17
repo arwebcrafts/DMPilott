@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-// PUT /api/automations/[id] - update automation
-export async function PUT(
+// PATCH /api/automations/[id] - update automation
+export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -33,6 +33,14 @@ export async function PUT(
   }
 
   return NextResponse.json({ automation })
+}
+
+// PUT /api/automations/[id] - update automation (backwards compat)
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  return PATCH(request, { params })
 }
 
 // DELETE /api/automations/[id] - delete automation

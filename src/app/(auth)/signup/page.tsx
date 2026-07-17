@@ -15,7 +15,12 @@ import { formatAuthError } from '@/lib/supabase/errors'
 import { motion } from 'framer-motion'
 
 const signupSchema = z.object({
-  fullName: z.string().min(2, 'Name must be at least 2 characters'),
+  fullName: z.string()
+    .trim()
+    .min(2, 'Name must be at least 2 characters')
+    .refine((val) => val.replace(/\s/g, '').length >= 2, {
+      message: 'Name cannot be only whitespace',
+    }),
   email: z.string().email('Please enter a valid email'),
   password: z.string()
     .min(8, 'Password must be at least 8 characters')

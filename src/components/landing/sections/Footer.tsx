@@ -35,10 +35,10 @@ export function Footer() {
           <div>
             <h4 className="font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Resources</h4>
             <ul className="space-y-2">
-              <li><a href="/docs" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Documentation</a></li>
-              <li><a href="/blog" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Blog</a></li>
-              <li><a href="/support" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Support</a></li>
-              <li><a href="/api" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>API</a></li>
+              <li><a href="/#faq" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>FAQ</a></li>
+              <li><a href="mailto:arwebcrafts@gmail.com" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Support</a></li>
+              <li><a href="/#integrations" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Integrations</a></li>
+              <li><a href="/signup" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Get Started</a></li>
             </ul>
           </div>
 
@@ -46,10 +46,9 @@ export function Footer() {
           <div>
             <h4 className="font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Legal</h4>
             <ul className="space-y-2">
-              <li><a href="/privacy" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Privacy</a></li>
-              <li><a href="/terms" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Terms</a></li>
-              <li><a href="/security" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Security</a></li>
-              <li><a href="/gdpr" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>GDPR</a></li>
+              <li><a href="/privacy-policy" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Privacy Policy</a></li>
+              <li><a href="/terms-of-service" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Terms of Service</a></li>
+              <li><a href="mailto:arwebcrafts@gmail.com" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Contact</a></li>
             </ul>
           </div>
         </div>
@@ -60,9 +59,9 @@ export function Footer() {
             © {new Date().getFullYear()} DMPilot. Built with calm.
           </p>
           <div className="flex items-center gap-4">
-            <a href="/twitter" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Twitter</a>
-            <a href="/instagram" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Instagram</a>
-            <a href="/github" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>GitHub</a>
+            <a href="https://x.com" target="_blank" rel="noopener noreferrer" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Twitter</a>
+            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Instagram</a>
+            <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>GitHub</a>
           </div>
         </div>
       </SectionContainer>

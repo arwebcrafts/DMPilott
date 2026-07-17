@@ -33,16 +33,16 @@ export function Integrations() {
 
       <div className="mt-16 max-w-4xl mx-auto">
         {/* Transit Map Visual */}
-        <div className="relative p-8 rounded-2xl" style={{ background: 'var(--surface-1)' }}>
+        <div className="relative p-8 rounded-2xl min-h-[320px] sm:min-h-[360px] md:min-h-[400px]" style={{ background: 'var(--surface-1)' }}>
           {/* Central Hub - DMPilot */}
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-            <div className="w-24 h-24 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-xl" style={{ background: 'var(--accent)' }}>
+            <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center text-white font-bold text-sm sm:text-base md:text-lg shadow-xl" style={{ background: 'var(--accent)' }}>
               DMPilot
             </div>
           </div>
 
           {/* Connection Lines */}
-          <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
+          <svg className="absolute inset-0 w-full h-full pointer-events-none hidden md:block" style={{ zIndex: 1 }}>
             {connections.map((conn, i) => {
               const angle = (i * (360 / connections.length)) - 90;
               const radius = 160;
@@ -67,7 +67,28 @@ export function Integrations() {
             })}
           </svg>
 
-          {/* Integration Nodes */}
+          {/* Integration Nodes - radial on desktop, grid on mobile */}
+          <div className="md:hidden grid grid-cols-3 sm:grid-cols-4 gap-4 pt-24 pb-4">
+            {connections.map((conn, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, scale: 0 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                className="flex flex-col items-center gap-1"
+              >
+                <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-lg" style={{ background: typeColors[conn.type] }}>
+                  {conn.from.slice(0, 2).toUpperCase()}
+                </div>
+                <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>
+                  {conn.from}
+                </span>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Desktop radial layout */}
           {connections.map((conn, i) => {
             const angle = (i * (360 / connections.length)) - 90;
             const radius = 160;
@@ -78,12 +99,12 @@ export function Integrations() {
 
             return (
               <motion.div
-                key={i}
+                key={`desktop-${i}`}
                 initial={{ opacity: 0, scale: 0 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="absolute"
+                className="absolute hidden md:block"
                 style={{ left: `${x}%`, top: `${y}%`, transform: 'translate(-50%, -50%)', zIndex: 5 }}
               >
                 <div className="w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-lg" style={{ background: typeColors[conn.type] }}>

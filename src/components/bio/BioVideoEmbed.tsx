@@ -23,9 +23,9 @@ export function BioVideoEmbed({ block, preview }: BioVideoEmbedProps) {
   return (
     <div className="rounded-xl overflow-hidden shadow-lg bg-black/20">
       {block.title && (
-        <div className="px-3 py-2 flex items-center gap-2 text-white text-sm font-medium">
-          <Play className="w-4 h-4" />
-          {block.title}
+        <div className="px-3 py-2 flex items-center gap-2 text-white text-sm font-medium truncate" style={{ wordBreak: 'break-word' }}>
+          <Play className="w-4 h-4 flex-shrink-0" />
+          <span className="truncate">{block.title}</span>
         </div>
       )}
       <div className="relative w-full aspect-video">
@@ -39,7 +39,9 @@ export function BioVideoEmbed({ block, preview }: BioVideoEmbedProps) {
         />
       </div>
       {block.description && (
-        <p className="px-3 py-2 text-white/80 text-xs">{block.description}</p>
+        <p className="px-3 py-2 text-white/80 text-xs" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+          {block.description.length > 200 ? block.description.slice(0, 200) + '…' : block.description}
+        </p>
       )}
       {!preview && block.url && (
         <a

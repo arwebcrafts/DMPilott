@@ -30,27 +30,33 @@ export function BioPublicView({ page, blocks, preview = false }: BioPublicViewPr
     >
       <div className="w-full max-w-md space-y-4">
         {/* Profile */}
-        <div className="text-center mb-6">
+        <div className="text-center mb-6 overflow-hidden">
           {page.avatar_url ? (
             <img
               src={page.avatar_url}
               alt={page.display_name || page.slug}
               className="w-24 h-24 rounded-full mx-auto mb-4 object-cover border-4 border-white/30 shadow-lg"
+              onError={(e) => {
+                // BUG-035: Fall back to initial avatar on broken image URL
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                const fallback = target.nextElementSibling as HTMLElement;
+                if (fallback) fallback.style.display = 'flex';
+              }}
             />
-          ) : (
-            <div
-              className="w-24 h-24 rounded-full mx-auto mb-4 bg-white/20 flex items-center justify-center text-3xl font-bold border-4 border-white/30"
-              style={{ color: profileColor }}
-            >
-              {(page.display_name || page.slug).charAt(0).toUpperCase()}
-            </div>
-          )}
-          <h1 className="text-xl font-bold drop-shadow-sm" style={{ color: profileColor }}>
+          ) : null}
+          <div
+            className={`w-24 h-24 rounded-full mx-auto mb-4 bg-white/20 items-center justify-center text-3xl font-bold border-4 border-white/30 ${page.avatar_url ? 'hidden' : 'flex'}`}
+            style={{ color: profileColor }}
+          >
+            {(page.display_name || page.slug).charAt(0).toUpperCase()}
+          </div>
+          <h1 className="text-xl font-bold drop-shadow-sm truncate max-w-full" style={{ color: profileColor, wordBreak: 'break-word' }}>
             {page.display_name || page.slug}
           </h1>
           {page.bio && (
-            <p className="text-sm mt-2 leading-relaxed opacity-90" style={{ color: profileColor }}>
-              {page.bio}
+            <p className="text-sm mt-2 leading-relaxed opacity-90" style={{ color: profileColor, wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+              {page.bio.length > 300 ? page.bio.slice(0, 300) + '…' : page.bio}
             </p>
           )}
         </div>

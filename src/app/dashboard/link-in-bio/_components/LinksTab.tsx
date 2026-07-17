@@ -4,6 +4,7 @@ import { useState } from 'react'
 import type { BioBlock, BioBlockType, LinkStyle } from '@/lib/bio/types'
 import { LINK_BUTTON_STYLES, DEFAULT_LINK_STYLE } from '@/lib/bio/types'
 import { detectVideoPlatform } from '@/lib/bio/videoEmbed'
+import { validateUrl } from '@/lib/bio/validation'
 import { useUserStore } from '@/stores/userStore'
 import { PLAN_LIMITS } from '@/lib/planGating'
 import {
@@ -57,6 +58,7 @@ export function LinksTab({ blocks, onRefresh }: LinksTabProps) {
     linkStyle: { ...DEFAULT_LINK_STYLE } as LinkStyle,
     useCustomLinkStyle: false,
   })
+  const [formError, setFormError] = useState<string | null>(null)
 
   function openEdit(block: BioBlock) {
     const blockLinkStyle = (block.metadata?.linkStyle as LinkStyle) || {}
@@ -118,6 +120,34 @@ export function LinksTab({ blocks, onRefresh }: LinksTabProps) {
 
   async function saveBlock() {
     if (!editingBlock) return
+    setFormError(null)
+
+    // BUG-026: Validate video URLs against supported platforms
+    if (editingBlock.type === 'video' && form.url.trim()) {
+      const platform = detectVideoPlatform(form.url)
+      if (platform === 'unknown') {
+        setFormError('Unsupported video URL. Please use YouTube, Vimeo, or TikTok.')
+        return
+      }
+    }
+
+    // BUG-029/030/031: Validate URLs client-side before saving
+    if ((editingBlock.type === 'link' || editingBlock.type === 'product') && form.url.trim()) {
+      const urlCheck = validateUrl(form.url)
+      if (!urlCheck.valid) {
+        setFormError(urlCheck.error || 'Invalid URL')
+        return
+      }
+    }
+
+    if (form.image_url.trim()) {
+      const imgCheck = validateUrl(form.image_url)
+      if (!imgCheck.valid) {
+        setFormError('Invalid thumbnail URL: ' + (imgCheck.error || 'Invalid URL'))
+        return
+      }
+    }
+
     setLoading(true)
     try {
       let metadata: Record<string, unknown> = { ...editingBlock.metadata }
@@ -146,7 +176,7 @@ export function LinksTab({ blocks, onRefresh }: LinksTabProps) {
         body: JSON.stringify({
           id: editingBlock.id,
           title: form.title,
-          url: form.url,
+          url: form.url || undefined,
           description: form.description,
           image_url: form.image_url,
           price: form.price,
@@ -155,7 +185,7 @@ export function LinksTab({ blocks, onRefresh }: LinksTabProps) {
       })
       const data = await res.json()
       if (!res.ok) {
-        alert(data.error || 'Failed to save')
+        setFormError(data.error || 'Failed to save')
         return
       }
       resetForm()
@@ -290,25 +320,33 @@ export function LinksTab({ blocks, onRefresh }: LinksTabProps) {
             <div>
               <label className="text-xs text-gray-500 mb-1 block">Title</label>
               <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
+                maxLength={200}
                 className="w-full px-3 py-2 rounded-lg border text-sm" style={{ borderColor: 'var(--surface-3)' }} />
             </div>
+
+            {formError && (
+              <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">
+                {formError}
+              </div>
+            )}
 
             {editingBlock.type === 'video' && (
               <>
                 <div>
                   <label className="text-xs text-gray-500 mb-1 block">Video URL (YouTube, Vimeo, TikTok)</label>
-                  <input value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })}
+                  <input value={form.url} onChange={(e) => { setForm({ ...form, url: e.target.value }); setFormError(null); }}
                     className="w-full px-3 py-2 rounded-lg border text-sm" style={{ borderColor: 'var(--surface-3)' }}
                     placeholder="https://youtube.com/watch?v=..." />
                   {form.url && (
-                    <p className="text-xs mt-1 text-gray-400">
-                      Platform: {detectVideoPlatform(form.url)}
+                    <p className={`text-xs mt-1 ${detectVideoPlatform(form.url) === 'unknown' ? 'text-red-400' : 'text-gray-400'}`}>
+                      Platform: {detectVideoPlatform(form.url)}{detectVideoPlatform(form.url) === 'unknown' ? ' (unsupported)' : ''}
                     </p>
                   )}
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 mb-1 block">Description (optional)</label>
                   <input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    maxLength={500}
                     className="w-full px-3 py-2 rounded-lg border text-sm" style={{ borderColor: 'var(--surface-3)' }} />
                 </div>
               </>
