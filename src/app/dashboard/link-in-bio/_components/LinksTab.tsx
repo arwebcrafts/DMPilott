@@ -122,6 +122,21 @@ export function LinksTab({ blocks, onRefresh }: LinksTabProps) {
     if (!editingBlock) return
     setFormError(null)
 
+    // Strip HTML tags from title (BUG-008)
+    const cleanTitle = form.title.replace(/<[^>]*>/g, '').trim()
+
+    // Require title for all block types (BUG-010)
+    if (!cleanTitle) {
+      setFormError('Title is required')
+      return
+    }
+
+    // Require URL for link blocks (BUG-006, BUG-009)
+    if ((editingBlock.type === 'link' || editingBlock.type === 'product') && !form.url.trim()) {
+      setFormError('URL is required for link blocks')
+      return
+    }
+
     // BUG-026: Validate video URLs against supported platforms
     if (editingBlock.type === 'video' && form.url.trim()) {
       const platform = detectVideoPlatform(form.url)
@@ -144,6 +159,20 @@ export function LinksTab({ blocks, onRefresh }: LinksTabProps) {
       const imgCheck = validateUrl(form.image_url)
       if (!imgCheck.valid) {
         setFormError('Invalid thumbnail URL: ' + (imgCheck.error || 'Invalid URL'))
+        return
+      }
+    }
+
+    // BUG-011: Check for duplicate titles and URLs (warning, not blocking)
+    const otherBlocks = blocks.filter(b => b.id !== editingBlock.id)
+    if (cleanTitle && otherBlocks.some(b => b.title?.toLowerCase() === cleanTitle.toLowerCase())) {
+      // Show warning but allow save (confirmation)
+      if (!window.confirm(`Another block already has the title "${cleanTitle}". Save anyway?`)) {
+        return
+      }
+    }
+    if (form.url.trim() && otherBlocks.some(b => b.url?.toLowerCase() === form.url.trim().toLowerCase())) {
+      if (!window.confirm(`Another block already uses this URL. Save anyway?`)) {
         return
       }
     }
@@ -175,7 +204,7 @@ export function LinksTab({ blocks, onRefresh }: LinksTabProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: editingBlock.id,
-          title: form.title,
+          title: cleanTitle,
           url: form.url || undefined,
           description: form.description,
           image_url: form.image_url,
@@ -320,7 +349,7 @@ export function LinksTab({ blocks, onRefresh }: LinksTabProps) {
             <div>
               <label className="text-xs text-gray-500 mb-1 block">Title</label>
               <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
-                maxLength={200}
+                maxLength={100}
                 className="w-full px-3 py-2 rounded-lg border text-sm" style={{ borderColor: 'var(--surface-3)' }} />
             </div>
 
@@ -451,7 +480,7 @@ export function LinksTab({ blocks, onRefresh }: LinksTabProps) {
 
             <div className="flex gap-2 pt-2">
               <button onClick={resetForm} className="flex-1 py-2 rounded-lg border text-sm" style={{ borderColor: 'var(--surface-3)' }}>Cancel</button>
-              <button onClick={saveBlock} disabled={loading} className="flex-1 py-2 rounded-lg text-sm font-semibold text-white bg-[#DD2A7B] disabled:opacity-50">
+              <button onClick={saveBlock} disabled={loading || !form.title.replace(/<[^>]*>/g, '').trim() || ((editingBlock.type === 'link' || editingBlock.type === 'product') && !form.url.trim())} className="flex-1 py-2 rounded-lg text-sm font-semibold text-white bg-[#DD2A7B] disabled:opacity-50">
                 {loading ? 'Saving...' : 'Save'}
               </button>
             </div>

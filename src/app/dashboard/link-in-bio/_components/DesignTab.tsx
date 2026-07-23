@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { BioPage, BioTheme, SocialLink, BackgroundType, LinkStyle } from '@/lib/bio/types'
 import { THEME_PRESETS, SOCIAL_PLATFORMS, LINK_BUTTON_STYLES, DEFAULT_LINK_STYLE } from '@/lib/bio/types'
-import { validateUrl } from '@/lib/bio/validation'
+import { validateUrl, validateImageUrl, validateSocialUrl } from '@/lib/bio/validation'
 import { useUserStore } from '@/stores/userStore'
 import { PLAN_LIMITS } from '@/lib/planGating'
 import { Loader2, Palette } from 'lucide-react'
@@ -83,19 +83,19 @@ export function DesignTab({ page, onUpdate, onThemeChange, saving }: DesignTabPr
   async function handleSave() {
     setError(null)
 
-    // BUG-029: Validate avatar URL
+    // BUG-012: Validate avatar URL is actually an image
     if (avatarUrl.trim()) {
-      const avatarCheck = validateUrl(avatarUrl)
+      const avatarCheck = validateImageUrl(avatarUrl)
       if (!avatarCheck.valid) {
-        setError('Invalid avatar URL: ' + (avatarCheck.error || 'Invalid URL'))
+        setError('Invalid avatar image: ' + (avatarCheck.error || 'Invalid URL'))
         return
       }
     }
 
-    // BUG-030: Validate social links
+    // BUG-013: Validate social links match their platform domains
     for (const link of socialLinks) {
       if (link.url.trim()) {
-        const socialCheck = validateUrl(link.url, true)
+        const socialCheck = validateSocialUrl(link.platform, link.url)
         if (!socialCheck.valid) {
           setError(`Invalid ${link.platform} URL: ${socialCheck.error || 'Invalid URL'}`)
           return
@@ -103,11 +103,11 @@ export function DesignTab({ page, onUpdate, onThemeChange, saving }: DesignTabPr
       }
     }
 
-    // BUG-031: Validate background image URL
+    // BUG-014: Validate background image URL is actually an image
     if (bgType === 'image' && theme.backgroundImage?.trim()) {
-      const bgCheck = validateUrl(theme.backgroundImage)
+      const bgCheck = validateImageUrl(theme.backgroundImage)
       if (!bgCheck.valid) {
-        setError('Invalid background image URL: ' + (bgCheck.error || 'Invalid URL'))
+        setError('Invalid background image: ' + (bgCheck.error || 'Invalid URL'))
         return
       }
     }

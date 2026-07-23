@@ -29,7 +29,11 @@ export function BioLinkButton({ block, theme, preview }: BioLinkButtonProps) {
           className="w-8 h-8 rounded-full inline-block mr-2 align-middle object-cover"
         />
       )}
-      {block.title || 'Untitled Link'}
+      <span className="truncate block overflow-hidden" style={{ wordBreak: 'break-word' }}>
+        {(block.title || 'Untitled Link').length > 100
+          ? (block.title || 'Untitled Link').slice(0, 100) + '…'
+          : (block.title || 'Untitled Link')}
+      </span>
     </a>
   )
 }

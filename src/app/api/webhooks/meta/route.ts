@@ -309,6 +309,15 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
     console.log('[IG Follow Button] No Instagram gift offer found for account:', account.username)
   }
 
+  // In-memory dedup: skip if we already processed this exact message
+  const messageId = messaging.message?.mid || `${senderId}_${Date.now()}`
+  const dmDedupKey = `dm_ig_${senderId}_${messageId}`
+  if (isProcessed(dmDedupKey)) {
+    console.log('[Message] Already processed this DM event (in-memory dedup) - skipping')
+    return
+  }
+  markProcessed(dmDedupKey)
+
   // Find automations for this account
   const { data: automations } = await supabase
     .from('automations')
@@ -324,6 +333,23 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
 
   const automation = automations[0]
   console.log('[Message] Found auto-reply automation:', automation.name)
+
+  // Database-level dedup: check if we already replied to this sender recently (60s cooldown)
+  const cooldownSeconds = 60
+  const { data: recentReply } = await supabase
+    .from('dm_logs')
+    .select('id')
+    .eq('automation_id', automation.id)
+    .eq('commenter_platform_id', senderId)
+    .eq('platform', 'instagram')
+    .gte('created_at', new Date(Date.now() - cooldownSeconds * 1000).toISOString())
+    .limit(1)
+    .maybeSingle()
+
+  if (recentReply) {
+    console.log('[Message] Already replied to sender', senderId, 'within', cooldownSeconds, 's cooldown - skipping duplicate')
+    return
+  }
 
   // Fetch sender username for personalization
   let senderUsername = null
@@ -353,6 +379,23 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
     if (automation.follow_instagram_url) {
       autoReply += `👉 Follow us on Instagram: ${automation.follow_instagram_url}`
     }
+  }
+
+  // Log to dm_logs BEFORE sending to ensure dedup works even if send is slow
+  const { error: logError } = await supabase.from('dm_logs').insert({
+    automation_id: automation.id,
+    user_id: account.user_id,
+    account_id: account.id,
+    platform: 'instagram',
+    commenter_platform_id: senderId,
+    commenter_username: senderUsername,
+    dm_message_sent: autoReply,
+    status: 'queued',
+  })
+
+  if (logError) {
+    console.log('[Message] ❌ Failed to log DM (possible duplicate):', logError.message)
+    return
   }
 
   // Send auto-reply
@@ -806,6 +849,15 @@ async function handleFacebookMessage(pageId: string, messaging: any, supabase: a
     return
   }
 
+  // In-memory dedup: skip if we already processed this exact message
+  const fbMessageId = messaging.message?.mid || `${senderId}_${Date.now()}`
+  const fbDmDedupKey = `dm_fb_${senderId}_${fbMessageId}`
+  if (isProcessed(fbDmDedupKey)) {
+    console.log('[Facebook Message] Already processed this DM event (in-memory dedup) - skipping')
+    return
+  }
+  markProcessed(fbDmDedupKey)
+
   // Find automations for this account
   const { data: automations } = await supabase
     .from('automations')
@@ -821,6 +873,23 @@ async function handleFacebookMessage(pageId: string, messaging: any, supabase: a
 
   const automation = automations[0]
   console.log('[Facebook Message] Found auto-reply automation:', automation.name)
+
+  // Database-level dedup: check if we already replied to this sender recently (60s cooldown)
+  const fbCooldownSeconds = 60
+  const { data: recentFbReply } = await supabase
+    .from('dm_logs')
+    .select('id')
+    .eq('automation_id', automation.id)
+    .eq('commenter_platform_id', senderId)
+    .eq('platform', 'facebook')
+    .gte('created_at', new Date(Date.now() - fbCooldownSeconds * 1000).toISOString())
+    .limit(1)
+    .maybeSingle()
+
+  if (recentFbReply) {
+    console.log('[Facebook Message] Already replied to sender', senderId, 'within', fbCooldownSeconds, 's cooldown - skipping duplicate')
+    return
+  }
 
   // Fetch sender name for personalization
   let senderName = null
@@ -855,12 +924,35 @@ async function handleFacebookMessage(pageId: string, messaging: any, supabase: a
     }
   }
 
+  // Log to dm_logs BEFORE sending to ensure dedup works even if send is slow
+  const { error: fbLogError } = await supabase.from('dm_logs').insert({
+    automation_id: automation.id,
+    user_id: account.user_id,
+    account_id: account.id,
+    platform: 'facebook',
+    commenter_platform_id: senderId,
+    commenter_username: senderName,
+    dm_message_sent: autoReply,
+    status: 'queued',
+  })
+
+  if (fbLogError) {
+    console.log('[Facebook Message] ❌ Failed to log DM (possible duplicate):', fbLogError.message)
+    return
+  }
+
   // Send auto-reply
   await sendFacebookDm({
     account,
     recipientId: senderId,
     message: autoReply,
   })
+
+  // Increment DM counter
+  await supabase
+    .from('automations')
+    .update({ total_dms_sent: automation.total_dms_sent + 1 })
+    .eq('id', automation.id)
 
   // Check if user has already interacted with follow button
   console.log('[Follow Button] Checking page configuration...')

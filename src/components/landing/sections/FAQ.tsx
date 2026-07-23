@@ -33,6 +33,17 @@ const faqs = [
 
 export function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const [emailCopied, setEmailCopied] = useState(false);
+
+  function handleEmailClick(e: React.MouseEvent<HTMLAnchorElement>) {
+    // Try mailto first; if it fails or user prefers copy, provide fallback
+    navigator.clipboard.writeText('arwebcrafts@gmail.com').then(() => {
+      setEmailCopied(true);
+      setTimeout(() => setEmailCopied(false), 2500);
+    }).catch(() => {
+      // clipboard API failed, mailto will still work as the href
+    });
+  }
 
   return (
     <SectionContainer padding="lg" id="faq">
@@ -75,11 +86,17 @@ export function FAQ() {
         </div>
 
         <div className="mt-8 text-center">
-          <a href="mailto:arwebcrafts@gmail.com" className="text-sm font-semibold hover:underline" style={{ color: 'var(--accent)' }}>
-            Still have questions? Email us →
+          <a
+            href="mailto:arwebcrafts@gmail.com"
+            onClick={handleEmailClick}
+            className="text-sm font-semibold hover:underline inline-flex items-center gap-2"
+            style={{ color: 'var(--accent)' }}
+          >
+            {emailCopied ? '✓ Email copied to clipboard!' : 'Still have questions? Email us →'}
           </a>
         </div>
       </div>
     </SectionContainer>
   );
 }
+

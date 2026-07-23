@@ -24,10 +24,10 @@ export function Footer() {
           <div>
             <h4 className="font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Product</h4>
             <ul className="space-y-2">
-              <li><a href="/features" className="text-sm hover:underline nav-link opacity-100">Features</a></li>
-              <li><a href="/services" className="text-sm hover:underline nav-link opacity-100">Services</a></li>
-              <li><a href="/#link-in-bio" className="text-sm hover:underline nav-link opacity-100">Link in Bio</a></li>
-              <li><a href="/#roadmap" className="text-sm hover:underline nav-link opacity-100">Roadmap</a></li>
+              <li><a href="/features" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Features</a></li>
+              <li><a href="/services" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Services</a></li>
+              <li><a href="/#link-in-bio" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Link in Bio</a></li>
+              <li><a href="/#roadmap" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Roadmap</a></li>
             </ul>
           </div>
 
@@ -37,7 +37,7 @@ export function Footer() {
             <ul className="space-y-2">
               <li><a href="/#faq" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>FAQ</a></li>
               <li><a href="mailto:arwebcrafts@gmail.com" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Support</a></li>
-              <li><a href="/#integrations" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Integrations</a></li>
+              <li><a href="/#features" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Integrations</a></li>
               <li><a href="/signup" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Get Started</a></li>
             </ul>
           </div>

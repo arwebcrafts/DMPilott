@@ -26,14 +26,14 @@ export async function GET(req: NextRequest) {
     const qrSvgInner = await QRCode.toString(url, {
       type: 'svg',
       margin: 0,
-      width: 220,
+      width: 280,
       color: { dark: '#1a1a2e', light: '#ffffff' },
     })
 
     const qrContent = qrSvgInner.replace(/<svg[^>]*>/, '').replace('</svg>', '')
 
     const brandedSvg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="400" height="500" viewBox="0 0 400 500">
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="600" viewBox="0 0 500 600">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#F58529"/>
@@ -44,14 +44,14 @@ export async function GET(req: NextRequest) {
       <feDropShadow dx="0" dy="4" stdDeviation="8" flood-opacity="0.25"/>
     </filter>
   </defs>
-  <rect width="400" height="500" rx="28" fill="url(#bg)"/>
-  <rect x="50" y="50" width="300" height="300" rx="20" fill="#ffffff" filter="url(#shadow)"/>
-  <g transform="translate(90, 90)">
+  <rect width="500" height="600" rx="28" fill="url(#bg)"/>
+  <rect x="60" y="50" width="380" height="380" rx="20" fill="#ffffff" filter="url(#shadow)"/>
+  <g transform="translate(110, 100)">
     ${qrContent}
   </g>
-  <text x="200" y="395" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="700">${displayName}</text>
-  <text x="200" y="425" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-family="system-ui, -apple-system, sans-serif" font-size="16">@${username}</text>
-  <text x="200" y="460" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-family="system-ui, -apple-system, sans-serif" font-size="12" letter-spacing="2">DMPILOT</text>
+  <text x="250" y="490" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="700">${displayName}</text>
+  <text x="250" y="520" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-family="system-ui, -apple-system, sans-serif" font-size="16">@${username}</text>
+  <text x="250" y="560" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-family="system-ui, -apple-system, sans-serif" font-size="12" letter-spacing="2">DMPILOT</text>
 </svg>`
 
     const format = req.nextUrl.searchParams.get('format')

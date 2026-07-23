@@ -16,9 +16,32 @@ export async function PATCH(
 
   const body = await request.json()
 
+  // Map camelCase client fields to snake_case database columns
+  const updates: Record<string, unknown> = {}
+  if (body.accountId !== undefined) updates.account_id = body.accountId
+  if (body.name !== undefined) updates.name = body.name
+  if (body.platform !== undefined) updates.platform = body.platform
+  if (body.triggerType !== undefined) updates.trigger_type = body.triggerType
+  if (body.keywords !== undefined) updates.keywords = body.keywords
+  if (body.dmMessage !== undefined) updates.dm_message = body.dmMessage
+  if (body.followFacebookUrl !== undefined) updates.follow_facebook_url = body.followFacebookUrl || null
+  if (body.followInstagramUrl !== undefined) updates.follow_instagram_url = body.followInstagramUrl || null
+  if (body.commentReplyEnabled !== undefined) updates.comment_reply_enabled = body.commentReplyEnabled
+  if (body.commentReplyText !== undefined) updates.comment_reply_text = body.commentReplyText
+  if (body.sendDelaySeconds !== undefined) updates.send_delay_seconds = body.sendDelaySeconds
+  if (body.is_active !== undefined) updates.is_active = body.is_active
+  // Also support direct snake_case fields (for toggle endpoint compatibility)
+  if (body.dm_message !== undefined) updates.dm_message = body.dm_message
+  if (body.trigger_type !== undefined) updates.trigger_type = body.trigger_type
+  if (body.account_id !== undefined) updates.account_id = body.account_id
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
+  }
+
   const { data: automation, error } = await supabase
     .from('automations')
-    .update(body)
+    .update(updates)
     .eq('id', id)
     .eq('user_id', user.id)
     .select()
