@@ -309,14 +309,36 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
     console.log('[IG Follow Button] No Instagram gift offer found for account:', account.username)
   }
 
-  // In-memory dedup: skip if we already processed this exact message
-  const messageId = messaging.message?.mid || `${senderId}_${Date.now()}`
-  const dmDedupKey = `dm_ig_${senderId}_${messageId}`
+  // ── Dedup Step 1: In-memory fast path (helps within same warm instance) ──
+  // NOTE: On Vercel serverless this Set resets on cold start, so it's only
+  // a fast-path optimisation. The real guard is the DB check below.
+  const messageId = messaging.message?.mid
+  if (!messageId) {
+    // No message ID means we can't reliably dedup — Meta should always provide `mid`.
+    // Without it, skip processing entirely to be safe.
+    console.log('[Message] ⚠️ No message mid found — skipping to prevent duplicates')
+    return
+  }
+  const dmDedupKey = `dm_ig_${messageId}`
   if (isProcessed(dmDedupKey)) {
     console.log('[Message] Already processed this DM event (in-memory dedup) - skipping')
     return
   }
   markProcessed(dmDedupKey)
+
+  // ── Dedup Step 2: Database-level check using message mid ──
+  // Check if we already have a dm_log entry for this exact message mid
+  const { data: existingMidLog } = await supabase
+    .from('dm_logs')
+    .select('id')
+    .eq('comment_id', `mid:${messageId}`)
+    .limit(1)
+    .maybeSingle()
+
+  if (existingMidLog) {
+    console.log('[Message] Already processed message mid:', messageId, '- skipping (DB dedup)')
+    return
+  }
 
   // Find automations for this account
   const { data: automations } = await supabase
@@ -334,8 +356,10 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
   const automation = automations[0]
   console.log('[Message] Found auto-reply automation:', automation.name)
 
-  // Database-level dedup: check if we already replied to this sender recently (60s cooldown)
-  const cooldownSeconds = 60
+  // ── Dedup Step 3: Cooldown — don't reply to same sender within 5 minutes ──
+  // Meta aggressively retries webhook delivery (up to ~15 times in 3-4 minutes).
+  // A 5-minute cooldown covers the entire retry window.
+  const cooldownSeconds = 300
   const { data: recentReply } = await supabase
     .from('dm_logs')
     .select('id')
@@ -381,7 +405,9 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
     }
   }
 
-  // Log to dm_logs BEFORE sending to ensure dedup works even if send is slow
+  // Log to dm_logs BEFORE sending to ensure dedup works even if send is slow.
+  // We store the message mid in comment_id field (prefixed with "mid:") so the
+  // DB dedup check above can catch parallel invocations.
   const { error: logError } = await supabase.from('dm_logs').insert({
     automation_id: automation.id,
     user_id: account.user_id,
@@ -390,6 +416,7 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
     commenter_platform_id: senderId,
     commenter_username: senderUsername,
     dm_message_sent: autoReply,
+    comment_id: `mid:${messageId}`,
     status: 'queued',
   })
 
@@ -849,14 +876,31 @@ async function handleFacebookMessage(pageId: string, messaging: any, supabase: a
     return
   }
 
-  // In-memory dedup: skip if we already processed this exact message
-  const fbMessageId = messaging.message?.mid || `${senderId}_${Date.now()}`
-  const fbDmDedupKey = `dm_fb_${senderId}_${fbMessageId}`
+  // ── Dedup Step 1: In-memory fast path ──
+  const fbMessageId = messaging.message?.mid
+  if (!fbMessageId) {
+    console.log('[Facebook Message] ⚠️ No message mid found — skipping to prevent duplicates')
+    return
+  }
+  const fbDmDedupKey = `dm_fb_${fbMessageId}`
   if (isProcessed(fbDmDedupKey)) {
     console.log('[Facebook Message] Already processed this DM event (in-memory dedup) - skipping')
     return
   }
   markProcessed(fbDmDedupKey)
+
+  // ── Dedup Step 2: Database-level check using message mid ──
+  const { data: existingFbMidLog } = await supabase
+    .from('dm_logs')
+    .select('id')
+    .eq('comment_id', `mid:${fbMessageId}`)
+    .limit(1)
+    .maybeSingle()
+
+  if (existingFbMidLog) {
+    console.log('[Facebook Message] Already processed message mid:', fbMessageId, '- skipping (DB dedup)')
+    return
+  }
 
   // Find automations for this account
   const { data: automations } = await supabase
@@ -874,8 +918,8 @@ async function handleFacebookMessage(pageId: string, messaging: any, supabase: a
   const automation = automations[0]
   console.log('[Facebook Message] Found auto-reply automation:', automation.name)
 
-  // Database-level dedup: check if we already replied to this sender recently (60s cooldown)
-  const fbCooldownSeconds = 60
+  // ── Dedup Step 3: Cooldown — don't reply to same sender within 5 minutes ──
+  const fbCooldownSeconds = 300
   const { data: recentFbReply } = await supabase
     .from('dm_logs')
     .select('id')
@@ -924,7 +968,8 @@ async function handleFacebookMessage(pageId: string, messaging: any, supabase: a
     }
   }
 
-  // Log to dm_logs BEFORE sending to ensure dedup works even if send is slow
+  // Log to dm_logs BEFORE sending to ensure dedup works even if send is slow.
+  // Store message mid in comment_id field (prefixed with "mid:") for DB dedup.
   const { error: fbLogError } = await supabase.from('dm_logs').insert({
     automation_id: automation.id,
     user_id: account.user_id,
@@ -933,6 +978,7 @@ async function handleFacebookMessage(pageId: string, messaging: any, supabase: a
     commenter_platform_id: senderId,
     commenter_username: senderName,
     dm_message_sent: autoReply,
+    comment_id: `mid:${fbMessageId}`,
     status: 'queued',
   })
 
