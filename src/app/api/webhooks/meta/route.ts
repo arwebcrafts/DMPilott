@@ -406,8 +406,7 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
   }
 
   // Log to dm_logs BEFORE sending to ensure dedup works even if send is slow.
-  // We store the message mid in comment_id field (prefixed with "mid:") so the
-  // DB dedup check above can catch parallel invocations.
+  // Insert as 'pending' so processQueuedInstagramDmsForAccount doesn't pick it up!
   const { error: logError } = await supabase.from('dm_logs').insert({
     automation_id: automation.id,
     user_id: account.user_id,
@@ -417,7 +416,7 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
     commenter_username: senderUsername,
     dm_message_sent: autoReply,
     comment_id: `mid:${messageId}`,
-    status: 'queued',
+    status: 'pending',
   })
 
   if (logError) {
@@ -425,20 +424,34 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
     return
   }
 
-  // Send auto-reply
-  await sendInstagramDm({
-    account,
-    recipientId: senderId,
-    message: autoReply,
-  })
+  try {
+    // Send auto-reply
+    await sendInstagramDm({
+      account,
+      recipientId: senderId,
+      message: autoReply,
+    })
 
-  // Increment DM counter
-  await supabase
-    .from('automations')
-    .update({ total_dms_sent: automation.total_dms_sent + 1 })
-    .eq('id', automation.id)
+    // Mark as sent in dm_logs so queue processor never resends
+    await supabase
+      .from('dm_logs')
+      .update({ status: 'sent', sent_at: new Date().toISOString() })
+      .eq('comment_id', `mid:${messageId}`)
 
-  console.log('[Message] ✓ DM counter incremented for automation:', automation.name)
+    // Increment DM counter
+    await supabase
+      .from('automations')
+      .update({ total_dms_sent: (automation.total_dms_sent || 0) + 1 })
+      .eq('id', automation.id)
+
+    console.log('[Message] ✓ DM sent and logged as sent for automation:', automation.name)
+  } catch (sendErr: any) {
+    console.log('[Message] ❌ Error sending DM:', sendErr?.message || sendErr)
+    await supabase
+      .from('dm_logs')
+      .update({ status: 'failed', error_message: sendErr?.message || 'Send failed' })
+      .eq('comment_id', `mid:${messageId}`)
+  }
 }
 
 async function handleInstagramComment(igAccountId: string, value: any, supabase: any) {
@@ -969,7 +982,7 @@ async function handleFacebookMessage(pageId: string, messaging: any, supabase: a
   }
 
   // Log to dm_logs BEFORE sending to ensure dedup works even if send is slow.
-  // Store message mid in comment_id field (prefixed with "mid:") for DB dedup.
+  // Insert as 'pending' so processQueuedInstagramDmsForAccount doesn't pick it up!
   const { error: fbLogError } = await supabase.from('dm_logs').insert({
     automation_id: automation.id,
     user_id: account.user_id,
@@ -979,7 +992,7 @@ async function handleFacebookMessage(pageId: string, messaging: any, supabase: a
     commenter_username: senderName,
     dm_message_sent: autoReply,
     comment_id: `mid:${fbMessageId}`,
-    status: 'queued',
+    status: 'pending',
   })
 
   if (fbLogError) {
@@ -987,18 +1000,40 @@ async function handleFacebookMessage(pageId: string, messaging: any, supabase: a
     return
   }
 
-  // Send auto-reply
-  await sendFacebookDm({
-    account,
-    recipientId: senderId,
-    message: autoReply,
-  })
+  try {
+    // Send auto-reply
+    const sendResult = await sendFacebookDm({
+      account,
+      recipientId: senderId,
+      message: autoReply,
+    })
 
-  // Increment DM counter
-  await supabase
-    .from('automations')
-    .update({ total_dms_sent: automation.total_dms_sent + 1 })
-    .eq('id', automation.id)
+    if (sendResult.success) {
+      await supabase
+        .from('dm_logs')
+        .update({ status: 'sent', sent_at: new Date().toISOString() })
+        .eq('comment_id', `mid:${fbMessageId}`)
+
+      // Increment DM counter
+      await supabase
+        .from('automations')
+        .update({ total_dms_sent: (automation.total_dms_sent || 0) + 1 })
+        .eq('id', automation.id)
+
+      console.log('[Facebook Message] ✓ DM sent and logged as sent for automation:', automation.name)
+    } else {
+      await supabase
+        .from('dm_logs')
+        .update({ status: 'failed', error_message: sendResult.error || 'Send failed' })
+        .eq('comment_id', `mid:${fbMessageId}`)
+    }
+  } catch (fbSendErr: any) {
+    console.log('[Facebook Message] ❌ Error sending DM:', fbSendErr?.message || fbSendErr)
+    await supabase
+      .from('dm_logs')
+      .update({ status: 'failed', error_message: fbSendErr?.message || 'Send failed' })
+      .eq('comment_id', `mid:${fbMessageId}`)
+  }
 
   // Check if user has already interacted with follow button
   console.log('[Follow Button] Checking page configuration...')
