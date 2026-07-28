@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import crypto from 'crypto'
 import { createServiceClient } from '@/lib/supabase/server'
 import { decryptToken } from '@/lib/encryption'
@@ -7,8 +7,13 @@ import { processQueuedInstagramDmsForAccount, sendInstagramDm, sendFacebookDm } 
 import { handleFollowButton, handleLikeStatusCheck, handleInstagramFollowButton, handleInstagramFollowStatusCheck } from '@/lib/messenger/handlers/postbackHandler'
 import { getUserInteraction } from '@/lib/db/userInteractions'
 import { getPageConfiguration, getInstagramGiftOffer, getInstagramUserInteraction, updateInstagramUserInteraction } from '@/lib/db/pageConfigurations'
+import { generateAiReply } from '@/lib/ai/generateReply'
 
 console.log('[INIT] Webhook route module loaded')
+
+// Give background processing (after()) headroom to finish sends/AI calls.
+// Capped to the platform limit on lower Vercel plans.
+export const maxDuration = 60
 
 // Verify Meta webhook signature. The HMAC must be computed over the exact raw
 // request bytes — re-serialising the parsed JSON produces different bytes and
@@ -183,17 +188,21 @@ export async function POST(request: Request) {
     })
   }
 
-  // Respond after processing (Meta accepts 1-2s response time)
-  console.log('[POST] Processing webhook synchronously...')
-  const responseTime = Date.now() - startTime
-  console.log('[POST] Processing time:', responseTime, 'ms')
-  
-  try {
-    await processWebhookAsync(payload)
-    console.log('[POST] ✓ Webhook processed successfully')
-  } catch (err: any) {
-    console.log('[POST] ❌ Webhook processing error:', err.message)
-  }
+  // Acknowledge Meta immediately, then process after the response is sent.
+  // Meta retries aggressively (~15x in 3-4 min) if it doesn't get a fast 200,
+  // and will disable a webhook that is repeatedly slow. Processing inline —
+  // which can involve an AI call plus several Graph API sends — risks blowing
+  // that budget at scale. `after()` runs the work post-response; dedup (the
+  // unique index + claimDmLogRow) makes any retry that still slips through safe.
+  console.log('[POST] Ack in', Date.now() - startTime, 'ms; processing in background')
+  after(async () => {
+    try {
+      await processWebhookAsync(payload)
+      console.log('[POST] ✓ Webhook processed successfully')
+    } catch (err: any) {
+      console.log('[POST] ❌ Webhook processing error:', err.message)
+    }
+  })
 
   return new NextResponse('OK', { status: 200 })
 }
@@ -460,9 +469,21 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
   }
 
   // Personalize message with variables
-  let autoReply = (automation.dm_message || "Thanks for your message! We'll get back to you soon. 👋")
+  const baseMessage = (automation.dm_message || "Thanks for your message! We'll get back to you soon. 👋")
     .replace(/{name}/g, senderUsername || 'there')
     .replace(/{username}/g, senderUsername ? `@${senderUsername}` : 'user')
+
+  // AI reply (opt-in per automation, and only when an API key is configured).
+  // Falls back to the static message on any failure.
+  let autoReply = baseMessage
+  if (automation.ai_replies_enabled) {
+    autoReply = await generateAiReply({
+      instruction: automation.dm_message || '',
+      incomingText: messageText || '',
+      senderName: senderUsername,
+      fallback: baseMessage,
+    })
+  }
 
   // Append follow links if configured
   if (automation.follow_facebook_url || automation.follow_instagram_url) {
@@ -611,7 +632,21 @@ async function handleInstagramComment(igAccountId: string, value: any, supabase:
   let matchedAutomation = null
   let matchedKeyword: string | null = null
 
-  for (const auto of automations || []) {
+  // A post-specific automation (media_id set) should win over a whole-account
+  // one, so evaluate the targeted automations first.
+  const candidates = [...(automations || [])].sort((a, b) => {
+    const aTargeted = a.media_id ? 0 : 1
+    const bTargeted = b.media_id ? 0 : 1
+    return aTargeted - bTargeted
+  })
+
+  for (const auto of candidates) {
+    // Per-video targeting: skip automations bound to a different post.
+    // media_id === null means "whole account" and matches every post.
+    if (auto.media_id && String(auto.media_id) !== String(mediaId)) {
+      continue
+    }
+
     if (auto.trigger_type === 'any_comment') {
       matchedAutomation = auto
       break
@@ -839,7 +874,19 @@ async function handleFacebookComment(pageId: string, value: any, supabase: any) 
   let matchedAutomation = null
   let matchedKeyword: string | null = null
 
-  for (const auto of automations || []) {
+  // Post-specific automations take priority over whole-account ones.
+  const candidates = [...(automations || [])].sort((a, b) => {
+    const aTargeted = a.media_id ? 0 : 1
+    const bTargeted = b.media_id ? 0 : 1
+    return aTargeted - bTargeted
+  })
+
+  for (const auto of candidates) {
+    // Per-post targeting: skip automations bound to a different post.
+    if (auto.media_id && String(auto.media_id) !== String(postId)) {
+      continue
+    }
+
     if (auto.trigger_type === 'any_comment') {
       matchedAutomation = auto
       break
@@ -1055,9 +1102,20 @@ async function handleFacebookMessage(pageId: string, messaging: any, supabase: a
   }
 
   // Personalize message with variables
-  let autoReply = (automation.dm_message || "Thanks for your message! We'll get back to you soon. 👋")
+  const fbBaseMessage = (automation.dm_message || "Thanks for your message! We'll get back to you soon. 👋")
     .replace(/{name}/g, senderName || 'there')
     .replace(/{username}/g, senderName || 'there')
+
+  // AI reply (opt-in per automation, key-gated). Falls back to static message.
+  let autoReply = fbBaseMessage
+  if (automation.ai_replies_enabled) {
+    autoReply = await generateAiReply({
+      instruction: automation.dm_message || '',
+      incomingText: messageText || '',
+      senderName,
+      fallback: fbBaseMessage,
+    })
+  }
 
   // Append follow links if configured
   if (automation.follow_facebook_url || automation.follow_instagram_url) {

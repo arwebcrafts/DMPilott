@@ -85,4 +85,15 @@ describe('mapUpdatableFields', () => {
   it('returns nothing for an empty body', () => {
     expect(mapUpdatableFields({})).toEqual({})
   })
+
+  it('maps a specific post target', () => {
+    expect(mapUpdatableFields({ mediaId: '178_9', mediaCaption: 'My reel' })).toEqual({
+      media_id: '178_9',
+      media_caption: 'My reel',
+    })
+  })
+
+  it('clears the post target (whole account) when media_id is empty', () => {
+    expect(mapUpdatableFields({ mediaId: '' })).toEqual({ media_id: null })
+  })
 })

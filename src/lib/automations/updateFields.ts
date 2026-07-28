@@ -36,16 +36,20 @@ export function mapUpdatableFields(body: Record<string, unknown>): Record<string
   assign('platform', 'platform')
   assign('trigger_type', 'triggerType', 'trigger_type')
   assign('keywords', 'keywords')
+  assign('media_caption', 'mediaCaption', 'media_caption')
   assign('dm_message', 'dmMessage', 'dm_message')
   assign('comment_reply_enabled', 'commentReplyEnabled', 'comment_reply_enabled')
   assign('comment_reply_text', 'commentReplyText', 'comment_reply_text')
+  assign('ai_replies_enabled', 'aiRepliesEnabled', 'ai_replies_enabled')
   assign('send_delay_seconds', 'sendDelaySeconds', 'send_delay_seconds')
   assign('is_active', 'isActive', 'is_active')
 
-  // Nullable URL columns: an empty string means "clear it".
+  // Nullable columns: an empty string means "clear it".
+  // media_id empty/absent => whole-account automation.
   const nullableUrls: Array<[string, string, string]> = [
     ['follow_facebook_url', 'followFacebookUrl', 'follow_facebook_url'],
     ['follow_instagram_url', 'followInstagramUrl', 'follow_instagram_url'],
+    ['media_id', 'mediaId', 'media_id'],
   ]
   for (const [column, ...aliases] of nullableUrls) {
     for (const alias of aliases) {

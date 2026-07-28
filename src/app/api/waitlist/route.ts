@@ -42,6 +42,11 @@ export async function POST(request: NextRequest) {
       .insert([{ email, created_at: new Date().toISOString() }]);
 
     if (error) {
+      // A concurrent signup can win the race to the UNIQUE(email) constraint;
+      // that is a success from the visitor's point of view, not an error.
+      if (error.code === '23505' || /duplicate key/i.test(error.message)) {
+        return NextResponse.json({ message: 'Email already on waitlist' }, { status: 200 });
+      }
       console.error('Supabase error:', error);
       return NextResponse.json(
         { error: 'Failed to add to waitlist' },

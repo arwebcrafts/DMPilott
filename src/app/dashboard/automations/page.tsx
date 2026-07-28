@@ -18,10 +18,13 @@ interface Automation {
   keywords: string[]
   dm_message: string
   dm_video_url?: string | null
+  media_id?: string | null
+  media_caption?: string | null
   follow_facebook_url?: string | null
   follow_instagram_url?: string | null
   comment_reply_enabled?: boolean
   comment_reply_text?: string | null
+  ai_replies_enabled?: boolean
   is_active: boolean
   total_dms_sent: number
   created_at: string
@@ -594,8 +597,18 @@ export default function AutomationsPage() {
                 </div>
 
                 <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">{auto.name}</h3>
-                <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">
+                <p className="text-xs text-gray-600 dark:text-gray-300 mb-2">
                   @{auto.connected_accounts?.username || 'account'}
+                </p>
+                <p className="text-xs mb-3">
+                  <span
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+                    style={{ background: 'var(--surface-2)', color: 'var(--text-secondary)' }}
+                  >
+                    {auto.media_id
+                      ? `🎯 ${auto.media_caption ? auto.media_caption.slice(0, 28) : 'Specific post'}`
+                      : '🌐 Whole account'}
+                  </span>
                 </p>
 
                 {/* Keywords */}
@@ -809,12 +822,18 @@ function CreateAutomationModal({
   const [commentReplyText, setCommentReplyText] = useState(
     editData?.comment_reply_text || 'Check your DMs! 📩'
   )
+  const [aiRepliesEnabled, setAiRepliesEnabled] = useState(editData?.ai_replies_enabled ?? false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // When editing, keep the automation pointed at the account it already uses.
   const [accountId, setAccountId] = useState(editData?.account_id || '')
+  // Per-post targeting. '' means "whole account".
+  const [mediaId, setMediaId] = useState<string>(editData?.media_id || '')
+  const [mediaOptions, setMediaOptions] = useState<Array<{ id: string; caption: string; mediaType?: string }>>([])
+  const [mediaLoading, setMediaLoading] = useState(false)
 
   const availableAccounts = platform === 'instagram' ? igAccounts : fbAccounts
+  const isCommentTrigger = triggerType === 'comment_keyword' || triggerType === 'any_comment'
 
   // Pick a sensible account whenever the current selection is not valid for the
   // chosen platform (first render, or after switching Instagram <-> Facebook).
@@ -824,6 +843,25 @@ function CreateAutomationModal({
       setAccountId(availableAccounts[0].id)
     }
   }, [platform, availableAccounts, accountId])
+
+  // Load the account's recent posts so the user can target one specific post.
+  useEffect(() => {
+    if (!accountId || !isCommentTrigger) {
+      setMediaOptions([])
+      return
+    }
+    let cancelled = false
+    setMediaLoading(true)
+    fetch(`/api/accounts/${accountId}/media`)
+      .then(res => res.json())
+      .then(data => {
+        if (cancelled) return
+        setMediaOptions(Array.isArray(data.media) ? data.media : [])
+      })
+      .catch(() => { if (!cancelled) setMediaOptions([]) })
+      .finally(() => { if (!cancelled) setMediaLoading(false) })
+    return () => { cancelled = true }
+  }, [accountId, isCommentTrigger])
 
   function addKeyword() {
     const kw = keywordInput.trim().toUpperCase()
@@ -866,6 +904,12 @@ function CreateAutomationModal({
       followInstagramUrl: followInstagramUrl.trim() || null,
       commentReplyEnabled,
       commentReplyText: commentReplyEnabled ? commentReplyText : null,
+      aiRepliesEnabled,
+      // Per-post targeting only applies to comment triggers; '' => whole account.
+      mediaId: isCommentTrigger ? (mediaId || null) : null,
+      mediaCaption: isCommentTrigger && mediaId
+        ? (mediaOptions.find(m => m.id === mediaId)?.caption?.slice(0, 140) || null)
+        : null,
     }
 
     console.log('[Client]', editData ? 'Updating' : 'Creating', 'automation for account:', {
@@ -986,6 +1030,38 @@ function CreateAutomationModal({
             </div>
           </div>
 
+          {/* Apply to: whole account or one specific post (comment triggers only) */}
+          {isCommentTrigger && (
+            <div>
+              <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Apply to</label>
+              <select
+                value={mediaId}
+                onChange={e => setMediaId(e.target.value)}
+                disabled={mediaLoading}
+                className="w-full px-3 py-2 border rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-[#DD2A7B]/50 bg-white dark:bg-gray-800 disabled:opacity-60"
+                style={{ borderColor: 'var(--surface-3)' }}
+              >
+                <option value="">All posts (whole account)</option>
+                {editData?.media_id && !mediaOptions.some(m => m.id === editData.media_id) && (
+                  <option value={editData.media_id}>
+                    {editData.media_caption ? `${editData.media_caption.slice(0, 60)}…` : `Post ${editData.media_id}`}
+                  </option>
+                )}
+                {mediaOptions.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {(m.caption?.trim()?.slice(0, 60) || `Untitled ${m.mediaType || 'post'}`)}
+                    {m.caption && m.caption.length > 60 ? '…' : ''}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
+                {mediaLoading
+                  ? 'Loading your recent posts…'
+                  : 'Choose a specific post to run this automation only on that post, or keep "All posts" for the whole account.'}
+              </p>
+            </div>
+          )}
+
           {/* Keywords (only for comment_keyword) */}
           {triggerType === 'comment_keyword' && (
             <div>
@@ -1037,6 +1113,29 @@ function CreateAutomationModal({
               <span className="text-xs text-gray-600 dark:text-gray-300">{dmMessage.length}/1000</span>
             </div>
           </div>
+
+          {/* AI replies (DM auto-reply only) */}
+          {triggerType === 'dm_received' && (
+            <div className="rounded-lg border p-3" style={{ borderColor: 'var(--surface-3)' }}>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  AI replies <span className="text-xs font-normal text-gray-500">(beta)</span>
+                </label>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={aiRepliesEnabled}
+                  onClick={() => setAiRepliesEnabled(v => !v)}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${aiRepliesEnabled ? 'bg-[#22c55e]' : 'bg-gray-300 dark:bg-gray-600'}`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${aiRepliesEnabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                </button>
+              </div>
+              <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
+                Let AI write a personalized reply based on the incoming message, using your DM message above as the brand voice. Requires an AI API key to be configured; otherwise your DM message is sent as-is.
+              </p>
+            </div>
+          )}
 
           {/* Follow Links */}
           {triggerType === 'dm_received' && (

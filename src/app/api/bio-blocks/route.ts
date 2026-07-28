@@ -137,6 +137,15 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Bio page not found' }, { status: 404 })
     }
 
+    // Verify ownership BEFORE writing. The service client bypasses RLS, so
+    // updating first and checking after would let a user modify another user's
+    // block — the 403 would arrive only after the write already happened.
+    const { getBioBlockById } = await import('@/lib/db/bioBlocks')
+    const existing = await getBioBlockById(body.id, service)
+    if (!existing || existing.bio_page_id !== page.id) {
+      return NextResponse.json({ error: 'Block not found' }, { status: 404 })
+    }
+
     const updates: Record<string, unknown> = {}
     if (body.title !== undefined) updates.title = sanitizeText(body.title, 200)
     if (body.url !== undefined) {
@@ -153,10 +162,6 @@ export async function PATCH(req: NextRequest) {
     if (body.is_active !== undefined) updates.is_active = Boolean(body.is_active)
 
     const block = await updateBioBlock(body.id, updates, service)
-    if (block.bio_page_id !== page.id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
     return NextResponse.json({ block })
   } catch (error) {
     console.error('[Bio Blocks PATCH]', error)

@@ -45,6 +45,9 @@ export async function POST(request: Request) {
     commentReplyEnabled,
     commentReplyText,
     sendDelaySeconds,
+    mediaId,
+    mediaCaption,
+    aiRepliesEnabled,
   } = body
 
   console.log('[Automation] Request body:', {
@@ -119,6 +122,9 @@ export async function POST(request: Request) {
       comment_reply_enabled: commentReplyEnabled || false,
       comment_reply_text: commentReplyText,
       send_delay_seconds: sendDelaySeconds || 0,
+      media_id: mediaId || null,
+      media_caption: mediaCaption || null,
+      ai_replies_enabled: aiRepliesEnabled || false,
     })
     .select('*, connected_accounts(username, platform)')
     .single()
