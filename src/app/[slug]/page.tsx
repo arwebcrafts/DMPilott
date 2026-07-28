@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation'
+import { notFound, unstable_rethrow } from 'next/navigation'
 import { cookies } from 'next/headers'
 import type { Metadata } from 'next'
 import { createServiceClient } from '@/lib/supabase/server'
@@ -6,6 +6,7 @@ import { getBioPageBySlug, incrementBioPageViews, recordBioClick } from '@/lib/d
 import { getBioBlocksByPageId } from '@/lib/db/bioBlocks'
 import { isReservedSlug } from '@/lib/bio/reservedSlugs'
 import { BioPublicView } from '@/components/bio/BioPublicView'
+import Link from 'next/link'
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -32,33 +33,46 @@ export default async function PublicBioPage({ params }: PageProps) {
   if (isReservedSlug(slug)) notFound()
 
   const service = createServiceClient()
-  
+
+  let page: Awaited<ReturnType<typeof getBioPageBySlug>> = null
+  let blocks: Awaited<ReturnType<typeof getBioBlocksByPageId>> = []
+  let loadError: any = null
+
   try {
-    const page = await getBioPageBySlug(slug, true, service)
-    if (!page) notFound()
+    page = await getBioPageBySlug(slug, true, service)
 
-    const blocks = await getBioBlocksByPageId(page.id, true, service)
+    if (page) {
+      blocks = await getBioBlocksByPageId(page.id, true, service)
 
-    // Track view once per cookie session
-    const cookieStore = await cookies()
-    const viewCookie = `bio_view_${page.id}`
-    if (!cookieStore.get(viewCookie)) {
-      try {
-        await incrementBioPageViews(page.id, service)
-        await recordBioClick(page.id, null, 'view', {}, service)
-        cookieStore.set(viewCookie, '1', { maxAge: 3600, path: '/', sameSite: 'lax' })
-      } catch (err) {
-        console.error('Failed to log bio view analytics:', err)
+      // Track view once per cookie session
+      const cookieStore = await cookies()
+      const viewCookie = `bio_view_${page.id}`
+      if (!cookieStore.get(viewCookie)) {
+        try {
+          await incrementBioPageViews(page.id, service)
+          await recordBioClick(page.id, null, 'view', {}, service)
+          cookieStore.set(viewCookie, '1', { maxAge: 3600, path: '/', sameSite: 'lax' })
+        } catch (err) {
+          console.error('Failed to log bio view analytics:', err)
+        }
       }
     }
-
-    return <BioPublicView page={page} blocks={blocks} />
   } catch (error: any) {
+    // notFound()/redirect() work by throwing; swallowing them here would render
+    // the error card instead of a real 404.
+    unstable_rethrow(error)
     console.error(`[PublicBioPage] Error loading bio page for slug ${slug}:`, error)
-    
+    loadError = error
+  }
+
+  // An unknown slug is a 404, not an error page.
+  if (!loadError && !page) notFound()
+
+  if (loadError) {
     // Check if it's a missing database table error
-    const isDbMissing = error?.message?.includes('does not exist') || error?.message?.includes('relation')
-    
+    const isDbMissing =
+      loadError?.message?.includes('does not exist') || loadError?.message?.includes('relation')
+
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
         <div className="max-w-md p-8 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xl">
@@ -71,11 +85,13 @@ export default async function PublicBioPage({ params }: PageProps) {
               ? "The database tables for the Link-in-Bio module are not set up yet. Please run migration 010_bio_pages.sql in your Supabase dashboard."
               : "An unexpected error occurred while loading this bio page."}
           </p>
-          <a href="/" className="px-5 py-2.5 rounded-xl font-medium text-white bg-gradient-to-r from-[#F58529] to-[#DD2A7B] hover:scale-[1.02] transition-transform inline-block">
+          <Link href="/" className="px-5 py-2.5 rounded-xl font-medium text-white bg-gradient-to-r from-[#F58529] to-[#DD2A7B] hover:scale-[1.02] transition-transform inline-block">
             Go to Home
-          </a>
+          </Link>
         </div>
       </div>
     )
   }
+
+  return <BioPublicView page={page!} blocks={blocks} />
 }

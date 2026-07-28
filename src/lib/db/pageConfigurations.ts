@@ -1,7 +1,7 @@
-import { createServiceClient } from '@/lib/supabase/server';
+import { serviceClientProxy } from '@/lib/supabase/server';
 import { SupabaseClient } from '@supabase/supabase-js';
 
-const supabase = createServiceClient();
+const supabase = serviceClientProxy;
 
 export interface PageConfiguration {
   id: string;

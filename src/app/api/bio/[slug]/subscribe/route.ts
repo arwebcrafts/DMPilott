@@ -23,7 +23,7 @@ export async function POST(
       return NextResponse.json({ error: 'Page not found' }, { status: 404 })
     }
 
-    let blockId: string | null = body.blockId || null
+    const blockId: string | null = body.blockId || null
     if (blockId) {
       const block = await getBioBlockById(blockId, service)
       if (!block || block.bio_page_id !== page.id || block.type !== 'email_capture') {

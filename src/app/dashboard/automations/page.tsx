@@ -7,15 +7,21 @@ import { PLAN_LIMITS } from '@/lib/planGating'
 import { Plus, Edit2, Trash2, MoreHorizontal, Zap, MessageSquare, ToggleLeft, ToggleRight } from 'lucide-react'
 import { InstagramIcon, FacebookIcon } from '@/components/ui/brand-icons'
 import { motion } from 'framer-motion'
+import Link from 'next/link'
 
 interface Automation {
   id: string
   name: string
+  account_id?: string
   platform: 'instagram' | 'facebook'
   trigger_type: string
   keywords: string[]
   dm_message: string
   dm_video_url?: string | null
+  follow_facebook_url?: string | null
+  follow_instagram_url?: string | null
+  comment_reply_enabled?: boolean
+  comment_reply_text?: string | null
   is_active: boolean
   total_dms_sent: number
   created_at: string
@@ -532,7 +538,7 @@ export default function AutomationsPage() {
           </p>
           {accounts.length === 0 ? (
             <p className="text-sm text-gray-600 dark:text-gray-300">
-              <a href="/dashboard/accounts" className="text-[#e85d3a] hover:underline">Connect an account</a> first
+              <Link href="/dashboard/accounts" className="text-[#e85d3a] hover:underline">Connect an account</Link> first
             </p>
           ) : (
             <motion.button
@@ -795,21 +801,29 @@ function CreateAutomationModal({
   const [keywords, setKeywords] = useState<string[]>(editData?.keywords || [])
   const [keywordInput, setKeywordInput] = useState('')
   const [dmMessage, setDmMessage] = useState(editData?.dm_message || '')
-  const [followFacebookUrl, setFollowFacebookUrl] = useState('')
-  const [followInstagramUrl, setFollowInstagramUrl] = useState('')
-  const [commentReplyEnabled, setCommentReplyEnabled] = useState(true)
-  const [commentReplyText, setCommentReplyText] = useState('Check your DMs! 📩')
+  const [followFacebookUrl, setFollowFacebookUrl] = useState(editData?.follow_facebook_url || '')
+  const [followInstagramUrl, setFollowInstagramUrl] = useState(editData?.follow_instagram_url || '')
+  const [commentReplyEnabled, setCommentReplyEnabled] = useState(
+    editData ? editData.comment_reply_enabled ?? false : true
+  )
+  const [commentReplyText, setCommentReplyText] = useState(
+    editData?.comment_reply_text || 'Check your DMs! 📩'
+  )
   const [loading, setLoading] = useState(false)
-  const [accountId, setAccountId] = useState('')
-  const supabase = createClient()
+  const [error, setError] = useState<string | null>(null)
+  // When editing, keep the automation pointed at the account it already uses.
+  const [accountId, setAccountId] = useState(editData?.account_id || '')
 
   const availableAccounts = platform === 'instagram' ? igAccounts : fbAccounts
 
+  // Pick a sensible account whenever the current selection is not valid for the
+  // chosen platform (first render, or after switching Instagram <-> Facebook).
   useEffect(() => {
-    if (availableAccounts.length > 0 && !accountId) {
+    if (availableAccounts.length === 0) return
+    if (!availableAccounts.some(a => a.id === accountId)) {
       setAccountId(availableAccounts[0].id)
     }
-  }, [platform, availableAccounts])
+  }, [platform, availableAccounts, accountId])
 
   function addKeyword() {
     const kw = keywordInput.trim().toUpperCase()
@@ -821,8 +835,20 @@ function CreateAutomationModal({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!accountId || !dmMessage) return
-    if (triggerType === 'comment_keyword' && keywords.length === 0) return
+    setError(null)
+
+    if (!accountId) {
+      setError('Select the account this automation should run on.')
+      return
+    }
+    if (!dmMessage.trim()) {
+      setError('Write the DM message you want to send.')
+      return
+    }
+    if (triggerType === 'comment_keyword' && keywords.length === 0) {
+      setError('Add at least one keyword for a keyword trigger.')
+      return
+    }
 
     setLoading(true)
 
@@ -849,22 +875,28 @@ function CreateAutomationModal({
       platform,
     })
 
-    const res = await fetch(editData ? `/api/automations/${editData.id}` : '/api/automations', {
-      method: editData ? 'PATCH' : 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
+    try {
+      const res = await fetch(editData ? `/api/automations/${editData.id}` : '/api/automations', {
+        method: editData ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
 
-    const data = await res.json()
+      // The API can return an HTML error page (gateway timeout, crash), so
+      // never assume the body parses as JSON.
+      const data = await res.json().catch(() => ({}))
 
-    if (res.ok) {
-      console.log('[Client] ✓ Automation', editData ? 'updated' : 'created', 'successfully:', data.automation)
+      if (!res.ok) {
+        throw new Error(data.error || `Failed to ${editData ? 'update' : 'create'} automation`)
+      }
+
       onCreated(data.automation)
-    } else {
-      console.error('[Client] ❌ Failed to', editData ? 'update' : 'create', 'automation:', data.error)
-      alert(data.error || `Failed to ${editData ? 'update' : 'create'} automation`)
+    } catch (err: any) {
+      console.error('[Client] Automation save failed:', err)
+      setError(err?.message || 'Something went wrong. Please try again.')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (
@@ -1074,6 +1106,15 @@ function CreateAutomationModal({
             </div>
           )}
 
+          {error && (
+            <div
+              role="alert"
+              className="rounded-lg border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/40 px-3 py-2 text-sm text-red-700 dark:text-red-300"
+            >
+              {error}
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex gap-3 pt-2">
             <button
@@ -1090,7 +1131,7 @@ function CreateAutomationModal({
               className="flex-1 py-2.5 rounded-lg text-sm font-medium text-white disabled:opacity-50"
               style={{ background: 'var(--accent)' }}
             >
-              {loading ? (editData ? 'Updating...' : 'Creating...') : (editData ? 'Update Automation' : 'Create Automation')}
+              {loading ? (editData ? 'Updating…' : 'Creating…') : (editData ? 'Update Automation' : 'Create Automation')}
             </button>
           </div>
         </form>

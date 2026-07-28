@@ -1,6 +1,6 @@
-import { createServiceClient } from '@/lib/supabase/server';
+import { serviceClientProxy } from '@/lib/supabase/server';
 
-const supabase = createServiceClient();
+const supabase = serviceClientProxy;
 
 export interface UserPageInteraction {
   id: string;

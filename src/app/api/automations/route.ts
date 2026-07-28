@@ -120,7 +120,7 @@ export async function POST(request: Request) {
       comment_reply_text: commentReplyText,
       send_delay_seconds: sendDelaySeconds || 0,
     })
-    .select()
+    .select('*, connected_accounts(username, platform)')
     .single()
 
   if (error) {

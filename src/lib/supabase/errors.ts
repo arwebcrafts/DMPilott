@@ -10,7 +10,9 @@ export function getSupabaseConfigError(): string | null {
     return 'Supabase anon key is still a placeholder. Copy the real anon key from Vercel or Supabase Dashboard into .env.local, then restart the dev server.'
   }
 
-  if (!anonKey.startsWith('eyJ')) {
+  // Legacy anon keys are JWTs ("eyJ..."); current projects issue publishable
+  // keys ("sb_publishable_..."). Both are valid.
+  if (!anonKey.startsWith('eyJ') && !anonKey.startsWith('sb_publishable_')) {
     return 'Supabase anon key looks invalid. Copy it again from Supabase → Project Settings → API.'
   }
 

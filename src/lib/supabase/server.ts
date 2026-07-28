@@ -38,3 +38,34 @@ export function createServiceClient() {
     }
   )
 }
+
+let cachedServiceClient: ReturnType<typeof createServiceClient> | null = null
+
+/**
+ * Memoised service client. Unlike `createServiceClient()` this must never be
+ * called at module scope — see `serviceClientProxy` below for that case.
+ */
+export function getServiceClient() {
+  if (!cachedServiceClient) {
+    cachedServiceClient = createServiceClient()
+  }
+  return cachedServiceClient
+}
+
+/**
+ * A stand-in for the service client that defers construction until the first
+ * property access. Modules that want a file-level `supabase` binding must use
+ * this: building the real client at import time reads env vars during
+ * `next build` page-data collection, where they are not available, and throws
+ * "Your project's URL and Key are required to create a Supabase client!".
+ */
+export const serviceClientProxy = new Proxy(
+  {},
+  {
+    get(_target, prop) {
+      const client = getServiceClient() as unknown as Record<string | symbol, unknown>
+      const value = client[prop]
+      return typeof value === 'function' ? (value as (...args: unknown[]) => unknown).bind(client) : value
+    },
+  }
+) as ReturnType<typeof createServiceClient>

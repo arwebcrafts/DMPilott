@@ -1,6 +1,7 @@
 'use client';
 
 import { SectionContainer } from '../shared/SectionContainer';
+import Link from 'next/link'
 
 export function Footer() {
   return (
@@ -24,10 +25,10 @@ export function Footer() {
           <div>
             <h4 className="font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Product</h4>
             <ul className="space-y-2">
-              <li><a href="/features" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Features</a></li>
-              <li><a href="/services" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Services</a></li>
-              <li><a href="/#link-in-bio" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Link in Bio</a></li>
-              <li><a href="/#roadmap" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Roadmap</a></li>
+              <li><Link href="/features" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Features</Link></li>
+              <li><Link href="/services" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Services</Link></li>
+              <li><Link href="/#link-in-bio" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Link in Bio</Link></li>
+              <li><Link href="/#roadmap" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Roadmap</Link></li>
             </ul>
           </div>
 
@@ -35,10 +36,10 @@ export function Footer() {
           <div>
             <h4 className="font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Resources</h4>
             <ul className="space-y-2">
-              <li><a href="/#faq" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>FAQ</a></li>
+              <li><Link href="/#faq" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>FAQ</Link></li>
               <li><a href="mailto:arwebcrafts@gmail.com" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Support</a></li>
-              <li><a href="/#features" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Integrations</a></li>
-              <li><a href="/signup" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Get Started</a></li>
+              <li><Link href="/#features" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Integrations</Link></li>
+              <li><Link href="/signup" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Get Started</Link></li>
             </ul>
           </div>
 
@@ -46,8 +47,8 @@ export function Footer() {
           <div>
             <h4 className="font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Legal</h4>
             <ul className="space-y-2">
-              <li><a href="/privacy-policy" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Privacy Policy</a></li>
-              <li><a href="/terms-of-service" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Terms of Service</a></li>
+              <li><Link href="/privacy-policy" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Privacy Policy</Link></li>
+              <li><Link href="/terms-of-service" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Terms of Service</Link></li>
               <li><a href="mailto:arwebcrafts@gmail.com" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Contact</a></li>
             </ul>
           </div>

@@ -3,12 +3,12 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { decryptToken } from '@/lib/encryption'
 import axios from 'axios'
 
+import { assertCronRequest } from '@/lib/cronAuth'
+
 // Called by Vercel Cron to fetch Instagram comments and queue DMs
 export async function GET(request: Request) {
-  const authHeader = request.headers.get('authorization')
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const unauthorized = assertCronRequest(request)
+  if (unauthorized) return unauthorized
 
   const supabase = createServiceClient()
   console.log('[Fetch Comments] Starting comment fetch...')

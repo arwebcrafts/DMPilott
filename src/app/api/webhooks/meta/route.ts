@@ -10,16 +10,80 @@ import { getPageConfiguration, getInstagramGiftOffer, getInstagramUserInteractio
 
 console.log('[INIT] Webhook route module loaded')
 
-// Verify Meta webhook signature
-function verifySignature(body: string, signature: string): boolean {
-  console.log('[SIG] verifySignature called')
-  const expected = crypto
-    .createHmac('sha256', process.env.META_APP_SECRET!)
-    .update(body)
-    .digest('hex')
-  const result = `sha256=${expected}` === signature
+// Verify Meta webhook signature. The HMAC must be computed over the exact raw
+// request bytes — re-serialising the parsed JSON produces different bytes and
+// would never match.
+function verifySignature(rawBody: string, signature: string): boolean {
+  const appSecret = process.env.META_APP_SECRET
+  if (!appSecret) {
+    console.error('[SIG] META_APP_SECRET is not set — cannot verify webhook signature')
+    return false
+  }
+  if (!signature) {
+    console.log('[SIG] No x-hub-signature-256 header on request')
+    return false
+  }
+
+  const expected = `sha256=${crypto.createHmac('sha256', appSecret).update(rawBody, 'utf8').digest('hex')}`
+  const expectedBuf = Buffer.from(expected)
+  const receivedBuf = Buffer.from(signature)
+
+  if (expectedBuf.length !== receivedBuf.length) {
+    console.log('[SIG] Signature length mismatch')
+    return false
+  }
+
+  const result = crypto.timingSafeEqual(expectedBuf, receivedBuf)
   console.log('[SIG] Signature match:', result)
   return result
+}
+
+// Postgres unique-violation. Raised by idx_dm_logs_comment_id_unique when two
+// concurrent webhook deliveries race to claim the same comment or message id.
+function isUniqueViolation(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+  return error.code === '23505' || /duplicate key value/i.test(error.message || '')
+}
+
+/**
+ * Second line of defence behind the unique index on dm_logs(comment_id).
+ *
+ * If `idx_dm_logs_comment_id_unique` has not been applied to this database
+ * (see migration 015), concurrent webhook deliveries all insert successfully
+ * and each one sends a DM. After inserting, re-read every row for this key and
+ * only let the oldest one proceed; the losers mark themselves skipped.
+ *
+ * Returns true when this invocation owns the send.
+ */
+async function claimDmLogRow(
+  supabase: any,
+  insertedId: string,
+  dedupKey: string,
+  logPrefix: string
+): Promise<boolean> {
+  const { data: rows, error } = await supabase
+    .from('dm_logs')
+    .select('id, created_at')
+    .eq('comment_id', dedupKey)
+    .order('created_at', { ascending: true })
+    .order('id', { ascending: true })
+    .limit(10)
+
+  if (error || !rows || rows.length === 0) {
+    // Cannot verify — fall back to proceeding so a transient read error never
+    // silently swallows a legitimate reply.
+    return true
+  }
+
+  if (rows.length === 1 || rows[0].id === insertedId) return true
+
+  console.log(`${logPrefix} Lost dedup race for ${dedupKey} (winner ${rows[0].id}) - not sending`)
+  await supabase
+    .from('dm_logs')
+    .update({ status: 'failed', error_message: 'Duplicate webhook delivery' })
+    .eq('id', insertedId)
+
+  return false
 }
 
 // Track processed comment IDs to prevent duplicates
@@ -80,11 +144,17 @@ export async function POST(request: Request) {
   console.log('[POST] Raw body length:', rawBody.length)
   console.log('[POST] Raw body preview:', rawBody.substring(0, 100) + '...')
 
-  // Skip signature verification (dev mode)
-  const skipSignatureEnv = process.env.SKIP_WEBHOOK_SIGNATURE === 'true'
-  console.log('[POST] Skip signature mode:', skipSignatureEnv)
+  // Signature verification can only be skipped outside production, and only
+  // when explicitly opted in. Without it, anyone who knows the webhook URL can
+  // make the app send DMs from any connected account.
+  const skipSignatureEnv =
+    process.env.SKIP_WEBHOOK_SIGNATURE === 'true' && process.env.NODE_ENV !== 'production'
+
   if (skipSignatureEnv) {
-    console.log('[POST] ⚠️ SKIPPING SIGNATURE VERIFICATION')
+    console.log('[POST] ⚠️ SKIPPING SIGNATURE VERIFICATION (non-production only)')
+  } else if (!verifySignature(rawBody, signature)) {
+    console.log('[POST] ✗ Invalid signature — rejecting webhook')
+    return new NextResponse('Invalid signature', { status: 401 })
   }
 
   // Parse payload
@@ -407,7 +477,7 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
 
   // Log to dm_logs BEFORE sending to ensure dedup works even if send is slow.
   // Insert as 'pending' so processQueuedInstagramDmsForAccount doesn't pick it up!
-  const { error: logError } = await supabase.from('dm_logs').insert({
+  const { data: insertedLog, error: logError } = await supabase.from('dm_logs').insert({
     automation_id: automation.id,
     user_id: account.user_id,
     account_id: account.id,
@@ -417,10 +487,21 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
     dm_message_sent: autoReply,
     comment_id: `mid:${messageId}`,
     status: 'pending',
-  })
+  }).select('id').single()
 
   if (logError) {
-    console.log('[Message] ❌ Failed to log DM (possible duplicate):', logError.message)
+    // 23505 = unique violation on idx_dm_logs_comment_id_unique. That means a
+    // concurrent invocation already claimed this message id, so this one must
+    // not send. Any other error is a real problem and must be visible.
+    if (isUniqueViolation(logError)) {
+      console.log('[Message] Duplicate webhook delivery for mid', messageId, '- another invocation is handling it')
+    } else {
+      console.error('[Message] ❌ Failed to log DM, aborting send:', logError.code, logError.message)
+    }
+    return
+  }
+
+  if (insertedLog && !(await claimDmLogRow(supabase, insertedLog.id, `mid:${messageId}`, '[Message]'))) {
     return
   }
 
@@ -436,7 +517,7 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
     await supabase
       .from('dm_logs')
       .update({ status: 'sent', sent_at: new Date().toISOString() })
-      .eq('comment_id', `mid:${messageId}`)
+      .eq('id', insertedLog.id)
 
     // Increment DM counter
     await supabase
@@ -450,7 +531,7 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
     await supabase
       .from('dm_logs')
       .update({ status: 'failed', error_message: sendErr?.message || 'Send failed' })
-      .eq('comment_id', `mid:${messageId}`)
+      .eq('id', insertedLog.id)
   }
 }
 
@@ -599,7 +680,11 @@ async function handleInstagramComment(igAccountId: string, value: any, supabase:
   })
 
   if (insertError) {
-    console.log('[Comment] ❌ Failed to enqueue DM:', insertError.message)
+    if (isUniqueViolation(insertError)) {
+      console.log('[Comment] Duplicate webhook delivery for comment', commentId, '- already enqueued')
+    } else {
+      console.error('[Comment] ❌ Failed to enqueue DM:', insertError.code, insertError.message)
+    }
     return
   }
 
@@ -823,7 +908,11 @@ async function handleFacebookComment(pageId: string, value: any, supabase: any) 
   })
 
   if (insertError) {
-    console.log('[Facebook Comment] ❌ Failed to enqueue DM:', insertError.message)
+    if (isUniqueViolation(insertError)) {
+      console.log('[Facebook Comment] Duplicate webhook delivery for comment', commentId, '- already enqueued')
+    } else {
+      console.error('[Facebook Comment] ❌ Failed to enqueue DM:', insertError.code, insertError.message)
+    }
     return
   }
 
@@ -983,7 +1072,7 @@ async function handleFacebookMessage(pageId: string, messaging: any, supabase: a
 
   // Log to dm_logs BEFORE sending to ensure dedup works even if send is slow.
   // Insert as 'pending' so processQueuedInstagramDmsForAccount doesn't pick it up!
-  const { error: fbLogError } = await supabase.from('dm_logs').insert({
+  const { data: insertedFbLog, error: fbLogError } = await supabase.from('dm_logs').insert({
     automation_id: automation.id,
     user_id: account.user_id,
     account_id: account.id,
@@ -993,10 +1082,18 @@ async function handleFacebookMessage(pageId: string, messaging: any, supabase: a
     dm_message_sent: autoReply,
     comment_id: `mid:${fbMessageId}`,
     status: 'pending',
-  })
+  }).select('id').single()
 
   if (fbLogError) {
-    console.log('[Facebook Message] ❌ Failed to log DM (possible duplicate):', fbLogError.message)
+    if (isUniqueViolation(fbLogError)) {
+      console.log('[Facebook Message] Duplicate webhook delivery for mid', fbMessageId, '- another invocation is handling it')
+    } else {
+      console.error('[Facebook Message] ❌ Failed to log DM, aborting send:', fbLogError.code, fbLogError.message)
+    }
+    return
+  }
+
+  if (insertedFbLog && !(await claimDmLogRow(supabase, insertedFbLog.id, `mid:${fbMessageId}`, '[Facebook Message]'))) {
     return
   }
 
@@ -1012,7 +1109,7 @@ async function handleFacebookMessage(pageId: string, messaging: any, supabase: a
       await supabase
         .from('dm_logs')
         .update({ status: 'sent', sent_at: new Date().toISOString() })
-        .eq('comment_id', `mid:${fbMessageId}`)
+        .eq('id', insertedFbLog.id)
 
       // Increment DM counter
       await supabase
@@ -1025,14 +1122,14 @@ async function handleFacebookMessage(pageId: string, messaging: any, supabase: a
       await supabase
         .from('dm_logs')
         .update({ status: 'failed', error_message: sendResult.error || 'Send failed' })
-        .eq('comment_id', `mid:${fbMessageId}`)
+        .eq('id', insertedFbLog.id)
     }
   } catch (fbSendErr: any) {
     console.log('[Facebook Message] ❌ Error sending DM:', fbSendErr?.message || fbSendErr)
     await supabase
       .from('dm_logs')
       .update({ status: 'failed', error_message: fbSendErr?.message || 'Send failed' })
-      .eq('comment_id', `mid:${fbMessageId}`)
+      .eq('id', insertedFbLog.id)
   }
 
   // Check if user has already interacted with follow button

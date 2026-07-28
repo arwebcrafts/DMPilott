@@ -1,16 +1,15 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { decryptToken, encryptToken } from '@/lib/encryption'
+import { assertCronRequest } from '@/lib/cronAuth'
 import axios from 'axios'
 
 // Called daily by Vercel Cron (configured in vercel.json)
 // Refreshes Instagram long-lived tokens before they expire (60-day lifetime)
 export async function GET(request: Request) {
   // Verify the request is from Vercel Cron (or an authorised caller)
-  const authHeader = request.headers.get('authorization')
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return new NextResponse('Unauthorized', { status: 401 })
-  }
+  const unauthorized = assertCronRequest(request)
+  if (unauthorized) return unauthorized
 
   const supabase = createServiceClient()
 

@@ -67,9 +67,9 @@ function UnlockWebviewContent() {
         }
         
         // Tell Messenger to close the Webview
-        // @ts-ignore
+        // @ts-expect-error - MessengerExtensions is injected by the Messenger webview at runtime and has no type declarations
         if (window.MessengerExtensions) {
-          // @ts-ignore
+          // @ts-expect-error - MessengerExtensions is injected by the Messenger webview at runtime and has no type declarations
           window.MessengerExtensions.requestCloseBrowser(
             function success() { /* Webview closes */ },
             function error(err: any) { 

@@ -5,6 +5,7 @@ import { Link2, Palette, BarChart3, Share2, Video, Mail, ShoppingBag } from 'luc
 import { SectionContainer } from '../shared/SectionContainer';
 import { SectionHeader } from '../shared/SectionHeader';
 import { CTAButton } from '../shared/CTAButton';
+import Link from 'next/link'
 
 const bioFeatures = [
   { icon: Link2, label: 'Unlimited links' },
@@ -47,14 +48,14 @@ export function LinkInBioShowcase() {
               <CTAButton variant="primary" size="md" href="/signup">
                 Create your page
               </CTAButton>
-              <a
+              <Link
                 href="/features"
                 className="inline-flex items-center gap-2 px-5 py-3 rounded-full text-sm font-medium border transition-colors hover:bg-black/5 dark:hover:bg-white/10"
                 style={{ borderColor: 'var(--surface-2)', color: 'var(--text-primary)' }}
               >
                 <Share2 className="w-4 h-4" />
                 See all features
-              </a>
+              </Link>
             </div>
           </div>
 

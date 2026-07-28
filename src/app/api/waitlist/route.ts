@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { getServiceClient } from '@/lib/supabase/server';
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getServiceClient();
     const { email } = await request.json();
 
     if (!email) {
@@ -31,7 +27,7 @@ export async function POST(request: NextRequest) {
       .from('waitlist')
       .select('email')
       .eq('email', email)
-      .single();
+      .maybeSingle();
 
     if (existing) {
       return NextResponse.json(

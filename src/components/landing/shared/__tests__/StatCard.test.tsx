@@ -62,7 +62,9 @@ describe('StatCard', () => {
         className="custom-class"
       />
     )
-    const card = screen.getByText('100').parentElement
-    expect(card).toHaveClass('custom-class')
+    // className lands on the outer card, not the inline value/trend row.
+    const card = screen.getByText('100').closest('.custom-class')
+    expect(card).toBeInTheDocument()
+    expect(card).toHaveClass('p-6', 'border')
   })
 })
