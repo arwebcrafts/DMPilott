@@ -16,6 +16,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ['/login', 0.6, 'monthly'],
     ['/privacy-policy', 0.4, 'monthly'],
     ['/terms-of-service', 0.4, 'monthly'],
+    ['/data-deletion', 0.4, 'monthly'],
   ]
 
   return routes.map(([path, priority, changeFrequency]) => ({

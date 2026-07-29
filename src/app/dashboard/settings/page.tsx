@@ -3,13 +3,17 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { User } from '@supabase/supabase-js'
-import { Loader2, User as UserIcon, Mail, LogOut } from 'lucide-react'
+import { Loader2, User as UserIcon, Mail, LogOut, Trash2 } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 export default function SettingsPage() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<any>(null)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -33,6 +37,23 @@ export default function SettingsPage() {
   async function handleSignOut() {
     await supabase.auth.signOut()
     window.location.href = '/login'
+  }
+
+  async function handleDeleteAccount() {
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      const res = await fetch('/api/account', { method: 'DELETE' })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || 'Could not delete your account. Please contact support.')
+      }
+      await supabase.auth.signOut()
+      window.location.href = '/?deleted=1'
+    } catch (err: any) {
+      setDeleteError(err.message)
+      setDeleting(false)
+    }
   }
 
   if (loading) {
@@ -123,6 +144,71 @@ export default function SettingsPage() {
           <LogOut className="w-4 h-4" />
           Sign Out
         </motion.button>
+      </motion.div>
+
+      {/* Delete Account — required by Meta's data deletion policy and linked
+          from the public /data-deletion page. */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="rounded-xl border p-6 shadow-sm"
+        style={{ background: 'var(--surface-0)', borderColor: '#FA3E3E40' }}
+      >
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">Delete Account</h2>
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+          Permanently erases your profile, all connected Instagram and Facebook accounts and their
+          access tokens, every automation, all message history, and your Link-in-Bio page.
+          This cannot be undone.
+        </p>
+
+        {deleteError && (
+          <p className="text-sm text-[#FA3E3E] mb-3">{deleteError}</p>
+        )}
+
+        {!confirmingDelete ? (
+          <button
+            onClick={() => setConfirmingDelete(true)}
+            className="flex items-center gap-2 px-4 py-2 border text-[#FA3E3E] rounded-lg font-medium text-sm hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            style={{ borderColor: '#FA3E3E' }}
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete My Account
+          </button>
+        ) : (
+          <div className="space-y-3">
+            <label className="block text-sm text-gray-700 dark:text-gray-200">
+              Type <strong>DELETE</strong> to confirm:
+              <input
+                value={deleteConfirmText}
+                onChange={e => setDeleteConfirmText(e.target.value)}
+                className="mt-1 block w-full max-w-xs px-3 py-2 rounded-lg border text-sm bg-transparent"
+                style={{ borderColor: 'var(--surface-3)' }}
+                placeholder="DELETE"
+                autoFocus
+              />
+            </label>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirmText !== 'DELETE' || deleting}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm text-white bg-[#FA3E3E] disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+              >
+                {deleting
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : <Trash2 className="w-4 h-4" />}
+                {deleting ? 'Deleting…' : 'Permanently delete'}
+              </button>
+              <button
+                onClick={() => { setConfirmingDelete(false); setDeleteConfirmText(''); setDeleteError(null) }}
+                disabled={deleting}
+                className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:underline disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </motion.div>
     </div>
   )
