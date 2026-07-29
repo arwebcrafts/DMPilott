@@ -4,6 +4,20 @@ import { encryptToken } from '@/lib/encryption'
 import { buildAccountsRedirect } from '@/lib/oauth/redirect'
 import axios from 'axios'
 
+/**
+ * Instagram returns the granted permissions on the token exchange, either as an
+ * array or as a comma-separated string depending on the API version. Anything we
+ * asked for but the app is not approved for is simply absent from this list.
+ */
+function parseGrantedScopes(raw: unknown): string[] {
+  const list = Array.isArray(raw)
+    ? raw
+    : typeof raw === 'string'
+      ? raw.split(',')
+      : []
+  return list.map(s => String(s).trim()).filter(Boolean)
+}
+
 // Instagram OAuth callback handler
 // Instagram OAuth uses /api/instagram/callback as redirect URI (not /api/meta/callback)
 export async function GET(request: Request) {
@@ -84,6 +98,12 @@ export async function GET(request: Request) {
     const shortLivedUserId: string | number | null = shortRes.data.user_id || null
     console.log('[Instagram Callback] Short token received:', shortLivedToken ? 'YES' : 'NO')
     console.log('[Instagram Callback] Short token user_id from response:', shortLivedUserId)
+
+    // Meta silently drops any scope the app is not approved for, so the granted
+    // list is the only reliable answer to "why do comments do nothing?".
+    // Store it so Diagnostics can show it instead of us guessing.
+    const grantedScopes = parseGrantedScopes(shortRes.data.permissions)
+    console.log('[Instagram Callback] Granted permissions:', grantedScopes.join(', ') || '(none reported)')
 
     // Step 2: Long-lived token exchange (ig_exchange_token)
     // Instagram Graph API requires GET with access_token as query parameter
@@ -275,6 +295,7 @@ export async function GET(request: Request) {
         follower_count: followerCount,
         access_token_encrypted: encryptedToken,
         token_expires_at: tokenExpiresAt,
+        granted_scopes: grantedScopes.length > 0 ? grantedScopes : null,
         is_active: true,
       }, {
         onConflict: 'user_id,platform,platform_account_id',

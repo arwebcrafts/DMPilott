@@ -72,6 +72,47 @@ export async function GET() {
 
   const dbReady = hasWebhookEvents && hasMediaId && hasFlowSteps && hasButtonText && hasCommentId
 
+  // Which permissions Instagram actually granted. Meta drops any scope the app
+  // is not approved for without erroring, so an account can look "connected"
+  // while comment automations can never fire. Queried separately and tolerantly
+  // so an un-migrated database still renders the rest of the page.
+  const igAccounts = (accounts || []).filter((a: any) => a.platform === 'instagram' && a.is_active)
+  let scopeCheck: { label: string; ok: boolean; hint?: string } | null = null
+
+  if (igAccounts.length > 0) {
+    const { data: scopeRows, error: scopeErr } = await supabase
+      .from('connected_accounts')
+      .select('username, granted_scopes')
+      .eq('user_id', user.id)
+      .eq('platform', 'instagram')
+      .eq('is_active', true)
+
+    if (!scopeErr) {
+      const reported = (scopeRows || []).filter((r: any) => Array.isArray(r.granted_scopes) && r.granted_scopes.length > 0)
+
+      if (reported.length === 0) {
+        scopeCheck = {
+          label: 'Instagram permissions confirmed',
+          ok: false,
+          hint: 'Unknown — this account was connected before permission tracking existed. Go to Accounts, disconnect the Instagram account, and connect it again. Takes 20 seconds and tells us exactly which permissions Meta granted.',
+        }
+      } else {
+        const missingComments = reported.filter(
+          (r: any) => !r.granted_scopes.includes('instagram_business_manage_comments')
+        )
+        scopeCheck = missingComments.length === 0
+          ? { label: 'Instagram permissions confirmed (comments + messages)', ok: true }
+          : {
+              label: 'Comment permission NOT granted by Instagram',
+              ok: false,
+              hint: `Meta did not grant instagram_business_manage_comments for ${missingComments
+                .map((r: any) => '@' + (r.username || 'account'))
+                .join(', ')}. Comment-triggered DMs cannot work without it. In the Meta dashboard this permission must show "Approved" under App Review, and the Instagram account must have an accepted role on the app. Reconnect the account after fixing either one.`,
+            }
+      }
+    }
+  }
+
   const checks: Array<{ label: string; ok: boolean; hint?: string }> = [
     {
       label: 'Database is up to date',
@@ -110,6 +151,7 @@ export async function GET() {
       ok: (events || []).length > 0,
       hint: 'If this is empty, Meta is not delivering events. In the Meta dashboard check that the Instagram product is subscribed to the "comments" and "messages" fields, and that the callback URL points to /api/webhooks/meta.',
     },
+    ...(scopeCheck ? [scopeCheck] : []),
   ]
 
   return NextResponse.json({
