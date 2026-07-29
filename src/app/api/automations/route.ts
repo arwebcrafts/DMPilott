@@ -52,6 +52,8 @@ export async function POST(request: Request) {
     mediaCaption,
     aiRepliesEnabled,
     flowSteps,
+    buttonText,
+    buttonUrl,
   } = body
 
   console.log('[Automation] Request body:', {
@@ -173,6 +175,8 @@ export async function POST(request: Request) {
       media_caption: mediaCaption || null,
       ai_replies_enabled: aiRepliesEnabled || false,
       flow_steps: parsedFlow.length > 0 ? parsedFlow : null,
+      button_text: buttonText?.trim() || null,
+      button_url: buttonUrl?.trim() || null,
     })
     .select('*, connected_accounts(username, platform)')
     .single()

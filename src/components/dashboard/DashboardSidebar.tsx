@@ -16,6 +16,7 @@ import {
   CreditCard,
   Settings,
   Gift,
+  Stethoscope,
 } from 'lucide-react'
 
 const mainNav = [
@@ -23,6 +24,7 @@ const mainNav = [
   { href: '/dashboard/automations', label: 'Automations', icon: Zap },
   { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/dashboard/accounts', label: 'Accounts', icon: Users },
+  { href: '/dashboard/diagnostics', label: 'Diagnostics', icon: Stethoscope },
 ]
 
 const toolsNav = [

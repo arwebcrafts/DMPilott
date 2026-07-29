@@ -26,6 +26,8 @@ interface Automation {
   comment_reply_text?: string | null
   ai_replies_enabled?: boolean
   flow_steps?: { text: string }[] | null
+  button_text?: string | null
+  button_url?: string | null
   is_active: boolean
   total_dms_sent: number
   created_at: string
@@ -831,6 +833,8 @@ function CreateAutomationModal({
     editData?.comment_reply_text || 'Check your DMs! 📩'
   )
   const [aiRepliesEnabled, setAiRepliesEnabled] = useState(editData?.ai_replies_enabled ?? false)
+  const [buttonText, setButtonText] = useState(editData?.button_text || '')
+  const [buttonUrl, setButtonUrl] = useState(editData?.button_url || '')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // When editing, keep the automation pointed at the account it already uses.
@@ -913,6 +917,8 @@ function CreateAutomationModal({
       commentReplyEnabled,
       commentReplyText: commentReplyEnabled ? commentReplyText : null,
       aiRepliesEnabled,
+      buttonText: buttonText.trim() || null,
+      buttonUrl: buttonUrl.trim() || null,
       // Multi-step flow: step 1 is the DM message, plus any follow-up steps.
       flowSteps: flowSteps.some(s => s.trim())
         ? [dmMessage, ...flowSteps.filter(s => s.trim())].map(text => ({ text }))
@@ -1021,11 +1027,11 @@ function CreateAutomationModal({
             <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Trigger Type</label>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { value: 'comment_keyword', label: 'Keyword', icon: '💬' },
-                { value: 'any_comment', label: 'Any Comment', icon: '✉️' },
-                { value: 'dm_received', label: 'DM Reply', icon: '📩' },
-                { value: 'story_reply', label: 'Story Reply', icon: '📖' },
-                { value: 'story_mention', label: 'Story Mention', icon: '🏷️' },
+                { value: 'comment_keyword', label: 'Keyword', icon: '💬', desc: 'Someone comments a keyword on your post → they get a DM' },
+                { value: 'any_comment', label: 'Any Comment', icon: '✉️', desc: 'Anyone comments anything on your post → they get a DM' },
+                { value: 'dm_received', label: 'DM Reply', icon: '📩', desc: 'Someone sends you a DM → they get an auto-reply' },
+                { value: 'story_reply', label: 'Story Reply', icon: '📖', desc: 'Someone replies to your story → they get a DM' },
+                { value: 'story_mention', label: 'Story Mention', icon: '🏷️', desc: 'Someone mentions you in their story → they get a DM' },
               ].filter(opt => platform === 'instagram' || (opt.value !== 'story_reply' && opt.value !== 'story_mention')).map(opt => (
                 <button
                   key={opt.value}
@@ -1042,6 +1048,13 @@ function CreateAutomationModal({
                 </button>
               ))}
             </div>
+            <p className="text-xs text-gray-600 dark:text-gray-300 mt-2">
+              {triggerType === 'comment_keyword' && 'Someone comments one of your keywords on your post → they get a DM.'}
+              {triggerType === 'any_comment' && 'Anyone comments anything on your post → they get a DM.'}
+              {triggerType === 'dm_received' && 'Someone sends your account a DM → they get an auto-reply.'}
+              {triggerType === 'story_reply' && 'Someone replies to your Instagram story → they get a DM.'}
+              {triggerType === 'story_mention' && 'Someone mentions your account in their story → they get a DM.'}
+            </p>
           </div>
 
           {/* Apply to: whole account or one specific post (comment triggers only) */}
@@ -1128,6 +1141,47 @@ function CreateAutomationModal({
             </div>
           </div>
 
+          {/* CTA button — sends a tappable button instead of a raw link */}
+          <div className="rounded-lg border p-3" style={{ borderColor: 'var(--surface-3)' }}>
+            <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+              Call-to-action button <span className="text-xs font-normal text-gray-500">(optional)</span>
+            </label>
+            <p className="text-xs text-gray-600 dark:text-gray-300 mb-2">
+              Adds a tappable button under your message instead of a plain link — like &ldquo;Get Access&rdquo;.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="text"
+                value={buttonText}
+                onChange={e => setButtonText(e.target.value)}
+                placeholder="Button label (e.g. Get Access)"
+                maxLength={20}
+                className="px-3 py-2 border rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-[#DD2A7B]/50 bg-white dark:bg-gray-800 placeholder-gray-400 dark:placeholder-gray-500"
+                style={{ borderColor: 'var(--surface-3)' }}
+              />
+              <input
+                type="url"
+                value={buttonUrl}
+                onChange={e => setButtonUrl(e.target.value)}
+                placeholder="https://your-link.com"
+                className="px-3 py-2 border rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-[#DD2A7B]/50 bg-white dark:bg-gray-800 placeholder-gray-400 dark:placeholder-gray-500"
+                style={{ borderColor: 'var(--surface-3)' }}
+              />
+            </div>
+            {buttonText.trim() && buttonUrl.trim() && (
+              <div className="mt-3 rounded-lg p-3" style={{ background: 'var(--surface-1)' }}>
+                <p className="text-xs text-gray-500 mb-1">Preview</p>
+                <div className="rounded-xl px-3 py-2 max-w-[240px]" style={{ background: 'var(--surface-2)' }}>
+                  <p className="text-sm text-gray-900 dark:text-gray-100 mb-2">{dmMessage || 'Your message…'}</p>
+                  <div className="rounded-lg py-2 text-center text-sm font-medium text-gray-900 dark:text-gray-100" style={{ background: 'var(--surface-0)' }}>
+                    {buttonText}
+                  </div>
+                </div>
+              </div>
+            )}
+            <p className="text-xs text-gray-500 mt-2">Button label max 20 characters (Instagram limit).</p>
+          </div>
+
           {/* Multi-step flow: follow-up messages */}
           <div>
             {flowSteps.map((step, i) => (
@@ -1141,7 +1195,7 @@ function CreateAutomationModal({
                     onChange={e => setFlowSteps(prev => prev.map((s, j) => (j === i ? e.target.value : s)))}
                     rows={2}
                     maxLength={1000}
-                    placeholder="Sent right after the message above…"
+                    placeholder="Sent right after the previous message…"
                     className="flex-1 px-3 py-2 border rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-[#DD2A7B]/50 resize-none bg-white dark:bg-gray-800 placeholder-gray-400 dark:placeholder-gray-500"
                     style={{ borderColor: 'var(--surface-3)' }}
                   />
@@ -1166,7 +1220,7 @@ function CreateAutomationModal({
               </button>
             )}
             {flowSteps.length > 0 && (
-              <p className="text-xs text-gray-500 mt-1">Messages are sent in order. Multi-step flows require a paid plan.</p>
+              <p className="text-xs text-gray-500 mt-1">Sent immediately after the previous message, in order (about 1 second apart). Requires a paid plan.</p>
             )}
           </div>
 
