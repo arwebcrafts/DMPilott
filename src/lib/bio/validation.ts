@@ -131,7 +131,9 @@ export function sanitizeText(text: string | null | undefined, maxLength: number)
 export function validateSocialLinks(links: SocialLink[]): SocialLink[] {
   return links
     .filter((l) => SOCIAL_PLATFORMS.includes(l.platform as typeof SOCIAL_PLATFORMS[number]))
-    .filter((l) => validateUrl(l.url, true).valid)
+    // Enforce both a valid URL and that it matches the platform's domain, so a
+    // direct API call can't store an unrelated URL in a platform field.
+    .filter((l) => validateUrl(l.url, true).valid && validateSocialUrl(l.platform, l.url).valid)
     .slice(0, 6)
     .map((l) => ({ platform: l.platform, url: l.url.trim() }))
 }
@@ -168,7 +170,8 @@ export function validateTheme(theme: BioTheme): BioTheme {
     preset: preset as BioTheme['preset'],
     backgroundType: backgroundType as BackgroundType,
     backgroundColor: theme.backgroundColor?.slice(0, 200),
-    backgroundImage: validateUrl(theme.backgroundImage).valid ? theme.backgroundImage?.slice(0, 500) : undefined,
+    // Only keep the background image if it actually looks like an image URL.
+    backgroundImage: validateImageUrl(theme.backgroundImage).valid ? theme.backgroundImage?.slice(0, 500) : undefined,
     gradientFrom: theme.gradientFrom?.slice(0, 50),
     gradientTo: theme.gradientTo?.slice(0, 50),
     gradientAngle: Math.min(Math.max(theme.gradientAngle ?? 135, 0), 360),

@@ -92,9 +92,9 @@ export function ShareTab({ page }: ShareTabProps) {
         <div className="flex flex-col items-center gap-5">
           <div className="rounded-2xl overflow-hidden shadow-xl">
             {qrUrl ? (
-              <img src={qrUrl} alt={`QR code for @${page.slug}`} className="w-80 h-[400px]" />
+              <img src={qrUrl} alt={`QR code for @${page.slug}`} className="w-full max-w-[340px] h-auto" />
             ) : (
-              <div className="w-80 h-[400px] bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#8134AF] flex items-center justify-center">
+              <div className="w-full max-w-[340px] aspect-[560/680] bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#8134AF] flex items-center justify-center">
                 {qrLoading ? (
                   <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (

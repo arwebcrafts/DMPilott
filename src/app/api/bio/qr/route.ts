@@ -23,17 +23,20 @@ export async function GET(req: NextRequest) {
     const username = page.slug
     const displayName = page.display_name || `@${page.slug}`
 
+    // Bigger QR + a real quiet zone (margin) + pure black modules = reliably
+    // scannable. High error correction survives the branded framing.
     const qrSvgInner = await QRCode.toString(url, {
       type: 'svg',
-      margin: 0,
-      width: 280,
-      color: { dark: '#1a1a2e', light: '#ffffff' },
+      margin: 2,
+      width: 400,
+      errorCorrectionLevel: 'H',
+      color: { dark: '#000000', light: '#ffffff' },
     })
 
     const qrContent = qrSvgInner.replace(/<svg[^>]*>/, '').replace('</svg>', '')
 
     const brandedSvg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="500" height="600" viewBox="0 0 500 600">
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="680" viewBox="0 0 560 680">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#F58529"/>
@@ -44,14 +47,14 @@ export async function GET(req: NextRequest) {
       <feDropShadow dx="0" dy="4" stdDeviation="8" flood-opacity="0.25"/>
     </filter>
   </defs>
-  <rect width="500" height="600" rx="28" fill="url(#bg)"/>
-  <rect x="60" y="50" width="380" height="380" rx="20" fill="#ffffff" filter="url(#shadow)"/>
-  <g transform="translate(110, 100)">
+  <rect width="560" height="680" rx="28" fill="url(#bg)"/>
+  <rect x="40" y="50" width="480" height="480" rx="20" fill="#ffffff" filter="url(#shadow)"/>
+  <g transform="translate(80, 90)">
     ${qrContent}
   </g>
-  <text x="250" y="490" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="700">${displayName}</text>
-  <text x="250" y="520" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-family="system-ui, -apple-system, sans-serif" font-size="16">@${username}</text>
-  <text x="250" y="560" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-family="system-ui, -apple-system, sans-serif" font-size="12" letter-spacing="2">DMPILOT</text>
+  <text x="280" y="580" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="26" font-weight="700">${displayName}</text>
+  <text x="280" y="612" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-family="system-ui, -apple-system, sans-serif" font-size="17">@${username}</text>
+  <text x="280" y="650" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-family="system-ui, -apple-system, sans-serif" font-size="12" letter-spacing="2">DMPILOT</text>
 </svg>`
 
     const format = req.nextUrl.searchParams.get('format')
