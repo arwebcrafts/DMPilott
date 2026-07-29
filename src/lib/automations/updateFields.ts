@@ -41,6 +41,7 @@ export function mapUpdatableFields(body: Record<string, unknown>): Record<string
   assign('comment_reply_enabled', 'commentReplyEnabled', 'comment_reply_enabled')
   assign('comment_reply_text', 'commentReplyText', 'comment_reply_text')
   assign('ai_replies_enabled', 'aiRepliesEnabled', 'ai_replies_enabled')
+  assign('flow_steps', 'flowSteps', 'flow_steps')
   assign('send_delay_seconds', 'sendDelaySeconds', 'send_delay_seconds')
   assign('is_active', 'isActive', 'is_active')
 

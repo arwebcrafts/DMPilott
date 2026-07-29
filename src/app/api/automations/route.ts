@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getAuthenticatedUserPlan } from '@/lib/bio/planChecks'
 import { PLAN_LIMITS, canCreateAutomation, canUseAI, canUsePerPostTargeting } from '@/lib/planGating'
+import { parseFlowSteps } from '@/lib/automations/flow'
 
 // GET /api/automations - list user's automations
 export async function GET() {
@@ -50,6 +51,7 @@ export async function POST(request: Request) {
     mediaId,
     mediaCaption,
     aiRepliesEnabled,
+    flowSteps,
   } = body
 
   console.log('[Automation] Request body:', {
@@ -71,7 +73,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
 
-  const validTriggerTypes = ['any_comment', 'comment_keyword', 'dm_received', 'story_mention']
+  const validTriggerTypes = ['any_comment', 'comment_keyword', 'dm_received', 'story_mention', 'story_reply']
   if (!validTriggerTypes.includes(triggerType)) {
     console.log('[Automation] ❌ Invalid trigger type:', triggerType)
     return NextResponse.json({ error: 'Invalid trigger type' }, { status: 400 })
@@ -107,6 +109,15 @@ export async function POST(request: Request) {
   if (mediaId && !canUsePerPostTargeting(plan)) {
     return NextResponse.json(
       { error: 'Targeting a specific post requires the Creator plan or higher.', code: 'plan_limit' },
+      { status: 403 }
+    )
+  }
+
+  // Multi-step flows are a paid feature (free plan sends a single message).
+  const parsedFlow = parseFlowSteps(flowSteps)
+  if (parsedFlow.length > 1 && plan === 'free') {
+    return NextResponse.json(
+      { error: 'Multi-step flows are available on the Creator plan and up. Upgrade to build a flow.', code: 'plan_limit' },
       { status: 403 }
     )
   }
@@ -161,6 +172,7 @@ export async function POST(request: Request) {
       media_id: mediaId || null,
       media_caption: mediaCaption || null,
       ai_replies_enabled: aiRepliesEnabled || false,
+      flow_steps: parsedFlow.length > 0 ? parsedFlow : null,
     })
     .select('*, connected_accounts(username, platform)')
     .single()

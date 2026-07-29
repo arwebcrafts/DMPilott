@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { decryptToken } from '@/lib/encryption'
 import { getUserPlanUsage, incrementDmUsage } from '@/lib/planUsage'
+import { getAutomationMessages } from '@/lib/automations/flow'
 
 const INSTAGRAM_MESSAGING_API_VERSION = 'v25.0'
 const FACEBOOK_MESSAGING_API_VERSION = 'v21.0'
@@ -26,6 +27,7 @@ interface Automation {
   comment_reply_enabled: boolean
   comment_reply_text: string | null
   total_dms_sent: number
+  flow_steps: unknown
 }
 
 interface DmLogRow {
@@ -396,7 +398,7 @@ export async function processQueuedInstagramDmsForAccount(
     if (!automationCache.has(log.automation_id)) {
       const { data: automation } = await supabase
         .from('automations')
-        .select('id, is_active, dm_message, dm_video_url, comment_reply_enabled, comment_reply_text, total_dms_sent')
+        .select('id, is_active, dm_message, dm_video_url, comment_reply_enabled, comment_reply_text, total_dms_sent, flow_steps')
         .eq('id', log.automation_id)
         .single()
       automationCache.set(log.automation_id, (automation as Automation) || null)
@@ -501,6 +503,25 @@ export async function processQueuedInstagramDmsForAccount(
         if (planUsage) {
           monthlyRemaining -= 1
           await incrementDmUsage(supabase, resolvedAccount.user_id)
+        }
+
+        // Multi-step flow: send steps 2..N in order. The primary (step 1) was
+        // stored in dm_message_sent; extras come from the automation's flow.
+        const extraSteps = getAutomationMessages(automation, log.commenter_username, log.commenter_username).slice(1)
+        for (const stepMsg of extraSteps) {
+          if (monthlyRemaining <= 0) break
+          try {
+            await new Promise(r => setTimeout(r, 800))
+            if (platform === 'facebook') {
+              await sendFacebookDm({ account: resolvedAccount, recipientId: log.commenter_platform_id, message: stepMsg })
+            } else {
+              await sendInstagramDm({ account: resolvedAccount, recipientId: log.commenter_platform_id, message: stepMsg })
+            }
+            if (planUsage) { monthlyRemaining -= 1; await incrementDmUsage(supabase, resolvedAccount.user_id) }
+          } catch (stepErr: any) {
+            console.log('[Queue] Flow extra step failed:', stepErr?.message || stepErr)
+            break
+          }
         }
 
         processed++

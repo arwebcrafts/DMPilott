@@ -7,6 +7,7 @@ import {
 } from '@/lib/automations/updateFields'
 import { getAuthenticatedUserPlan } from '@/lib/bio/planChecks'
 import { canUseAI, canUsePerPostTargeting } from '@/lib/planGating'
+import { parseFlowSteps } from '@/lib/automations/flow'
 
 // PATCH /api/automations/[id] - update automation
 export async function PATCH(
@@ -75,6 +76,16 @@ export async function PATCH(
       { error: 'Targeting a specific post requires the Creator plan or higher.', code: 'plan_limit' },
       { status: 403 }
     )
+  }
+  if (updates.flow_steps !== undefined) {
+    const parsed = parseFlowSteps(updates.flow_steps)
+    if (parsed.length > 1 && plan === 'free') {
+      return NextResponse.json(
+        { error: 'Multi-step flows are available on the Creator plan and up. Upgrade to build a flow.', code: 'plan_limit' },
+        { status: 403 }
+      )
+    }
+    updates.flow_steps = parsed.length > 0 ? parsed : null
   }
 
   // Never let a user re-point an automation at an account they do not own.

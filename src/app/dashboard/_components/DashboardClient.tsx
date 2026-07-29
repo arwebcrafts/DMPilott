@@ -634,6 +634,14 @@ export default function DashboardClient({
               />
             </div>
           )}
+          {!isUnlimited && dmsPercent >= 80 && plan !== 'business' && (
+            <Link
+              href="/dashboard/billing"
+              className="mt-2 inline-block text-xs font-medium text-[#e85d3a] hover:underline"
+            >
+              {dmsPercent >= 100 ? 'Limit reached — upgrade to keep sending →' : 'Running low — upgrade for more DMs →'}
+            </Link>
+          )}
         </motion.div>
 
         {/* Active Automations */}

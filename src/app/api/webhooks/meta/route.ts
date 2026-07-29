@@ -10,6 +10,7 @@ import { getPageConfiguration, getInstagramGiftOffer, getInstagramUserInteractio
 import { generateAiReply } from '@/lib/ai/generateReply'
 import { getUserPlanUsage, incrementDmUsage } from '@/lib/planUsage'
 import { canUseAI } from '@/lib/planGating'
+import { getAutomationMessages } from '@/lib/automations/flow'
 
 console.log('[INIT] Webhook route module loaded')
 
@@ -91,6 +92,35 @@ async function claimDmLogRow(
     .eq('id', insertedId)
 
   return false
+}
+
+// Builds the "follow us" footer appended to the last message, or '' if none.
+function buildFollowLinks(automation: any): string {
+  if (!automation.follow_facebook_url && !automation.follow_instagram_url) return ''
+  let out = '\n\n'
+  if (automation.follow_facebook_url) out += `👉 Follow us on Facebook: ${automation.follow_facebook_url}\n`
+  if (automation.follow_instagram_url) out += `👉 Follow us on Instagram: ${automation.follow_instagram_url}`
+  return out
+}
+
+// Sends the trailing steps of a multi-step flow in order, spacing them slightly
+// so they arrive in sequence, and counting each toward the monthly budget.
+async function sendFlowExtraSteps(
+  extra: string[],
+  send: (message: string) => Promise<any>,
+  supabase: any,
+  userId: string
+) {
+  for (const msg of extra) {
+    try {
+      await new Promise(r => setTimeout(r, 800))
+      await send(msg)
+      await incrementDmUsage(supabase, userId)
+    } catch (err: any) {
+      console.log('[Flow] Extra step send failed:', err?.message || err)
+      break
+    }
+  }
 }
 
 // Track processed comment IDs to prevent duplicates
@@ -363,6 +393,23 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
     return
   }
 
+  // ── Story reply / story mention ──────────────────────────────────────────
+  // These arrive as messaging events (not comment changes): a story reply is a
+  // DM with message.reply_to.story; a story mention is a DM whose attachments
+  // include a story_mention. Route them to the story trigger types, which
+  // otherwise never fired at all.
+  const storyReply = message?.reply_to?.story
+  const storyMention = Array.isArray(message?.attachments)
+    && message.attachments.some((a: any) => a?.type === 'story_mention')
+
+  if (storyReply || storyMention) {
+    const triggerType = storyMention ? 'story_mention' : 'story_reply'
+    await handleInstagramStory({
+      account, senderId, messageText, messageId: messaging.message?.mid, triggerType, supabase,
+    })
+    return
+  }
+
   // Check for Instagram gift offer
   console.log('[IG Follow Button] Checking Instagram gift offer for account:', account.username)
   const giftOffer = await getInstagramGiftOffer(account.username)
@@ -477,32 +524,25 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
     return
   }
 
-  // Personalize message with variables
-  const baseMessage = (automation.dm_message || "Thanks for your message! We'll get back to you soon. 👋")
-    .replace(/{name}/g, senderUsername || 'there')
-    .replace(/{username}/g, senderUsername ? `@${senderUsername}` : 'user')
+  // Resolve the reply. Precedence: AI (handles the whole conversation) → a
+  // multi-step flow → the single dm_message. flowExtra holds steps 2..N.
+  const useAi = automation.ai_replies_enabled && igPlan && canUseAI(igPlan.plan)
+  const igMessages = useAi
+    ? [await generateAiReply({
+        instruction: automation.dm_message || '',
+        incomingText: messageText || '',
+        senderName: senderUsername,
+        fallback: (automation.dm_message || "Thanks for your message! We'll get back to you soon. 👋"),
+      })]
+    : getAutomationMessages(automation, senderUsername, senderUsername)
+  let autoReply = igMessages[0]
+  const igFlowExtra = igMessages.slice(1)
 
-  // AI reply — opt-in per automation, gated to plans that include AI, and only
-  // when an API key is configured. Falls back to the static message otherwise.
-  let autoReply = baseMessage
-  if (automation.ai_replies_enabled && igPlan && canUseAI(igPlan.plan)) {
-    autoReply = await generateAiReply({
-      instruction: automation.dm_message || '',
-      incomingText: messageText || '',
-      senderName: senderUsername,
-      fallback: baseMessage,
-    })
-  }
-
-  // Append follow links if configured
-  if (automation.follow_facebook_url || automation.follow_instagram_url) {
-    autoReply += '\n\n'
-    if (automation.follow_facebook_url) {
-      autoReply += `👉 Follow us on Facebook: ${automation.follow_facebook_url}\n`
-    }
-    if (automation.follow_instagram_url) {
-      autoReply += `👉 Follow us on Instagram: ${automation.follow_instagram_url}`
-    }
+  // Append follow links to the LAST message of the sequence.
+  const igFollowLinks = buildFollowLinks(automation)
+  if (igFollowLinks) {
+    if (igFlowExtra.length > 0) igFlowExtra[igFlowExtra.length - 1] += igFollowLinks
+    else autoReply += igFollowLinks
   }
 
   // Log to dm_logs BEFORE sending to ensure dedup works even if send is slow.
@@ -552,6 +592,9 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
     // Count against the user's monthly plan budget
     await incrementDmUsage(supabase, account.user_id)
 
+    // Send any additional flow steps in order.
+    await sendFlowExtraSteps(igFlowExtra, msg => sendInstagramDm({ account, recipientId: senderId, message: msg }), supabase, account.user_id)
+
     // Increment DM counter
     await supabase
       .from('automations')
@@ -565,6 +608,110 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
       .from('dm_logs')
       .update({ status: 'failed', error_message: sendErr?.message || 'Send failed' })
       .eq('id', insertedLog.id)
+  }
+}
+
+// Handles a story reply or story mention: matches an automation of the given
+// story trigger type for this account and sends its DM. Mirrors the dm_received
+// path (dedup by message id, monthly-limit check, usage increment).
+async function handleInstagramStory(params: {
+  account: any
+  senderId: string
+  messageText: string | undefined
+  messageId: string | undefined
+  triggerType: 'story_reply' | 'story_mention'
+  supabase: any
+}) {
+  const { account, senderId, messageText, messageId, triggerType, supabase } = params
+  console.log(`[Story] ${triggerType} from`, senderId, 'on account', account.username)
+
+  if (!messageId) {
+    console.log('[Story] No message mid — skipping to prevent duplicates')
+    return
+  }
+
+  const dedupKey = `mid:${messageId}`
+
+  const { data: automations } = await supabase
+    .from('automations')
+    .select('*')
+    .eq('account_id', account.id)
+    .eq('is_active', true)
+    .eq('trigger_type', triggerType)
+
+  if (!automations || automations.length === 0) {
+    console.log('[Story] No', triggerType, 'automation for this account')
+    return
+  }
+  const automation = automations[0]
+
+  // Monthly plan limit
+  const plan = await getUserPlanUsage(supabase, account.user_id)
+  if (plan && plan.remaining <= 0) {
+    console.log('[Story] Monthly DM limit reached for plan:', plan.plan)
+    return
+  }
+
+  // Fetch sender username for personalization (best effort)
+  let senderUsername: string | null = null
+  try {
+    const token = decryptToken(account.access_token_encrypted)
+    const res = await axios.get(`https://graph.instagram.com/${senderId}`, {
+      params: { fields: 'username', access_token: token },
+      timeout: 5000,
+    })
+    senderUsername = res.data?.username || null
+  } catch { /* non-fatal */ }
+
+  const baseMessage = (automation.dm_message || 'Thanks for sharing! 🙌')
+    .replace(/{name}/g, senderUsername || 'there')
+    .replace(/{username}/g, senderUsername ? `@${senderUsername}` : 'user')
+
+  let reply = baseMessage
+  if (automation.ai_replies_enabled && plan && canUseAI(plan.plan)) {
+    reply = await generateAiReply({
+      instruction: automation.dm_message || '',
+      incomingText: messageText || `(replied to your story)`,
+      senderName: senderUsername,
+      fallback: baseMessage,
+    })
+  }
+
+  // Insert-before-send with the unique index guarding against duplicates.
+  const { data: inserted, error: logError } = await supabase.from('dm_logs').insert({
+    automation_id: automation.id,
+    user_id: account.user_id,
+    account_id: account.id,
+    platform: 'instagram',
+    commenter_platform_id: senderId,
+    commenter_username: senderUsername,
+    dm_message_sent: reply,
+    comment_id: dedupKey,
+    status: 'pending',
+  }).select('id').single()
+
+  if (logError) {
+    if (isUniqueViolation(logError)) {
+      console.log('[Story] Duplicate delivery for', dedupKey, '- another invocation handling it')
+    } else {
+      console.error('[Story] Failed to log DM:', logError.code, logError.message)
+    }
+    return
+  }
+
+  if (inserted && !(await claimDmLogRow(supabase, inserted.id, dedupKey, '[Story]'))) {
+    return
+  }
+
+  try {
+    await sendInstagramDm({ account, recipientId: senderId, message: reply })
+    await supabase.from('dm_logs').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('id', inserted.id)
+    await incrementDmUsage(supabase, account.user_id)
+    await supabase.from('automations').update({ total_dms_sent: (automation.total_dms_sent || 0) + 1 }).eq('id', automation.id)
+    console.log('[Story] ✓ DM sent for', triggerType)
+  } catch (err: any) {
+    console.log('[Story] ❌ Send failed:', err?.message || err)
+    await supabase.from('dm_logs').update({ status: 'failed', error_message: err?.message || 'Send failed' }).eq('id', inserted.id)
   }
 }
 
@@ -1125,26 +1272,24 @@ async function handleFacebookMessage(pageId: string, messaging: any, supabase: a
     .replace(/{name}/g, senderName || 'there')
     .replace(/{username}/g, senderName || 'there')
 
-  // AI reply — opt-in per automation, plan-gated, key-gated. Falls back to static.
-  let autoReply = fbBaseMessage
-  if (automation.ai_replies_enabled && fbPlan && canUseAI(fbPlan.plan)) {
-    autoReply = await generateAiReply({
-      instruction: automation.dm_message || '',
-      incomingText: messageText || '',
-      senderName,
-      fallback: fbBaseMessage,
-    })
-  }
+  // Resolve reply: AI → flow → single message. fbFlowExtra holds steps 2..N.
+  const fbUseAi = automation.ai_replies_enabled && fbPlan && canUseAI(fbPlan.plan)
+  const fbMessages = fbUseAi
+    ? [await generateAiReply({
+        instruction: automation.dm_message || '',
+        incomingText: messageText || '',
+        senderName,
+        fallback: fbBaseMessage,
+      })]
+    : getAutomationMessages(automation, senderName, senderName)
+  let autoReply = fbMessages[0]
+  const fbFlowExtra = fbMessages.slice(1)
 
-  // Append follow links if configured
-  if (automation.follow_facebook_url || automation.follow_instagram_url) {
-    autoReply += '\n\n'
-    if (automation.follow_facebook_url) {
-      autoReply += `👉 Follow us on Facebook: ${automation.follow_facebook_url}\n`
-    }
-    if (automation.follow_instagram_url) {
-      autoReply += `👉 Follow us on Instagram: ${automation.follow_instagram_url}`
-    }
+  // Append follow links to the last message of the sequence.
+  const fbFollowLinks = buildFollowLinks(automation)
+  if (fbFollowLinks) {
+    if (fbFlowExtra.length > 0) fbFlowExtra[fbFlowExtra.length - 1] += fbFollowLinks
+    else autoReply += fbFollowLinks
   }
 
   // Log to dm_logs BEFORE sending to ensure dedup works even if send is slow.
@@ -1190,6 +1335,14 @@ async function handleFacebookMessage(pageId: string, messaging: any, supabase: a
 
       // Count against the user's monthly plan budget
       await incrementDmUsage(supabase, account.user_id)
+
+      // Send any additional flow steps in order.
+      await sendFlowExtraSteps(
+        fbFlowExtra,
+        async msg => { await sendFacebookDm({ account, recipientId: senderId, message: msg }) },
+        supabase,
+        account.user_id
+      )
 
       // Increment DM counter
       await supabase

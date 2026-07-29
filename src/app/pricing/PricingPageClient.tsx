@@ -62,7 +62,7 @@ export function PricingPageClient() {
       </div>
 
       {/* Plan cards */}
-      <div className="grid gap-6 md:grid-cols-3 max-w-5xl mx-auto px-4">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 max-w-6xl mx-auto px-4">
         {PRICING.map(plan => {
           const price = cycle === 'monthly' ? plan.monthly : plan.yearly
           const suffix = plan.monthly === 0 ? '' : cycle === 'monthly' ? '/mo' : '/yr'
@@ -114,7 +114,7 @@ export function PricingPageClient() {
       </div>
 
       {/* Comparison table */}
-      <div className="max-w-5xl mx-auto px-4 mt-20">
+      <div className="max-w-6xl mx-auto px-4 mt-20">
         <h2 className="text-2xl font-bold text-center mb-8 text-gray-900 dark:text-gray-100">Compare every feature</h2>
         <div className="overflow-x-auto rounded-xl border" style={{ borderColor: 'var(--surface-3)' }}>
           <table className="w-full text-left border-collapse min-w-[560px]">

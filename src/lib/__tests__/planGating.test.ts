@@ -17,7 +17,7 @@ describe('plan gating', () => {
   })
 
   it('no plan is unlimited', () => {
-    for (const plan of ['free', 'creator', 'pro'] as const) {
+    for (const plan of ['free', 'creator', 'pro', 'business'] as const) {
       expect(Number.isFinite(PLAN_LIMITS[plan].dmsPerMonth)).toBe(true)
       expect(Number.isFinite(PLAN_LIMITS[plan].maxAutomations)).toBe(true)
       expect(Number.isFinite(PLAN_LIMITS[plan].maxBioBlocks)).toBe(true)
@@ -45,8 +45,10 @@ describe('plan gating', () => {
   it('enforces the automation count limit', () => {
     expect(canCreateAutomation('free', 0)).toBe(true)
     expect(canCreateAutomation('free', 1)).toBe(false) // free = 1 automation
-    expect(canCreateAutomation('pro', 99)).toBe(true)
-    expect(canCreateAutomation('pro', 100)).toBe(false)
+    expect(canCreateAutomation('pro', 49)).toBe(true)
+    expect(canCreateAutomation('pro', 50)).toBe(false)
+    expect(canCreateAutomation('business', 199)).toBe(true)
+    expect(canCreateAutomation('business', 200)).toBe(false)
   })
 
   it('enforces the monthly DM limit', () => {
@@ -57,7 +59,7 @@ describe('plan gating', () => {
   })
 
   it('pricing config covers every plan and yearly saves ~2 months', () => {
-    expect(PRICING.map(p => p.key)).toEqual(['free', 'creator', 'pro'])
+    expect(PRICING.map(p => p.key)).toEqual(['free', 'creator', 'pro', 'business'])
     for (const p of PRICING) {
       if (p.monthly > 0) {
         // Yearly is billed as 10x monthly (two months free).

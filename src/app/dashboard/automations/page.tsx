@@ -25,6 +25,7 @@ interface Automation {
   comment_reply_enabled?: boolean
   comment_reply_text?: string | null
   ai_replies_enabled?: boolean
+  flow_steps?: { text: string }[] | null
   is_active: boolean
   total_dms_sent: number
   created_at: string
@@ -814,6 +815,13 @@ function CreateAutomationModal({
   const [keywords, setKeywords] = useState<string[]>(editData?.keywords || [])
   const [keywordInput, setKeywordInput] = useState('')
   const [dmMessage, setDmMessage] = useState(editData?.dm_message || '')
+  // Extra flow steps (messages 2..N). Step 1 is the DM Message above.
+  const [flowSteps, setFlowSteps] = useState<string[]>(
+    Array.isArray(editData?.flow_steps) && (editData!.flow_steps as any[]).length > 1
+      ? (editData!.flow_steps as any[]).slice(1).map((s: any) => (typeof s === 'string' ? s : s?.text || ''))
+      : []
+  )
+  const MAX_EXTRA_STEPS = 2 // 3 messages total
   const [followFacebookUrl, setFollowFacebookUrl] = useState(editData?.follow_facebook_url || '')
   const [followInstagramUrl, setFollowInstagramUrl] = useState(editData?.follow_instagram_url || '')
   const [commentReplyEnabled, setCommentReplyEnabled] = useState(
@@ -905,6 +913,10 @@ function CreateAutomationModal({
       commentReplyEnabled,
       commentReplyText: commentReplyEnabled ? commentReplyText : null,
       aiRepliesEnabled,
+      // Multi-step flow: step 1 is the DM message, plus any follow-up steps.
+      flowSteps: flowSteps.some(s => s.trim())
+        ? [dmMessage, ...flowSteps.filter(s => s.trim())].map(text => ({ text }))
+        : null,
       // Per-post targeting only applies to comment triggers; '' => whole account.
       mediaId: isCommentTrigger ? (mediaId || null) : null,
       mediaCaption: isCommentTrigger && mediaId
@@ -1012,7 +1024,9 @@ function CreateAutomationModal({
                 { value: 'comment_keyword', label: 'Keyword', icon: '💬' },
                 { value: 'any_comment', label: 'Any Comment', icon: '✉️' },
                 { value: 'dm_received', label: 'DM Reply', icon: '📩' },
-              ].map(opt => (
+                { value: 'story_reply', label: 'Story Reply', icon: '📖' },
+                { value: 'story_mention', label: 'Story Mention', icon: '🏷️' },
+              ].filter(opt => platform === 'instagram' || (opt.value !== 'story_reply' && opt.value !== 'story_mention')).map(opt => (
                 <button
                   key={opt.value}
                   type="button"
@@ -1112,6 +1126,48 @@ function CreateAutomationModal({
               </p>
               <span className="text-xs text-gray-600 dark:text-gray-300">{dmMessage.length}/1000</span>
             </div>
+          </div>
+
+          {/* Multi-step flow: follow-up messages */}
+          <div>
+            {flowSteps.map((step, i) => (
+              <div key={i} className="mb-2">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
+                  Follow-up message {i + 1}
+                </label>
+                <div className="flex gap-2">
+                  <textarea
+                    value={step}
+                    onChange={e => setFlowSteps(prev => prev.map((s, j) => (j === i ? e.target.value : s)))}
+                    rows={2}
+                    maxLength={1000}
+                    placeholder="Sent right after the message above…"
+                    className="flex-1 px-3 py-2 border rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-[#DD2A7B]/50 resize-none bg-white dark:bg-gray-800 placeholder-gray-400 dark:placeholder-gray-500"
+                    style={{ borderColor: 'var(--surface-3)' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setFlowSteps(prev => prev.filter((_, j) => j !== i))}
+                    className="self-start px-2 py-2 text-gray-400 hover:text-red-500"
+                    aria-label="Remove step"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+            {flowSteps.length < MAX_EXTRA_STEPS && (
+              <button
+                type="button"
+                onClick={() => setFlowSteps(prev => [...prev, ''])}
+                className="text-xs font-medium text-[#e85d3a] hover:underline flex items-center gap-1"
+              >
+                <Plus className="w-3 h-3" /> Add a follow-up message (build a flow)
+              </button>
+            )}
+            {flowSteps.length > 0 && (
+              <p className="text-xs text-gray-500 mt-1">Messages are sent in order. Multi-step flows require a paid plan.</p>
+            )}
           </div>
 
           {/* AI replies (DM auto-reply only) */}
