@@ -53,7 +53,38 @@ export async function GET() {
     aiKey: Boolean(process.env.ANTHROPIC_API_KEY),
   }
 
+  // Probe the schema by selecting each column the app depends on. A missing
+  // table/column surfaces as a PostgREST error, which is exactly the
+  // "did I run the SQL?" question users cannot otherwise answer.
+  async function schemaOk(table: string, column: string): Promise<boolean> {
+    const { error } = await service.from(table).select(column).limit(1)
+    return !error
+  }
+
+  const [hasWebhookEvents, hasMediaId, hasFlowSteps, hasButtonText, hasCommentId] =
+    await Promise.all([
+      schemaOk('webhook_events', 'id'),
+      schemaOk('automations', 'media_id'),
+      schemaOk('automations', 'flow_steps'),
+      schemaOk('automations', 'button_text'),
+      schemaOk('dm_logs', 'comment_id'),
+    ])
+
+  const dbReady = hasWebhookEvents && hasMediaId && hasFlowSteps && hasButtonText && hasCommentId
+
   const checks: Array<{ label: string; ok: boolean; hint?: string }> = [
+    {
+      label: 'Database is up to date',
+      ok: dbReady,
+      hint: 'Open Supabase → SQL Editor → New query, paste the contents of RUN_THIS_IN_SUPABASE.sql from the repo, and click Run. Missing: ' +
+        [
+          !hasCommentId && 'dm_logs.comment_id',
+          !hasWebhookEvents && 'webhook_events table',
+          !hasMediaId && 'automations.media_id',
+          !hasFlowSteps && 'automations.flow_steps',
+          !hasButtonText && 'automations.button_text',
+        ].filter(Boolean).join(', '),
+    },
     {
       label: 'App secret configured',
       ok: env.metaAppSecret || env.instagramAppSecret,
