@@ -14,6 +14,7 @@ import {
   sanitizeText,
   validateSocialLinks,
   validateTheme,
+  validateImageUrl,
 } from '@/lib/bio/validation'
 import { DEFAULT_BIO_THEME } from '@/lib/bio/types'
 
@@ -131,6 +132,13 @@ export async function PATCH(req: NextRequest) {
       updates.bio = sanitizeText(body.bio, 500)
     }
     if (body.avatar_url !== undefined) {
+      // Reject non-image URLs server-side (avatar must be an image).
+      if (body.avatar_url && body.avatar_url.trim()) {
+        const avatarCheck = validateImageUrl(body.avatar_url)
+        if (!avatarCheck.valid) {
+          return NextResponse.json({ error: avatarCheck.error || 'Invalid avatar image URL' }, { status: 400 })
+        }
+      }
       updates.avatar_url = sanitizeText(body.avatar_url, 500)
     }
     if (body.is_published !== undefined) {

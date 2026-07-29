@@ -147,9 +147,18 @@ export async function PATCH(req: NextRequest) {
     }
 
     const updates: Record<string, unknown> = {}
-    if (body.title !== undefined) updates.title = sanitizeText(body.title, 200)
+    if (body.title !== undefined) {
+      const cleanTitle = sanitizeText(body.title, 200)
+      // A link/product block must keep a title (BUG-010) — can't blank it out.
+      if (!cleanTitle && (existing.type === 'link' || existing.type === 'product')) {
+        return NextResponse.json({ error: 'Title is required' }, { status: 400 })
+      }
+      updates.title = cleanTitle
+    }
     if (body.url !== undefined) {
-      const urlCheck = validateUrl(body.url, false)
+      const isLinkish = existing.type === 'link' || existing.type === 'product'
+      // Link/product blocks require a valid URL (BUG-009) — no empty saves.
+      const urlCheck = validateUrl(body.url, isLinkish)
       if (!urlCheck.valid) {
         return NextResponse.json({ error: urlCheck.error }, { status: 400 })
       }
