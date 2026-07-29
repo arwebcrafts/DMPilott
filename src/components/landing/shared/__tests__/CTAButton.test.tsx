@@ -6,13 +6,13 @@ describe('CTAButton', () => {
     render(<CTAButton>Click me</CTAButton>)
     const button = screen.getByRole('button', { name: 'Click me' })
     expect(button).toBeInTheDocument()
-    expect(button).toHaveClass('bg-blue-600')
+    expect(button).toHaveClass('bg-slate-900', 'text-white')
   })
 
   it('renders with variant secondary', () => {
     render(<CTAButton variant="secondary">Secondary</CTAButton>)
     const button = screen.getByRole('button', { name: 'Secondary' })
-    expect(button).toHaveClass('bg-gray-900')
+    expect(button).toHaveClass('bg-gray-100', 'text-gray-900')
   })
 
   it('renders with variant outline', () => {

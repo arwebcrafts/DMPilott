@@ -1,5 +1,7 @@
 import axios from 'axios'
 import { decryptToken } from '@/lib/encryption'
+import { getUserPlanUsage, incrementDmUsage } from '@/lib/planUsage'
+import { getAutomationMessages } from '@/lib/automations/flow'
 
 const INSTAGRAM_MESSAGING_API_VERSION = 'v25.0'
 const FACEBOOK_MESSAGING_API_VERSION = 'v21.0'
@@ -25,6 +27,7 @@ interface Automation {
   comment_reply_enabled: boolean
   comment_reply_text: string | null
   total_dms_sent: number
+  flow_steps: unknown
 }
 
 interface DmLogRow {
@@ -68,42 +71,110 @@ function resolveInstagramCredentials(account: ConnectedAccount) {
   }
 }
 
+/**
+ * Instagram exposes messaging on two hosts and an account can be addressed by
+ * two different IDs, so the first send probes for the combination that works.
+ *
+ * Only errors that prove the request never reached the messaging queue are
+ * worth retrying on the next combination. Retrying after a timeout, a 5xx or a
+ * rate-limit means re-POSTing a message Meta may already have delivered — that
+ * is how one incoming DM turns into four identical replies.
+ */
+export function isWrongEndpointError(err: any): boolean {
+  const status = err?.response?.status
+  const apiError = err?.response?.data?.error
+  const code = apiError?.code
+  const type = apiError?.type
+  const message: string = apiError?.message || ''
+
+  // No response at all (timeout, socket hangup, DNS): the message may well have
+  // been delivered. Never retry these.
+  if (!err?.response) return false
+
+  if (status === 404) return true
+
+  if (status === 400 || status === 403) {
+    // (#100) Unsupported post request / Object with ID does not exist
+    if (code === 100 || type === 'GraphMethodException') return true
+    if (/unsupported (get|post) request/i.test(message)) return true
+    if (/does not exist|cannot be loaded|unknown path/i.test(message)) return true
+  }
+
+  return false
+}
+
+// Remembers the host + sender ID that last worked for an account, so warm
+// instances stop probing endpoints on every send.
+const resolvedEndpointCache = new Map<string, { host: string; accountId: string }>()
+
 async function sendWithHostAndIdFallback(
   account: ConnectedAccount,
   requestBody: Record<string, unknown>
 ) {
   const { accessToken, accountId: configuredAccountId, source } = resolveInstagramCredentials(account)
   console.log('[DM] Using token source:', source, '| account:', account.username)
+
+  const post = (host: string, accountId: string) =>
+    axios.post(`${host}/${INSTAGRAM_MESSAGING_API_VERSION}/${accountId}/messages`, requestBody, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      params: { access_token: accessToken },
+      timeout: 20000,
+    })
+
+  // Fast path: reuse the combination that already worked for this account.
+  const cached = resolvedEndpointCache.get(account.id)
+  if (cached) {
+    console.log('[DM] Using cached endpoint:', cached.host, cached.accountId)
+    try {
+      await post(cached.host, cached.accountId)
+      console.log('[DM] ✓ DM sent successfully via cached endpoint')
+      return
+    } catch (err: any) {
+      if (!isWrongEndpointError(err)) {
+        console.log('[DM] ✗ Send failed (not retrying):', err?.response?.data?.error?.message || err?.message)
+        throw err
+      }
+      console.log('[DM] Cached endpoint no longer valid, re-probing')
+      resolvedEndpointCache.delete(account.id)
+    }
+  }
+
   const tokenUserId = await getTokenUserId(accessToken)
-  const accountIdsToTry = [configuredAccountId, tokenUserId].filter(id => id && id !== configuredAccountId)
+  const accountIdsToTry = [configuredAccountId, tokenUserId]
+    .filter((id): id is string => Boolean(id))
+    .filter((id, idx, all) => all.indexOf(id) === idx)
 
   let lastError: any = null
-  console.log('[DM] Attempting to send DM with account IDs:', [configuredAccountId, ...accountIdsToTry])
+  console.log('[DM] Probing endpoints with account IDs:', accountIdsToTry)
 
-  for (const accountId of [configuredAccountId, ...accountIdsToTry]) {
-    if (!accountId) continue
+  for (const accountId of accountIdsToTry) {
     for (const host of INSTAGRAM_MESSAGING_HOSTS) {
-      const endpoint = `${host}/${INSTAGRAM_MESSAGING_API_VERSION}/${accountId}/messages`
-      console.log('[DM] Trying endpoint:', endpoint)
+      console.log('[DM] Trying endpoint:', host, accountId)
       try {
-        await axios.post(endpoint, requestBody, {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`,
-          },
-          params: { access_token: accessToken },
-          timeout: 10000,
-        })
-        console.log('[DM] ✓ DM sent successfully via', endpoint)
+        await post(host, accountId)
+        console.log('[DM] ✓ DM sent successfully via', host, accountId)
+        resolvedEndpointCache.set(account.id, { host, accountId })
         return
       } catch (err: any) {
-        console.log('[DM] ✗ Failed via', endpoint, ':', err?.response?.data?.error?.message || err?.message)
+        const reason = err?.response?.data?.error?.message || err?.message
         lastError = err
+
+        if (!isWrongEndpointError(err)) {
+          // Ambiguous or terminal failure — stop here rather than risk sending
+          // the same message again through another endpoint.
+          console.log('[DM] ✗ Aborting fallback, error is not an endpoint mismatch:', reason)
+          throw err
+        }
+
+        console.log('[DM] ✗ Wrong endpoint', host, accountId, ':', reason)
       }
     }
   }
 
-  console.log('[DM] ✗ All attempts failed, throwing error')
+  console.log('[DM] ✗ No working endpoint found, throwing last error')
   throw lastError
 }
 
@@ -269,6 +340,15 @@ export async function processQueuedInstagramDmsForAccount(
     return { processed: 0, remainingQuota: 0 }
   }
 
+  // ── Monthly plan limit ──────────────────────────────────────────────────
+  // Separate from the per-hour Meta limit above: this is the subscription cap.
+  const planUsage = await getUserPlanUsage(supabase, resolvedAccount.user_id)
+  let monthlyRemaining = planUsage ? planUsage.remaining : Number.POSITIVE_INFINITY
+  if (planUsage && monthlyRemaining <= 0) {
+    console.log('[Queue] Monthly DM limit reached for plan:', planUsage.plan)
+    return { processed: 0, remainingQuota }
+  }
+
   const { data: queuedLogs } = await supabase
     .from('dm_logs')
     .select('id, automation_id, commenter_platform_id, commenter_username, dm_message_sent, comment_id, retry_count')
@@ -286,6 +366,12 @@ export async function processQueuedInstagramDmsForAccount(
   for (const rawLog of (queuedLogs || [])) {
     const log = rawLog as DmLogRow
     console.log('[Queue] Processing log:', log.id, 'for commenter:', log.commenter_username)
+
+    // Stop once the plan's monthly budget is exhausted; leave the rest queued.
+    if (monthlyRemaining <= 0) {
+      console.log('[Queue] Monthly DM budget exhausted mid-run; leaving remainder queued')
+      break
+    }
 
     const { data: claimed } = await supabase
       .from('dm_logs')
@@ -312,7 +398,7 @@ export async function processQueuedInstagramDmsForAccount(
     if (!automationCache.has(log.automation_id)) {
       const { data: automation } = await supabase
         .from('automations')
-        .select('id, is_active, dm_message, dm_video_url, comment_reply_enabled, comment_reply_text, total_dms_sent')
+        .select('id, is_active, dm_message, dm_video_url, comment_reply_enabled, comment_reply_text, total_dms_sent, flow_steps')
         .eq('id', log.automation_id)
         .single()
       automationCache.set(log.automation_id, (automation as Automation) || null)
@@ -410,6 +496,31 @@ export async function processQueuedInstagramDmsForAccount(
           } catch (replyErr: any) {
             // Public comment reply is best effort and should not fail DM delivery.
             console.log('[Queue] Comment reply failed:', replyErr.response?.data?.error?.message || replyErr.message)
+          }
+        }
+
+        // Count this send against the user's monthly plan budget.
+        if (planUsage) {
+          monthlyRemaining -= 1
+          await incrementDmUsage(supabase, resolvedAccount.user_id)
+        }
+
+        // Multi-step flow: send steps 2..N in order. The primary (step 1) was
+        // stored in dm_message_sent; extras come from the automation's flow.
+        const extraSteps = getAutomationMessages(automation, log.commenter_username, log.commenter_username).slice(1)
+        for (const stepMsg of extraSteps) {
+          if (monthlyRemaining <= 0) break
+          try {
+            await new Promise(r => setTimeout(r, 800))
+            if (platform === 'facebook') {
+              await sendFacebookDm({ account: resolvedAccount, recipientId: log.commenter_platform_id, message: stepMsg })
+            } else {
+              await sendInstagramDm({ account: resolvedAccount, recipientId: log.commenter_platform_id, message: stepMsg })
+            }
+            if (planUsage) { monthlyRemaining -= 1; await incrementDmUsage(supabase, resolvedAccount.user_id) }
+          } catch (stepErr: any) {
+            console.log('[Queue] Flow extra step failed:', stepErr?.message || stepErr)
+            break
           }
         }
 

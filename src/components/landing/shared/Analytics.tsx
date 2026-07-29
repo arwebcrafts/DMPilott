@@ -25,6 +25,9 @@ export function Analytics({ measurementId }: AnalyticsProps) {
 
     window.dataLayer = window.dataLayer || [];
     window.gtag = function gtag() {
+      // Google's official snippet pushes the `arguments` object itself; gtag.js
+      // reads it as an Arguments, so rest parameters must not be used here.
+      // eslint-disable-next-line prefer-rest-params
       window.dataLayer?.push(arguments);
     };
 

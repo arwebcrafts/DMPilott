@@ -7,15 +7,25 @@ import { PLAN_LIMITS } from '@/lib/planGating'
 import { Plus, Edit2, Trash2, MoreHorizontal, Zap, MessageSquare, ToggleLeft, ToggleRight } from 'lucide-react'
 import { InstagramIcon, FacebookIcon } from '@/components/ui/brand-icons'
 import { motion } from 'framer-motion'
+import Link from 'next/link'
 
 interface Automation {
   id: string
   name: string
+  account_id?: string
   platform: 'instagram' | 'facebook'
   trigger_type: string
   keywords: string[]
   dm_message: string
   dm_video_url?: string | null
+  media_id?: string | null
+  media_caption?: string | null
+  follow_facebook_url?: string | null
+  follow_instagram_url?: string | null
+  comment_reply_enabled?: boolean
+  comment_reply_text?: string | null
+  ai_replies_enabled?: boolean
+  flow_steps?: { text: string }[] | null
   is_active: boolean
   total_dms_sent: number
   created_at: string
@@ -532,7 +542,7 @@ export default function AutomationsPage() {
           </p>
           {accounts.length === 0 ? (
             <p className="text-sm text-gray-600 dark:text-gray-300">
-              <a href="/dashboard/accounts" className="text-[#e85d3a] hover:underline">Connect an account</a> first
+              <Link href="/dashboard/accounts" className="text-[#e85d3a] hover:underline">Connect an account</Link> first
             </p>
           ) : (
             <motion.button
@@ -588,8 +598,18 @@ export default function AutomationsPage() {
                 </div>
 
                 <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">{auto.name}</h3>
-                <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">
+                <p className="text-xs text-gray-600 dark:text-gray-300 mb-2">
                   @{auto.connected_accounts?.username || 'account'}
+                </p>
+                <p className="text-xs mb-3">
+                  <span
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+                    style={{ background: 'var(--surface-2)', color: 'var(--text-secondary)' }}
+                  >
+                    {auto.media_id
+                      ? `🎯 ${auto.media_caption ? auto.media_caption.slice(0, 28) : 'Specific post'}`
+                      : '🌐 Whole account'}
+                  </span>
                 </p>
 
                 {/* Keywords */}
@@ -795,21 +815,61 @@ function CreateAutomationModal({
   const [keywords, setKeywords] = useState<string[]>(editData?.keywords || [])
   const [keywordInput, setKeywordInput] = useState('')
   const [dmMessage, setDmMessage] = useState(editData?.dm_message || '')
-  const [followFacebookUrl, setFollowFacebookUrl] = useState('')
-  const [followInstagramUrl, setFollowInstagramUrl] = useState('')
-  const [commentReplyEnabled, setCommentReplyEnabled] = useState(true)
-  const [commentReplyText, setCommentReplyText] = useState('Check your DMs! 📩')
+  // Extra flow steps (messages 2..N). Step 1 is the DM Message above.
+  const [flowSteps, setFlowSteps] = useState<string[]>(
+    Array.isArray(editData?.flow_steps) && (editData!.flow_steps as any[]).length > 1
+      ? (editData!.flow_steps as any[]).slice(1).map((s: any) => (typeof s === 'string' ? s : s?.text || ''))
+      : []
+  )
+  const MAX_EXTRA_STEPS = 2 // 3 messages total
+  const [followFacebookUrl, setFollowFacebookUrl] = useState(editData?.follow_facebook_url || '')
+  const [followInstagramUrl, setFollowInstagramUrl] = useState(editData?.follow_instagram_url || '')
+  const [commentReplyEnabled, setCommentReplyEnabled] = useState(
+    editData ? editData.comment_reply_enabled ?? false : true
+  )
+  const [commentReplyText, setCommentReplyText] = useState(
+    editData?.comment_reply_text || 'Check your DMs! 📩'
+  )
+  const [aiRepliesEnabled, setAiRepliesEnabled] = useState(editData?.ai_replies_enabled ?? false)
   const [loading, setLoading] = useState(false)
-  const [accountId, setAccountId] = useState('')
-  const supabase = createClient()
+  const [error, setError] = useState<string | null>(null)
+  // When editing, keep the automation pointed at the account it already uses.
+  const [accountId, setAccountId] = useState(editData?.account_id || '')
+  // Per-post targeting. '' means "whole account".
+  const [mediaId, setMediaId] = useState<string>(editData?.media_id || '')
+  const [mediaOptions, setMediaOptions] = useState<Array<{ id: string; caption: string; mediaType?: string }>>([])
+  const [mediaLoading, setMediaLoading] = useState(false)
 
   const availableAccounts = platform === 'instagram' ? igAccounts : fbAccounts
+  const isCommentTrigger = triggerType === 'comment_keyword' || triggerType === 'any_comment'
 
+  // Pick a sensible account whenever the current selection is not valid for the
+  // chosen platform (first render, or after switching Instagram <-> Facebook).
   useEffect(() => {
-    if (availableAccounts.length > 0 && !accountId) {
+    if (availableAccounts.length === 0) return
+    if (!availableAccounts.some(a => a.id === accountId)) {
       setAccountId(availableAccounts[0].id)
     }
-  }, [platform, availableAccounts])
+  }, [platform, availableAccounts, accountId])
+
+  // Load the account's recent posts so the user can target one specific post.
+  useEffect(() => {
+    if (!accountId || !isCommentTrigger) {
+      setMediaOptions([])
+      return
+    }
+    let cancelled = false
+    setMediaLoading(true)
+    fetch(`/api/accounts/${accountId}/media`)
+      .then(res => res.json())
+      .then(data => {
+        if (cancelled) return
+        setMediaOptions(Array.isArray(data.media) ? data.media : [])
+      })
+      .catch(() => { if (!cancelled) setMediaOptions([]) })
+      .finally(() => { if (!cancelled) setMediaLoading(false) })
+    return () => { cancelled = true }
+  }, [accountId, isCommentTrigger])
 
   function addKeyword() {
     const kw = keywordInput.trim().toUpperCase()
@@ -821,8 +881,20 @@ function CreateAutomationModal({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!accountId || !dmMessage) return
-    if (triggerType === 'comment_keyword' && keywords.length === 0) return
+    setError(null)
+
+    if (!accountId) {
+      setError('Select the account this automation should run on.')
+      return
+    }
+    if (!dmMessage.trim()) {
+      setError('Write the DM message you want to send.')
+      return
+    }
+    if (triggerType === 'comment_keyword' && keywords.length === 0) {
+      setError('Add at least one keyword for a keyword trigger.')
+      return
+    }
 
     setLoading(true)
 
@@ -840,6 +912,16 @@ function CreateAutomationModal({
       followInstagramUrl: followInstagramUrl.trim() || null,
       commentReplyEnabled,
       commentReplyText: commentReplyEnabled ? commentReplyText : null,
+      aiRepliesEnabled,
+      // Multi-step flow: step 1 is the DM message, plus any follow-up steps.
+      flowSteps: flowSteps.some(s => s.trim())
+        ? [dmMessage, ...flowSteps.filter(s => s.trim())].map(text => ({ text }))
+        : null,
+      // Per-post targeting only applies to comment triggers; '' => whole account.
+      mediaId: isCommentTrigger ? (mediaId || null) : null,
+      mediaCaption: isCommentTrigger && mediaId
+        ? (mediaOptions.find(m => m.id === mediaId)?.caption?.slice(0, 140) || null)
+        : null,
     }
 
     console.log('[Client]', editData ? 'Updating' : 'Creating', 'automation for account:', {
@@ -849,22 +931,28 @@ function CreateAutomationModal({
       platform,
     })
 
-    const res = await fetch(editData ? `/api/automations/${editData.id}` : '/api/automations', {
-      method: editData ? 'PATCH' : 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
+    try {
+      const res = await fetch(editData ? `/api/automations/${editData.id}` : '/api/automations', {
+        method: editData ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
 
-    const data = await res.json()
+      // The API can return an HTML error page (gateway timeout, crash), so
+      // never assume the body parses as JSON.
+      const data = await res.json().catch(() => ({}))
 
-    if (res.ok) {
-      console.log('[Client] ✓ Automation', editData ? 'updated' : 'created', 'successfully:', data.automation)
+      if (!res.ok) {
+        throw new Error(data.error || `Failed to ${editData ? 'update' : 'create'} automation`)
+      }
+
       onCreated(data.automation)
-    } else {
-      console.error('[Client] ❌ Failed to', editData ? 'update' : 'create', 'automation:', data.error)
-      alert(data.error || `Failed to ${editData ? 'update' : 'create'} automation`)
+    } catch (err: any) {
+      console.error('[Client] Automation save failed:', err)
+      setError(err?.message || 'Something went wrong. Please try again.')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (
@@ -936,7 +1024,9 @@ function CreateAutomationModal({
                 { value: 'comment_keyword', label: 'Keyword', icon: '💬' },
                 { value: 'any_comment', label: 'Any Comment', icon: '✉️' },
                 { value: 'dm_received', label: 'DM Reply', icon: '📩' },
-              ].map(opt => (
+                { value: 'story_reply', label: 'Story Reply', icon: '📖' },
+                { value: 'story_mention', label: 'Story Mention', icon: '🏷️' },
+              ].filter(opt => platform === 'instagram' || (opt.value !== 'story_reply' && opt.value !== 'story_mention')).map(opt => (
                 <button
                   key={opt.value}
                   type="button"
@@ -953,6 +1043,38 @@ function CreateAutomationModal({
               ))}
             </div>
           </div>
+
+          {/* Apply to: whole account or one specific post (comment triggers only) */}
+          {isCommentTrigger && (
+            <div>
+              <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Apply to</label>
+              <select
+                value={mediaId}
+                onChange={e => setMediaId(e.target.value)}
+                disabled={mediaLoading}
+                className="w-full px-3 py-2 border rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-[#DD2A7B]/50 bg-white dark:bg-gray-800 disabled:opacity-60"
+                style={{ borderColor: 'var(--surface-3)' }}
+              >
+                <option value="">All posts (whole account)</option>
+                {editData?.media_id && !mediaOptions.some(m => m.id === editData.media_id) && (
+                  <option value={editData.media_id}>
+                    {editData.media_caption ? `${editData.media_caption.slice(0, 60)}…` : `Post ${editData.media_id}`}
+                  </option>
+                )}
+                {mediaOptions.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {(m.caption?.trim()?.slice(0, 60) || `Untitled ${m.mediaType || 'post'}`)}
+                    {m.caption && m.caption.length > 60 ? '…' : ''}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
+                {mediaLoading
+                  ? 'Loading your recent posts…'
+                  : 'Choose a specific post to run this automation only on that post, or keep "All posts" for the whole account.'}
+              </p>
+            </div>
+          )}
 
           {/* Keywords (only for comment_keyword) */}
           {triggerType === 'comment_keyword' && (
@@ -1005,6 +1127,71 @@ function CreateAutomationModal({
               <span className="text-xs text-gray-600 dark:text-gray-300">{dmMessage.length}/1000</span>
             </div>
           </div>
+
+          {/* Multi-step flow: follow-up messages */}
+          <div>
+            {flowSteps.map((step, i) => (
+              <div key={i} className="mb-2">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
+                  Follow-up message {i + 1}
+                </label>
+                <div className="flex gap-2">
+                  <textarea
+                    value={step}
+                    onChange={e => setFlowSteps(prev => prev.map((s, j) => (j === i ? e.target.value : s)))}
+                    rows={2}
+                    maxLength={1000}
+                    placeholder="Sent right after the message above…"
+                    className="flex-1 px-3 py-2 border rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-[#DD2A7B]/50 resize-none bg-white dark:bg-gray-800 placeholder-gray-400 dark:placeholder-gray-500"
+                    style={{ borderColor: 'var(--surface-3)' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setFlowSteps(prev => prev.filter((_, j) => j !== i))}
+                    className="self-start px-2 py-2 text-gray-400 hover:text-red-500"
+                    aria-label="Remove step"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+            {flowSteps.length < MAX_EXTRA_STEPS && (
+              <button
+                type="button"
+                onClick={() => setFlowSteps(prev => [...prev, ''])}
+                className="text-xs font-medium text-[#e85d3a] hover:underline flex items-center gap-1"
+              >
+                <Plus className="w-3 h-3" /> Add a follow-up message (build a flow)
+              </button>
+            )}
+            {flowSteps.length > 0 && (
+              <p className="text-xs text-gray-500 mt-1">Messages are sent in order. Multi-step flows require a paid plan.</p>
+            )}
+          </div>
+
+          {/* AI replies (DM auto-reply only) */}
+          {triggerType === 'dm_received' && (
+            <div className="rounded-lg border p-3" style={{ borderColor: 'var(--surface-3)' }}>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  AI replies <span className="text-xs font-normal text-gray-500">(beta)</span>
+                </label>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={aiRepliesEnabled}
+                  onClick={() => setAiRepliesEnabled(v => !v)}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${aiRepliesEnabled ? 'bg-[#22c55e]' : 'bg-gray-300 dark:bg-gray-600'}`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${aiRepliesEnabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                </button>
+              </div>
+              <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
+                Let AI write a personalized reply based on the incoming message, using your DM message above as the brand voice. Requires an AI API key to be configured; otherwise your DM message is sent as-is.
+              </p>
+            </div>
+          )}
 
           {/* Follow Links */}
           {triggerType === 'dm_received' && (
@@ -1074,6 +1261,15 @@ function CreateAutomationModal({
             </div>
           )}
 
+          {error && (
+            <div
+              role="alert"
+              className="rounded-lg border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/40 px-3 py-2 text-sm text-red-700 dark:text-red-300"
+            >
+              {error}
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex gap-3 pt-2">
             <button
@@ -1090,7 +1286,7 @@ function CreateAutomationModal({
               className="flex-1 py-2.5 rounded-lg text-sm font-medium text-white disabled:opacity-50"
               style={{ background: 'var(--accent)' }}
             >
-              {loading ? (editData ? 'Updating...' : 'Creating...') : (editData ? 'Update Automation' : 'Create Automation')}
+              {loading ? (editData ? 'Updating…' : 'Creating…') : (editData ? 'Update Automation' : 'Create Automation')}
             </button>
           </div>
         </form>

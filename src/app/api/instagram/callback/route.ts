@@ -230,6 +230,35 @@ export async function GET(request: Request) {
       }
     }
 
+    // Enforce the plan's connected-account limit — but never block reconnecting
+    // an account the user already has (upsert), only genuinely new ones.
+    {
+      const { PLAN_LIMITS } = await import('@/lib/planGating')
+      const { data: planRow } = await supabase
+        .from('users')
+        .select('plan')
+        .eq('id', stateData.userId)
+        .maybeSingle()
+      const plan = (planRow?.plan as 'free' | 'creator' | 'pro') || 'free'
+
+      const { data: existingAccounts } = await supabase
+        .from('connected_accounts')
+        .select('platform_account_id')
+        .eq('user_id', stateData.userId)
+        .eq('is_active', true)
+
+      const already = (existingAccounts || []).some(
+        (a: any) => a.platform_account_id === platformAccountId
+      )
+      if (!already && (existingAccounts?.length || 0) >= PLAN_LIMITS[plan].maxAccounts) {
+        console.log('[Instagram Callback] Account limit reached for plan:', plan)
+        return buildAccountsRedirect(
+          { error: 'plan_limit', message: `Your ${plan} plan allows ${PLAN_LIMITS[plan].maxAccounts} connected account(s). Upgrade to add more.`, platform: 'instagram' },
+          stateData
+        )
+      }
+    }
+
     const encryptedToken = encryptToken(accessToken)
     console.log('[Instagram Callback] Token encrypted, saving to database...')
 

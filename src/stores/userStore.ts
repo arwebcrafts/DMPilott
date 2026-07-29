@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { createClient } from '@/lib/supabase/client'
-import type { Plan, PlanLimits } from '@/lib/planGating'
+import { PLAN_LIMITS, type Plan, type PlanLimits } from '@/lib/planGating'
 
 interface User {
   id: string
@@ -38,20 +38,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
   user: null,
   accounts: [],
   isLoading: true,
-  planLimits: {
-    dmsPerMonth: 300,
-    maxAccounts: 1,
-    maxGiveaways: 0,
-    analyticsDays: 7,
-    hasAI: false,
-    hasEmailLeads: false,
-    hasAPI: false,
-    maxBioBlocks: 5,
-    maxBioSocialLinks: 3,
-    bioThemePresets: 2,
-    maxBioProducts: 0,
-    hasBioEmailCapture: false,
-  },
+  planLimits: PLAN_LIMITS.free,
 
   fetchUser: async () => {
     const supabase = createClient()

@@ -27,6 +27,18 @@ export async function GET(
       return NextResponse.json({ error: 'No URL configured' }, { status: 400 })
     }
 
+    // Defense in depth: only ever redirect to http(s), regardless of how the
+    // row was stored. Blocks javascript:/data: and other unsafe schemes.
+    let target: URL
+    try {
+      target = new URL(block.url)
+      if (target.protocol !== 'http:' && target.protocol !== 'https:') {
+        throw new Error('unsafe protocol')
+      }
+    } catch {
+      return NextResponse.json({ error: 'Invalid URL' }, { status: 400 })
+    }
+
     const page = await getBioPageById(block.bio_page_id, service)
     if (!page || !page.is_published) {
       return NextResponse.json({ error: 'Page not found' }, { status: 404 })
@@ -38,7 +50,7 @@ export async function GET(
     await recordBioClick(page.id, blockId, 'click', { referrer, userAgent }, service)
     await incrementBlockClickCount(blockId, service)
 
-    return NextResponse.redirect(block.url, 302)
+    return NextResponse.redirect(target.toString(), 302)
   } catch (error) {
     console.error('[Bio Click]', error)
     return NextResponse.json({ error: 'Redirect failed' }, { status: 500 })

@@ -3,12 +3,12 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { decryptToken } from '@/lib/encryption'
 import axios from 'axios'
 
+import { assertCronRequest } from '@/lib/cronAuth'
+
 // Called by Vercel Cron to fetch Instagram comments and queue DMs
 export async function GET(request: Request) {
-  const authHeader = request.headers.get('authorization')
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const unauthorized = assertCronRequest(request)
+  if (unauthorized) return unauthorized
 
   const supabase = createServiceClient()
   console.log('[Fetch Comments] Starting comment fetch...')
@@ -100,43 +100,74 @@ export async function GET(request: Request) {
                 continue // Already processed
               }
 
-              // Check if comment matches any automation keywords
-              for (const automation of automations) {
-                if (automation.trigger_type !== 'comment_keyword') {
+              // Post-specific automations take priority over whole-account ones.
+              const candidates = [...automations].sort((a: any, b: any) =>
+                (a.media_id ? 0 : 1) - (b.media_id ? 0 : 1)
+              )
+
+              for (const automation of candidates) {
+                // Per-post targeting: only run whole-account automations or ones
+                // bound to exactly this media.
+                if (automation.media_id && String(automation.media_id) !== String(media.id)) {
                   continue
                 }
 
-                const keywords = automation.keywords || []
-                const commentUpper = commentText.toUpperCase()
+                let matchedKeyword: string | null = null
 
-                const matchedKeyword = keywords.find((kw: string) =>
-                  commentUpper.includes(kw.toUpperCase())
-                )
-
-                if (matchedKeyword) {
-                  console.log(`[Fetch Comments] Comment matched keyword "${matchedKeyword}"`)
-
-                  // Queue DM for sending
-                  await supabase
-                    .from('dm_logs')
-                    .insert({
-                      automation_id: automation.id,
-                      account_id: account.id,
-                      platform: 'instagram',
-                      commenter_platform_id: commenterId,
-                      commenter_username: commenterUsername,
-                      comment_id: commentId,
-                      comment_text: commentText,
-                      keyword_matched: matchedKeyword,
-                      dm_message_sent: automation.dm_message,
-                      status: 'queued',
-                      created_at: new Date().toISOString(),
-                    })
-
-                  totalCommentsProcessed++
-                  console.log(`[Fetch Comments] Queued DM for commenter ${commenterUsername}`)
-                  break // Only queue once per comment
+                if (automation.trigger_type === 'any_comment') {
+                  matchedKeyword = null // matches, no specific keyword
+                } else if (automation.trigger_type === 'comment_keyword') {
+                  const keywords: string[] = automation.keywords || []
+                  const commentLower = (commentText || '').toLowerCase().trim()
+                  const found = keywords.find((kw: string) => {
+                    try {
+                      const escaped = kw.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+                      return new RegExp(`\\b${escaped}\\b`, 'i').test(commentLower)
+                    } catch {
+                      return commentLower === kw.toLowerCase()
+                    }
+                  })
+                  if (!found) continue
+                  matchedKeyword = found
+                } else {
+                  continue
                 }
+
+                console.log(`[Fetch Comments] Comment matched automation "${automation.name}"`)
+
+                const personalizedMessage = (automation.dm_message || '')
+                  .replace(/{name}/g, commenterUsername || 'there')
+                  .replace(/{username}/g, '@' + (commenterUsername || 'user'))
+
+                // Queue DM for sending. Must include the NOT NULL user_id and use
+                // only real dm_logs columns, or the insert fails silently.
+                const { error: insertError } = await supabase
+                  .from('dm_logs')
+                  .insert({
+                    automation_id: automation.id,
+                    user_id: account.user_id,
+                    account_id: account.id,
+                    platform: 'instagram',
+                    post_id: media.id,
+                    commenter_platform_id: commenterId,
+                    commenter_username: commenterUsername,
+                    comment_id: commentId,
+                    keyword_matched: matchedKeyword,
+                    dm_message_sent: personalizedMessage,
+                    status: 'queued',
+                  })
+
+                if (insertError) {
+                  // Unique violation = already queued by the webhook; not an error.
+                  if (insertError.code !== '23505') {
+                    console.error('[Fetch Comments] Failed to queue DM:', insertError.message)
+                  }
+                  break
+                }
+
+                totalCommentsProcessed++
+                console.log(`[Fetch Comments] Queued DM for commenter ${commenterUsername}`)
+                break // Only queue once per comment
               }
             }
           } catch (commentErr: any) {

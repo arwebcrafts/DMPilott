@@ -1,15 +1,12 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
-// @ts-ignore
 import Stripe from 'stripe'
 
 export async function POST(request: Request) {
-  // @ts-ignore
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-03-25.dahlia' })
   const body = await request.text()
   const signature = request.headers.get('stripe-signature')!
 
-  // @ts-ignore
   let event: Stripe.Event
 
   try {
@@ -27,7 +24,6 @@ export async function POST(request: Request) {
 
   switch (event.type) {
     case 'checkout.session.completed': {
-      // @ts-ignore
       const session = event.data.object as Stripe.Checkout.Session
       const userId = session.metadata?.userId
       const plan = session.metadata?.plan as 'creator' | 'pro'
@@ -53,7 +49,6 @@ export async function POST(request: Request) {
     }
 
     case 'customer.subscription.updated': {
-      // @ts-ignore
       const sub = event.data.object as Stripe.Subscription & {
         current_period_start?: number
         current_period_end?: number
@@ -82,7 +77,6 @@ export async function POST(request: Request) {
     }
 
     case 'customer.subscription.deleted': {
-      // @ts-ignore
       const sub = event.data.object as Stripe.Subscription
       const userId = sub.metadata?.userId
 
@@ -94,7 +88,6 @@ export async function POST(request: Request) {
     }
 
     case 'invoice.payment_failed': {
-      // @ts-ignore
       const invoice = event.data.object as Stripe.Invoice
       const customerId = invoice.customer as string
 
@@ -111,7 +104,6 @@ export async function POST(request: Request) {
     }
 
     case 'invoice.payment_succeeded': {
-      // @ts-ignore
       const invoice = event.data.object as Stripe.Invoice
       const customerId = invoice.customer as string
 

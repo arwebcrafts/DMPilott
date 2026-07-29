@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { Image, Link2, Loader2, Upload } from 'lucide-react'
+import { Image as ImageIcon, Link2, Loader2, Upload } from 'lucide-react'
 
 interface BioImageFieldProps {
   label: string
@@ -47,7 +47,7 @@ export function BioImageField({ label, value, onChange, hint }: BioImageFieldPro
   return (
     <div>
       <label className="text-xs text-gray-500 mb-2 block flex items-center gap-1">
-        <Image className="w-3 h-3" /> {label}
+        <ImageIcon className="w-3 h-3" /> {label}
       </label>
 
       {value && (

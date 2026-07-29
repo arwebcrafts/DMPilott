@@ -1,13 +1,16 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { processQueuedInstagramDmsForAccount } from '@/lib/instagramDmQueue'
+import { assertCronRequest } from '@/lib/cronAuth'
+
+// The queue is processed account-by-account; give it room so a backlog across
+// many accounts isn't cut short. The 5-minute cron cadence catches any overflow.
+export const maxDuration = 300
 
 // Called by Vercel Cron to continue queued comment-triggered DMs.
 export async function GET(request: Request) {
-  const authHeader = request.headers.get('authorization')
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return new NextResponse('Unauthorized', { status: 401 })
-  }
+  const unauthorized = assertCronRequest(request)
+  if (unauthorized) return unauthorized
 
   const supabase = createServiceClient()
 

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getAuthenticatedUserPlan } from '@/lib/bio/planChecks'
+import { canUseFollowGate } from '@/lib/planGating'
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
@@ -7,6 +9,15 @@ export async function POST(request: NextRequest) {
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Follow-to-unlock (gift offers) is a Pro feature.
+  const auth = await getAuthenticatedUserPlan()
+  if (!canUseFollowGate(auth?.plan || 'free')) {
+    return NextResponse.json(
+      { error: 'Follow-to-unlock is available on the Pro plan. Upgrade to enable it.', code: 'plan_limit' },
+      { status: 403 }
+    )
   }
 
   try {

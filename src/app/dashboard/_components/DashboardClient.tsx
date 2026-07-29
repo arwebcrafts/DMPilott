@@ -13,6 +13,7 @@ import {
   Plus, Gift, BarChart2, UserPlus,
 } from 'lucide-react'
 import type { ChartPoint, TopPost, ActivityItem, AutomationItem } from './DashboardDataFetcher'
+import Link from 'next/link'
 
 // ─── Animated number counter ─────────────────────────────────────────────────
 
@@ -221,9 +222,9 @@ function RecentActivity({ items }: { items: ActivityItem[] }) {
     <div className="rounded-xl border shadow-sm overflow-hidden" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
       <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--surface-3)' }}>
         <h2 className="font-semibold text-gray-900 dark:text-gray-100">Recent DM Activity</h2>
-        <a href="/dashboard/analytics" className="text-xs text-[#e85d3a] hover:underline">
+        <Link href="/dashboard/analytics" className="text-xs text-[#e85d3a] hover:underline">
           View All →
-        </a>
+        </Link>
       </div>
 
       {items.length > 0 ? (
@@ -340,9 +341,9 @@ function ActiveAutomations({ automations }: { automations: AutomationItem[] }) {
     <div className="rounded-xl border shadow-sm p-5 h-full" style={{ background: 'var(--surface-0)', borderColor: 'var(--surface-3)' }}>
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-semibold text-gray-900 dark:text-gray-100">Top Automations</h2>
-        <a href="/dashboard/automations" className="text-xs text-[#e85d3a] hover:underline">
+        <Link href="/dashboard/automations" className="text-xs text-[#e85d3a] hover:underline">
           Manage all →
-        </a>
+        </Link>
       </div>
       {automations.length > 0 ? (
         <div className="space-y-3">
@@ -393,9 +394,9 @@ function ActiveAutomations({ automations }: { automations: AutomationItem[] }) {
         <div className="h-32 flex flex-col items-center justify-center text-gray-600 dark:text-gray-300 text-xs gap-2">
           <Zap className="w-8 h-8 text-gray-400 dark:text-gray-500" />
           <p>No active automations</p>
-          <a href="/dashboard/automations" className="text-[#e85d3a] hover:underline">
+          <Link href="/dashboard/automations" className="text-[#e85d3a] hover:underline">
             Create one →
-          </a>
+          </Link>
         </div>
       )}
     </div>
@@ -513,20 +514,20 @@ export default function DashboardClient({
           </div>
           <div className="flex flex-wrap gap-2">
             {totalAccounts === 0 && (
-              <a
+              <Link
                 href="/dashboard/accounts"
                 className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF]"
               >
                 Connect Instagram
-              </a>
+              </Link>
             )}
-            <a
+            <Link
               href="/dashboard/automations"
               className="px-4 py-2 rounded-xl text-sm font-medium border hover:bg-white/50 dark:hover:bg-gray-800 transition-colors"
               style={{ borderColor: 'var(--surface-3)' }}
             >
               Create Automation
-            </a>
+            </Link>
           </div>
         </div>
       )}
@@ -632,6 +633,14 @@ export default function DashboardClient({
                 transition={{ duration: 0.7 }}
               />
             </div>
+          )}
+          {!isUnlimited && dmsPercent >= 80 && plan !== 'business' && (
+            <Link
+              href="/dashboard/billing"
+              className="mt-2 inline-block text-xs font-medium text-[#e85d3a] hover:underline"
+            >
+              {dmsPercent >= 100 ? 'Limit reached — upgrade to keep sending →' : 'Running low — upgrade for more DMs →'}
+            </Link>
           )}
         </motion.div>
 

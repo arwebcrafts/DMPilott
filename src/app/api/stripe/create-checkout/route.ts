@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
-// @ts-ignore
 import Stripe from 'stripe'
 
 export async function POST(request: Request) {
   try {
-    // @ts-ignore
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-03-25.dahlia' })
 
     const PRICE_IDS: Record<string, string> = {

@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { createPageConfiguration, getPageConfigurationByUserId } from '@/lib/db/pageConfigurations';
 import { decryptToken } from '@/lib/encryption';
+import { getAuthenticatedUserPlan } from '@/lib/bio/planChecks';
+import { canUseFollowGate } from '@/lib/planGating';
 
 /**
  * Whitelist domain for Messenger Extensions
@@ -32,6 +34,37 @@ async function whitelistDomain(pageAccessToken: string, domain: string) {
 }
 
 /**
+ * Whitelist the app domain using the caller's OWN Facebook token.
+ *
+ * Multi-tenant safety: previously this grabbed the first active Facebook
+ * account in the whole table, so one user saving a config used another user's
+ * page token. Scope strictly to `userId`. Best-effort — a whitelist failure
+ * must not fail the config save.
+ */
+async function whitelistDomainForUser(serviceSupabase: any, userId: string) {
+  try {
+    const { data: account } = await serviceSupabase
+      .from('connected_accounts')
+      .select('access_token_encrypted')
+      .eq('user_id', userId)
+      .eq('platform', 'facebook')
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle();
+
+    if (!account) return;
+
+    const pageAccessToken = decryptToken(account.access_token_encrypted);
+    const baseUrl =
+      process.env.NEXT_PUBLIC_BASE_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+    await whitelistDomain(pageAccessToken, baseUrl);
+  } catch (error) {
+    console.error('[Domain Whitelist] Skipped (non-fatal):', error);
+  }
+}
+
+/**
  * POST - Create or update page configuration
  */
 export async function POST(req: NextRequest) {
@@ -46,7 +79,16 @@ export async function POST(req: NextRequest) {
       console.error('[Page Config] Auth error:', userError);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
+
+    // Facebook follow-to-unlock (gift offer) is a Pro feature.
+    const auth = await getAuthenticatedUserPlan();
+    if (!canUseFollowGate(auth?.plan || 'free')) {
+      return NextResponse.json(
+        { error: 'Follow-to-unlock is available on the Pro plan. Upgrade to enable it.', code: 'plan_limit' },
+        { status: 403 }
+      );
+    }
+
     console.log('[Page Config] User:', user.id, 'Body:', body);
     
     // Use service client for database operations (bypasses RLS)
@@ -78,23 +120,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
       
-      // Whitelist domain for Messenger Extensions
-      const { data: account } = await serviceSupabase
-        .from('connected_accounts')
-        .select('access_token_encrypted')
-        .eq('platform', 'facebook')
-        .eq('is_active', true)
-        .limit(1)
-        .single();
-      
-      if (account) {
-        const pageAccessToken = decryptToken(account.access_token_encrypted);
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL 
-          ? `https://${process.env.VERCEL_URL}` 
-          : 'http://localhost:3000');
-        await whitelistDomain(pageAccessToken, baseUrl);
-      }
-      
+      await whitelistDomainForUser(serviceSupabase, user.id);
+
       return NextResponse.json(data);
     } else {
       // Create new configuration
@@ -108,24 +135,9 @@ export async function POST(req: NextRequest) {
         gift_link_title: body.gift_link_title,
         gift_link_description: body.gift_link_description,
       }, serviceSupabase);
-      
-      // Whitelist domain for Messenger Extensions
-      const { data: account } = await serviceSupabase
-        .from('connected_accounts')
-        .select('access_token_encrypted')
-        .eq('platform', 'facebook')
-        .eq('is_active', true)
-        .limit(1)
-        .single();
-      
-      if (account) {
-        const pageAccessToken = decryptToken(account.access_token_encrypted);
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL 
-          ? `https://${process.env.VERCEL_URL}` 
-          : 'http://localhost:3000');
-        await whitelistDomain(pageAccessToken, baseUrl);
-      }
-      
+
+      await whitelistDomainForUser(serviceSupabase, user.id);
+
       return NextResponse.json(config);
     }
   } catch (error) {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { decryptToken } from '@/lib/encryption';
 
 /**
@@ -7,16 +7,24 @@ import { decryptToken } from '@/lib/encryption';
  */
 export async function POST(req: NextRequest) {
   try {
+    // Requires a signed-in user, and only ever touches that user's own token.
+    const authClient = await createClient();
+    const { data: { user } } = await authClient.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const supabase = createServiceClient();
-    
-    // Get Facebook page access token from connected_accounts
+
+    // Get Facebook page access token from the caller's connected accounts
     const { data: account, error } = await supabase
       .from('connected_accounts')
       .select('access_token_encrypted')
+      .eq('user_id', user.id)
       .eq('platform', 'facebook')
       .eq('is_active', true)
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (error || !account) {
       return NextResponse.json({ error: 'Facebook account not connected' }, { status: 404 });

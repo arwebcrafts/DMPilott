@@ -34,15 +34,20 @@ describe('SectionHeader', () => {
     expect(header).toHaveClass('text-left')
   })
 
+  // Title sizing is driven by an inline `clamp()` font-size rather than a
+  // Tailwind text-* class, so assert on the resolved style.
   it('renders with lg size', () => {
     render(<SectionHeader title="Title" size="lg" />)
-    const title = screen.getByText('Title')
-    expect(title).toHaveClass('text-4xl')
+    expect(screen.getByText('Title')).toHaveStyle({ fontSize: 'clamp(2rem, 5vw, 4rem)' })
   })
 
   it('renders with sm size', () => {
     render(<SectionHeader title="Title" size="sm" />)
-    const title = screen.getByText('Title')
-    expect(title).toHaveClass('text-2xl')
+    expect(screen.getByText('Title')).toHaveStyle({ fontSize: 'clamp(1.25rem, 3vw, 2.5rem)' })
+  })
+
+  it('renders the title as a heading', () => {
+    render(<SectionHeader title="Title" />)
+    expect(screen.getByRole('heading', { name: 'Title' })).toBeInTheDocument()
   })
 })

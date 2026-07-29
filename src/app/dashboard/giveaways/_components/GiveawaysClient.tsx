@@ -9,6 +9,7 @@ import {
 import { format, formatDistanceToNow } from 'date-fns'
 import { InstagramIcon, FacebookIcon } from '@/components/ui/brand-icons'
 import type { Giveaway } from './GiveawaysDataFetcher'
+import Link from 'next/link'
 
 interface Props {
   plan: string
@@ -59,7 +60,7 @@ export default function GiveawaysClient({
       <div className="rounded-xl border p-4" style={{ background: 'rgba(221,42,123,0.06)', borderColor: 'rgba(221,42,123,0.2)' }}>
         <p className="text-sm text-gray-700 dark:text-gray-300">
           <strong className="text-[#DD2A7B]">Giveaways launching soon.</strong> For now, use{' '}
-          <a href="/dashboard/automations" className="text-[#DD2A7B] underline font-medium">Automations</a>{' '}
+          <Link href="/dashboard/automations" className="text-[#DD2A7B] underline font-medium">Automations</Link>{' '}
           with a keyword trigger (e.g. &quot;GIVEAWAY&quot;) to auto-DM everyone who comments.
         </p>
       </div>

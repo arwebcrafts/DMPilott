@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import crypto from 'crypto'
 import { createServiceClient } from '@/lib/supabase/server'
 import { decryptToken } from '@/lib/encryption'
@@ -7,19 +7,120 @@ import { processQueuedInstagramDmsForAccount, sendInstagramDm, sendFacebookDm } 
 import { handleFollowButton, handleLikeStatusCheck, handleInstagramFollowButton, handleInstagramFollowStatusCheck } from '@/lib/messenger/handlers/postbackHandler'
 import { getUserInteraction } from '@/lib/db/userInteractions'
 import { getPageConfiguration, getInstagramGiftOffer, getInstagramUserInteraction, updateInstagramUserInteraction } from '@/lib/db/pageConfigurations'
+import { generateAiReply } from '@/lib/ai/generateReply'
+import { getUserPlanUsage, incrementDmUsage } from '@/lib/planUsage'
+import { canUseAI } from '@/lib/planGating'
+import { getAutomationMessages } from '@/lib/automations/flow'
 
 console.log('[INIT] Webhook route module loaded')
 
-// Verify Meta webhook signature
-function verifySignature(body: string, signature: string): boolean {
-  console.log('[SIG] verifySignature called')
-  const expected = crypto
-    .createHmac('sha256', process.env.META_APP_SECRET!)
-    .update(body)
-    .digest('hex')
-  const result = `sha256=${expected}` === signature
+// Give background processing (after()) headroom to finish sends/AI calls.
+// Capped to the platform limit on lower Vercel plans.
+export const maxDuration = 60
+
+// Verify Meta webhook signature. The HMAC must be computed over the exact raw
+// request bytes — re-serialising the parsed JSON produces different bytes and
+// would never match.
+function verifySignature(rawBody: string, signature: string): boolean {
+  const appSecret = process.env.META_APP_SECRET
+  if (!appSecret) {
+    console.error('[SIG] META_APP_SECRET is not set — cannot verify webhook signature')
+    return false
+  }
+  if (!signature) {
+    console.log('[SIG] No x-hub-signature-256 header on request')
+    return false
+  }
+
+  const expected = `sha256=${crypto.createHmac('sha256', appSecret).update(rawBody, 'utf8').digest('hex')}`
+  const expectedBuf = Buffer.from(expected)
+  const receivedBuf = Buffer.from(signature)
+
+  if (expectedBuf.length !== receivedBuf.length) {
+    console.log('[SIG] Signature length mismatch')
+    return false
+  }
+
+  const result = crypto.timingSafeEqual(expectedBuf, receivedBuf)
   console.log('[SIG] Signature match:', result)
   return result
+}
+
+// Postgres unique-violation. Raised by idx_dm_logs_comment_id_unique when two
+// concurrent webhook deliveries race to claim the same comment or message id.
+function isUniqueViolation(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+  return error.code === '23505' || /duplicate key value/i.test(error.message || '')
+}
+
+/**
+ * Second line of defence behind the unique index on dm_logs(comment_id).
+ *
+ * If `idx_dm_logs_comment_id_unique` has not been applied to this database
+ * (see migration 015), concurrent webhook deliveries all insert successfully
+ * and each one sends a DM. After inserting, re-read every row for this key and
+ * only let the oldest one proceed; the losers mark themselves skipped.
+ *
+ * Returns true when this invocation owns the send.
+ */
+async function claimDmLogRow(
+  supabase: any,
+  insertedId: string,
+  dedupKey: string,
+  logPrefix: string
+): Promise<boolean> {
+  const { data: rows, error } = await supabase
+    .from('dm_logs')
+    .select('id, created_at')
+    .eq('comment_id', dedupKey)
+    .order('created_at', { ascending: true })
+    .order('id', { ascending: true })
+    .limit(10)
+
+  if (error || !rows || rows.length === 0) {
+    // Cannot verify — fall back to proceeding so a transient read error never
+    // silently swallows a legitimate reply.
+    return true
+  }
+
+  if (rows.length === 1 || rows[0].id === insertedId) return true
+
+  console.log(`${logPrefix} Lost dedup race for ${dedupKey} (winner ${rows[0].id}) - not sending`)
+  await supabase
+    .from('dm_logs')
+    .update({ status: 'failed', error_message: 'Duplicate webhook delivery' })
+    .eq('id', insertedId)
+
+  return false
+}
+
+// Builds the "follow us" footer appended to the last message, or '' if none.
+function buildFollowLinks(automation: any): string {
+  if (!automation.follow_facebook_url && !automation.follow_instagram_url) return ''
+  let out = '\n\n'
+  if (automation.follow_facebook_url) out += `👉 Follow us on Facebook: ${automation.follow_facebook_url}\n`
+  if (automation.follow_instagram_url) out += `👉 Follow us on Instagram: ${automation.follow_instagram_url}`
+  return out
+}
+
+// Sends the trailing steps of a multi-step flow in order, spacing them slightly
+// so they arrive in sequence, and counting each toward the monthly budget.
+async function sendFlowExtraSteps(
+  extra: string[],
+  send: (message: string) => Promise<any>,
+  supabase: any,
+  userId: string
+) {
+  for (const msg of extra) {
+    try {
+      await new Promise(r => setTimeout(r, 800))
+      await send(msg)
+      await incrementDmUsage(supabase, userId)
+    } catch (err: any) {
+      console.log('[Flow] Extra step send failed:', err?.message || err)
+      break
+    }
+  }
 }
 
 // Track processed comment IDs to prevent duplicates
@@ -80,11 +181,17 @@ export async function POST(request: Request) {
   console.log('[POST] Raw body length:', rawBody.length)
   console.log('[POST] Raw body preview:', rawBody.substring(0, 100) + '...')
 
-  // Skip signature verification (dev mode)
-  const skipSignatureEnv = process.env.SKIP_WEBHOOK_SIGNATURE === 'true'
-  console.log('[POST] Skip signature mode:', skipSignatureEnv)
+  // Signature verification can only be skipped outside production, and only
+  // when explicitly opted in. Without it, anyone who knows the webhook URL can
+  // make the app send DMs from any connected account.
+  const skipSignatureEnv =
+    process.env.SKIP_WEBHOOK_SIGNATURE === 'true' && process.env.NODE_ENV !== 'production'
+
   if (skipSignatureEnv) {
-    console.log('[POST] ⚠️ SKIPPING SIGNATURE VERIFICATION')
+    console.log('[POST] ⚠️ SKIPPING SIGNATURE VERIFICATION (non-production only)')
+  } else if (!verifySignature(rawBody, signature)) {
+    console.log('[POST] ✗ Invalid signature — rejecting webhook')
+    return new NextResponse('Invalid signature', { status: 401 })
   }
 
   // Parse payload
@@ -113,17 +220,21 @@ export async function POST(request: Request) {
     })
   }
 
-  // Respond after processing (Meta accepts 1-2s response time)
-  console.log('[POST] Processing webhook synchronously...')
-  const responseTime = Date.now() - startTime
-  console.log('[POST] Processing time:', responseTime, 'ms')
-  
-  try {
-    await processWebhookAsync(payload)
-    console.log('[POST] ✓ Webhook processed successfully')
-  } catch (err: any) {
-    console.log('[POST] ❌ Webhook processing error:', err.message)
-  }
+  // Acknowledge Meta immediately, then process after the response is sent.
+  // Meta retries aggressively (~15x in 3-4 min) if it doesn't get a fast 200,
+  // and will disable a webhook that is repeatedly slow. Processing inline —
+  // which can involve an AI call plus several Graph API sends — risks blowing
+  // that budget at scale. `after()` runs the work post-response; dedup (the
+  // unique index + claimDmLogRow) makes any retry that still slips through safe.
+  console.log('[POST] Ack in', Date.now() - startTime, 'ms; processing in background')
+  after(async () => {
+    try {
+      await processWebhookAsync(payload)
+      console.log('[POST] ✓ Webhook processed successfully')
+    } catch (err: any) {
+      console.log('[POST] ❌ Webhook processing error:', err.message)
+    }
+  })
 
   return new NextResponse('OK', { status: 200 })
 }
@@ -282,6 +393,23 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
     return
   }
 
+  // ── Story reply / story mention ──────────────────────────────────────────
+  // These arrive as messaging events (not comment changes): a story reply is a
+  // DM with message.reply_to.story; a story mention is a DM whose attachments
+  // include a story_mention. Route them to the story trigger types, which
+  // otherwise never fired at all.
+  const storyReply = message?.reply_to?.story
+  const storyMention = Array.isArray(message?.attachments)
+    && message.attachments.some((a: any) => a?.type === 'story_mention')
+
+  if (storyReply || storyMention) {
+    const triggerType = storyMention ? 'story_mention' : 'story_reply'
+    await handleInstagramStory({
+      account, senderId, messageText, messageId: messaging.message?.mid, triggerType, supabase,
+    })
+    return
+  }
+
   // Check for Instagram gift offer
   console.log('[IG Follow Button] Checking Instagram gift offer for account:', account.username)
   const giftOffer = await getInstagramGiftOffer(account.username)
@@ -389,25 +517,37 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
     console.log('[Message] Could not fetch sender username:', err?.response?.data?.error?.message || err?.message)
   }
 
-  // Personalize message with variables
-  let autoReply = (automation.dm_message || "Thanks for your message! We'll get back to you soon. 👋")
-    .replace(/{name}/g, senderUsername || 'there')
-    .replace(/{username}/g, senderUsername ? `@${senderUsername}` : 'user')
+  // Monthly plan limit — stop replying once the subscription budget is spent.
+  const igPlan = await getUserPlanUsage(supabase, account.user_id)
+  if (igPlan && igPlan.remaining <= 0) {
+    console.log('[Message] Monthly DM limit reached for plan:', igPlan.plan, '- skipping auto-reply')
+    return
+  }
 
-  // Append follow links if configured
-  if (automation.follow_facebook_url || automation.follow_instagram_url) {
-    autoReply += '\n\n'
-    if (automation.follow_facebook_url) {
-      autoReply += `👉 Follow us on Facebook: ${automation.follow_facebook_url}\n`
-    }
-    if (automation.follow_instagram_url) {
-      autoReply += `👉 Follow us on Instagram: ${automation.follow_instagram_url}`
-    }
+  // Resolve the reply. Precedence: AI (handles the whole conversation) → a
+  // multi-step flow → the single dm_message. flowExtra holds steps 2..N.
+  const useAi = automation.ai_replies_enabled && igPlan && canUseAI(igPlan.plan)
+  const igMessages = useAi
+    ? [await generateAiReply({
+        instruction: automation.dm_message || '',
+        incomingText: messageText || '',
+        senderName: senderUsername,
+        fallback: (automation.dm_message || "Thanks for your message! We'll get back to you soon. 👋"),
+      })]
+    : getAutomationMessages(automation, senderUsername, senderUsername)
+  let autoReply = igMessages[0]
+  const igFlowExtra = igMessages.slice(1)
+
+  // Append follow links to the LAST message of the sequence.
+  const igFollowLinks = buildFollowLinks(automation)
+  if (igFollowLinks) {
+    if (igFlowExtra.length > 0) igFlowExtra[igFlowExtra.length - 1] += igFollowLinks
+    else autoReply += igFollowLinks
   }
 
   // Log to dm_logs BEFORE sending to ensure dedup works even if send is slow.
   // Insert as 'pending' so processQueuedInstagramDmsForAccount doesn't pick it up!
-  const { error: logError } = await supabase.from('dm_logs').insert({
+  const { data: insertedLog, error: logError } = await supabase.from('dm_logs').insert({
     automation_id: automation.id,
     user_id: account.user_id,
     account_id: account.id,
@@ -417,10 +557,21 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
     dm_message_sent: autoReply,
     comment_id: `mid:${messageId}`,
     status: 'pending',
-  })
+  }).select('id').single()
 
   if (logError) {
-    console.log('[Message] ❌ Failed to log DM (possible duplicate):', logError.message)
+    // 23505 = unique violation on idx_dm_logs_comment_id_unique. That means a
+    // concurrent invocation already claimed this message id, so this one must
+    // not send. Any other error is a real problem and must be visible.
+    if (isUniqueViolation(logError)) {
+      console.log('[Message] Duplicate webhook delivery for mid', messageId, '- another invocation is handling it')
+    } else {
+      console.error('[Message] ❌ Failed to log DM, aborting send:', logError.code, logError.message)
+    }
+    return
+  }
+
+  if (insertedLog && !(await claimDmLogRow(supabase, insertedLog.id, `mid:${messageId}`, '[Message]'))) {
     return
   }
 
@@ -436,7 +587,13 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
     await supabase
       .from('dm_logs')
       .update({ status: 'sent', sent_at: new Date().toISOString() })
-      .eq('comment_id', `mid:${messageId}`)
+      .eq('id', insertedLog.id)
+
+    // Count against the user's monthly plan budget
+    await incrementDmUsage(supabase, account.user_id)
+
+    // Send any additional flow steps in order.
+    await sendFlowExtraSteps(igFlowExtra, msg => sendInstagramDm({ account, recipientId: senderId, message: msg }), supabase, account.user_id)
 
     // Increment DM counter
     await supabase
@@ -450,7 +607,111 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
     await supabase
       .from('dm_logs')
       .update({ status: 'failed', error_message: sendErr?.message || 'Send failed' })
-      .eq('comment_id', `mid:${messageId}`)
+      .eq('id', insertedLog.id)
+  }
+}
+
+// Handles a story reply or story mention: matches an automation of the given
+// story trigger type for this account and sends its DM. Mirrors the dm_received
+// path (dedup by message id, monthly-limit check, usage increment).
+async function handleInstagramStory(params: {
+  account: any
+  senderId: string
+  messageText: string | undefined
+  messageId: string | undefined
+  triggerType: 'story_reply' | 'story_mention'
+  supabase: any
+}) {
+  const { account, senderId, messageText, messageId, triggerType, supabase } = params
+  console.log(`[Story] ${triggerType} from`, senderId, 'on account', account.username)
+
+  if (!messageId) {
+    console.log('[Story] No message mid — skipping to prevent duplicates')
+    return
+  }
+
+  const dedupKey = `mid:${messageId}`
+
+  const { data: automations } = await supabase
+    .from('automations')
+    .select('*')
+    .eq('account_id', account.id)
+    .eq('is_active', true)
+    .eq('trigger_type', triggerType)
+
+  if (!automations || automations.length === 0) {
+    console.log('[Story] No', triggerType, 'automation for this account')
+    return
+  }
+  const automation = automations[0]
+
+  // Monthly plan limit
+  const plan = await getUserPlanUsage(supabase, account.user_id)
+  if (plan && plan.remaining <= 0) {
+    console.log('[Story] Monthly DM limit reached for plan:', plan.plan)
+    return
+  }
+
+  // Fetch sender username for personalization (best effort)
+  let senderUsername: string | null = null
+  try {
+    const token = decryptToken(account.access_token_encrypted)
+    const res = await axios.get(`https://graph.instagram.com/${senderId}`, {
+      params: { fields: 'username', access_token: token },
+      timeout: 5000,
+    })
+    senderUsername = res.data?.username || null
+  } catch { /* non-fatal */ }
+
+  const baseMessage = (automation.dm_message || 'Thanks for sharing! 🙌')
+    .replace(/{name}/g, senderUsername || 'there')
+    .replace(/{username}/g, senderUsername ? `@${senderUsername}` : 'user')
+
+  let reply = baseMessage
+  if (automation.ai_replies_enabled && plan && canUseAI(plan.plan)) {
+    reply = await generateAiReply({
+      instruction: automation.dm_message || '',
+      incomingText: messageText || `(replied to your story)`,
+      senderName: senderUsername,
+      fallback: baseMessage,
+    })
+  }
+
+  // Insert-before-send with the unique index guarding against duplicates.
+  const { data: inserted, error: logError } = await supabase.from('dm_logs').insert({
+    automation_id: automation.id,
+    user_id: account.user_id,
+    account_id: account.id,
+    platform: 'instagram',
+    commenter_platform_id: senderId,
+    commenter_username: senderUsername,
+    dm_message_sent: reply,
+    comment_id: dedupKey,
+    status: 'pending',
+  }).select('id').single()
+
+  if (logError) {
+    if (isUniqueViolation(logError)) {
+      console.log('[Story] Duplicate delivery for', dedupKey, '- another invocation handling it')
+    } else {
+      console.error('[Story] Failed to log DM:', logError.code, logError.message)
+    }
+    return
+  }
+
+  if (inserted && !(await claimDmLogRow(supabase, inserted.id, dedupKey, '[Story]'))) {
+    return
+  }
+
+  try {
+    await sendInstagramDm({ account, recipientId: senderId, message: reply })
+    await supabase.from('dm_logs').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('id', inserted.id)
+    await incrementDmUsage(supabase, account.user_id)
+    await supabase.from('automations').update({ total_dms_sent: (automation.total_dms_sent || 0) + 1 }).eq('id', automation.id)
+    console.log('[Story] ✓ DM sent for', triggerType)
+  } catch (err: any) {
+    console.log('[Story] ❌ Send failed:', err?.message || err)
+    await supabase.from('dm_logs').update({ status: 'failed', error_message: err?.message || 'Send failed' }).eq('id', inserted.id)
   }
 }
 
@@ -530,7 +791,21 @@ async function handleInstagramComment(igAccountId: string, value: any, supabase:
   let matchedAutomation = null
   let matchedKeyword: string | null = null
 
-  for (const auto of automations || []) {
+  // A post-specific automation (media_id set) should win over a whole-account
+  // one, so evaluate the targeted automations first.
+  const candidates = [...(automations || [])].sort((a, b) => {
+    const aTargeted = a.media_id ? 0 : 1
+    const bTargeted = b.media_id ? 0 : 1
+    return aTargeted - bTargeted
+  })
+
+  for (const auto of candidates) {
+    // Per-video targeting: skip automations bound to a different post.
+    // media_id === null means "whole account" and matches every post.
+    if (auto.media_id && String(auto.media_id) !== String(mediaId)) {
+      continue
+    }
+
     if (auto.trigger_type === 'any_comment') {
       matchedAutomation = auto
       break
@@ -599,7 +874,11 @@ async function handleInstagramComment(igAccountId: string, value: any, supabase:
   })
 
   if (insertError) {
-    console.log('[Comment] ❌ Failed to enqueue DM:', insertError.message)
+    if (isUniqueViolation(insertError)) {
+      console.log('[Comment] Duplicate webhook delivery for comment', commentId, '- already enqueued')
+    } else {
+      console.error('[Comment] ❌ Failed to enqueue DM:', insertError.code, insertError.message)
+    }
     return
   }
 
@@ -754,7 +1033,19 @@ async function handleFacebookComment(pageId: string, value: any, supabase: any) 
   let matchedAutomation = null
   let matchedKeyword: string | null = null
 
-  for (const auto of automations || []) {
+  // Post-specific automations take priority over whole-account ones.
+  const candidates = [...(automations || [])].sort((a, b) => {
+    const aTargeted = a.media_id ? 0 : 1
+    const bTargeted = b.media_id ? 0 : 1
+    return aTargeted - bTargeted
+  })
+
+  for (const auto of candidates) {
+    // Per-post targeting: skip automations bound to a different post.
+    if (auto.media_id && String(auto.media_id) !== String(postId)) {
+      continue
+    }
+
     if (auto.trigger_type === 'any_comment') {
       matchedAutomation = auto
       break
@@ -823,7 +1114,11 @@ async function handleFacebookComment(pageId: string, value: any, supabase: any) 
   })
 
   if (insertError) {
-    console.log('[Facebook Comment] ❌ Failed to enqueue DM:', insertError.message)
+    if (isUniqueViolation(insertError)) {
+      console.log('[Facebook Comment] Duplicate webhook delivery for comment', commentId, '- already enqueued')
+    } else {
+      console.error('[Facebook Comment] ❌ Failed to enqueue DM:', insertError.code, insertError.message)
+    }
     return
   }
 
@@ -965,25 +1260,41 @@ async function handleFacebookMessage(pageId: string, messaging: any, supabase: a
     console.log('[Facebook Message] Using fallback name:', senderName)
   }
 
+  // Monthly plan limit
+  const fbPlan = await getUserPlanUsage(supabase, account.user_id)
+  if (fbPlan && fbPlan.remaining <= 0) {
+    console.log('[Facebook Message] Monthly DM limit reached for plan:', fbPlan.plan, '- skipping auto-reply')
+    return
+  }
+
   // Personalize message with variables
-  let autoReply = (automation.dm_message || "Thanks for your message! We'll get back to you soon. 👋")
+  const fbBaseMessage = (automation.dm_message || "Thanks for your message! We'll get back to you soon. 👋")
     .replace(/{name}/g, senderName || 'there')
     .replace(/{username}/g, senderName || 'there')
 
-  // Append follow links if configured
-  if (automation.follow_facebook_url || automation.follow_instagram_url) {
-    autoReply += '\n\n'
-    if (automation.follow_facebook_url) {
-      autoReply += `👉 Follow us on Facebook: ${automation.follow_facebook_url}\n`
-    }
-    if (automation.follow_instagram_url) {
-      autoReply += `👉 Follow us on Instagram: ${automation.follow_instagram_url}`
-    }
+  // Resolve reply: AI → flow → single message. fbFlowExtra holds steps 2..N.
+  const fbUseAi = automation.ai_replies_enabled && fbPlan && canUseAI(fbPlan.plan)
+  const fbMessages = fbUseAi
+    ? [await generateAiReply({
+        instruction: automation.dm_message || '',
+        incomingText: messageText || '',
+        senderName,
+        fallback: fbBaseMessage,
+      })]
+    : getAutomationMessages(automation, senderName, senderName)
+  let autoReply = fbMessages[0]
+  const fbFlowExtra = fbMessages.slice(1)
+
+  // Append follow links to the last message of the sequence.
+  const fbFollowLinks = buildFollowLinks(automation)
+  if (fbFollowLinks) {
+    if (fbFlowExtra.length > 0) fbFlowExtra[fbFlowExtra.length - 1] += fbFollowLinks
+    else autoReply += fbFollowLinks
   }
 
   // Log to dm_logs BEFORE sending to ensure dedup works even if send is slow.
   // Insert as 'pending' so processQueuedInstagramDmsForAccount doesn't pick it up!
-  const { error: fbLogError } = await supabase.from('dm_logs').insert({
+  const { data: insertedFbLog, error: fbLogError } = await supabase.from('dm_logs').insert({
     automation_id: automation.id,
     user_id: account.user_id,
     account_id: account.id,
@@ -993,10 +1304,18 @@ async function handleFacebookMessage(pageId: string, messaging: any, supabase: a
     dm_message_sent: autoReply,
     comment_id: `mid:${fbMessageId}`,
     status: 'pending',
-  })
+  }).select('id').single()
 
   if (fbLogError) {
-    console.log('[Facebook Message] ❌ Failed to log DM (possible duplicate):', fbLogError.message)
+    if (isUniqueViolation(fbLogError)) {
+      console.log('[Facebook Message] Duplicate webhook delivery for mid', fbMessageId, '- another invocation is handling it')
+    } else {
+      console.error('[Facebook Message] ❌ Failed to log DM, aborting send:', fbLogError.code, fbLogError.message)
+    }
+    return
+  }
+
+  if (insertedFbLog && !(await claimDmLogRow(supabase, insertedFbLog.id, `mid:${fbMessageId}`, '[Facebook Message]'))) {
     return
   }
 
@@ -1012,7 +1331,18 @@ async function handleFacebookMessage(pageId: string, messaging: any, supabase: a
       await supabase
         .from('dm_logs')
         .update({ status: 'sent', sent_at: new Date().toISOString() })
-        .eq('comment_id', `mid:${fbMessageId}`)
+        .eq('id', insertedFbLog.id)
+
+      // Count against the user's monthly plan budget
+      await incrementDmUsage(supabase, account.user_id)
+
+      // Send any additional flow steps in order.
+      await sendFlowExtraSteps(
+        fbFlowExtra,
+        async msg => { await sendFacebookDm({ account, recipientId: senderId, message: msg }) },
+        supabase,
+        account.user_id
+      )
 
       // Increment DM counter
       await supabase
@@ -1025,14 +1355,14 @@ async function handleFacebookMessage(pageId: string, messaging: any, supabase: a
       await supabase
         .from('dm_logs')
         .update({ status: 'failed', error_message: sendResult.error || 'Send failed' })
-        .eq('comment_id', `mid:${fbMessageId}`)
+        .eq('id', insertedFbLog.id)
     }
   } catch (fbSendErr: any) {
     console.log('[Facebook Message] ❌ Error sending DM:', fbSendErr?.message || fbSendErr)
     await supabase
       .from('dm_logs')
       .update({ status: 'failed', error_message: fbSendErr?.message || 'Send failed' })
-      .eq('comment_id', `mid:${fbMessageId}`)
+      .eq('id', insertedFbLog.id)
   }
 
   // Check if user has already interacted with follow button

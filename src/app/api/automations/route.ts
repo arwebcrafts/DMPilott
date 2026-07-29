@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getAuthenticatedUserPlan } from '@/lib/bio/planChecks'
+import { PLAN_LIMITS, canCreateAutomation, canUseAI, canUsePerPostTargeting } from '@/lib/planGating'
+import { parseFlowSteps } from '@/lib/automations/flow'
 
 // GET /api/automations - list user's automations
 export async function GET() {
@@ -45,6 +48,10 @@ export async function POST(request: Request) {
     commentReplyEnabled,
     commentReplyText,
     sendDelaySeconds,
+    mediaId,
+    mediaCaption,
+    aiRepliesEnabled,
+    flowSteps,
   } = body
 
   console.log('[Automation] Request body:', {
@@ -66,10 +73,53 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
 
-  const validTriggerTypes = ['any_comment', 'comment_keyword', 'dm_received', 'story_mention']
+  const validTriggerTypes = ['any_comment', 'comment_keyword', 'dm_received', 'story_mention', 'story_reply']
   if (!validTriggerTypes.includes(triggerType)) {
     console.log('[Automation] ❌ Invalid trigger type:', triggerType)
     return NextResponse.json({ error: 'Invalid trigger type' }, { status: 400 })
+  }
+
+  // ── Plan gating ──────────────────────────────────────────────────────────
+  const auth = await getAuthenticatedUserPlan()
+  const plan = auth?.plan || 'free'
+  const limits = PLAN_LIMITS[plan]
+
+  const { count: automationCount } = await supabase
+    .from('automations')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+
+  if (!canCreateAutomation(plan, automationCount || 0)) {
+    return NextResponse.json(
+      {
+        error: `Your ${plan} plan allows up to ${limits.maxAutomations} automation${limits.maxAutomations === 1 ? '' : 's'}. Upgrade to add more.`,
+        code: 'plan_limit',
+      },
+      { status: 403 }
+    )
+  }
+
+  if (aiRepliesEnabled && !canUseAI(plan)) {
+    return NextResponse.json(
+      { error: 'AI replies are available on the Pro plan. Upgrade to enable AI.', code: 'plan_limit' },
+      { status: 403 }
+    )
+  }
+
+  if (mediaId && !canUsePerPostTargeting(plan)) {
+    return NextResponse.json(
+      { error: 'Targeting a specific post requires the Creator plan or higher.', code: 'plan_limit' },
+      { status: 403 }
+    )
+  }
+
+  // Multi-step flows are a paid feature (free plan sends a single message).
+  const parsedFlow = parseFlowSteps(flowSteps)
+  if (parsedFlow.length > 1 && plan === 'free') {
+    return NextResponse.json(
+      { error: 'Multi-step flows are available on the Creator plan and up. Upgrade to build a flow.', code: 'plan_limit' },
+      { status: 403 }
+    )
   }
 
   if (triggerType === 'comment_keyword' && (!keywords || keywords.length === 0)) {
@@ -119,8 +169,12 @@ export async function POST(request: Request) {
       comment_reply_enabled: commentReplyEnabled || false,
       comment_reply_text: commentReplyText,
       send_delay_seconds: sendDelaySeconds || 0,
+      media_id: mediaId || null,
+      media_caption: mediaCaption || null,
+      ai_replies_enabled: aiRepliesEnabled || false,
+      flow_steps: parsedFlow.length > 0 ? parsedFlow : null,
     })
-    .select()
+    .select('*, connected_accounts(username, platform)')
     .single()
 
   if (error) {

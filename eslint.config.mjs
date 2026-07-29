@@ -20,9 +20,16 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    files: ["scripts/**/*.js"],
+    // CommonJS config/tooling files legitimately use require().
+    files: [
+      "scripts/**/*.js",
+      "local-testing/**/*.js",
+      "jest.config.js",
+      "jest.setup.js",
+    ],
     rules: {
       "@typescript-eslint/no-require-imports": "off",
+      "@typescript-eslint/no-unused-expressions": "off",
     },
   },
   // Override default ignores of eslint-config-next.

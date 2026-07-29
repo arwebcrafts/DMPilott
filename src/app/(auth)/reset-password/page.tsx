@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { AuthShell } from '@/components/auth/AuthShell'
+import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
@@ -94,7 +95,7 @@ export default function ResetPasswordPage() {
         </div>
         <p className="text-center text-sm text-gray-500 mt-4">
           If this takes too long, your reset link may have expired.{' '}
-          <a href="/forgot-password" className="text-[#e85d3a] hover:underline">Request a new one</a>
+          <Link href="/forgot-password" className="text-[#e85d3a] hover:underline">Request a new one</Link>
         </p>
       </AuthShell>
     )

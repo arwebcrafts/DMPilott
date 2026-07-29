@@ -6,38 +6,51 @@ import { getUserInteraction } from '@/lib/db/userInteractions';
 import { getPageConfiguration } from '@/lib/db/pageConfigurations';
 
 /**
- * Verify webhook signature from Facebook
+ * Verify webhook signature from Facebook.
+ *
+ * The HMAC has to be computed over the raw request bytes. Hashing
+ * `JSON.stringify(parsedBody)` instead re-serialises the payload with
+ * different key order/spacing, so the digest never matches and every real
+ * Meta delivery is rejected.
  */
-function verifySignature(req: NextRequest, body: any): boolean {
-  const signature = req.headers.get('x-hub-signature-256');
+function verifySignature(rawBody: string, signature: string | null): boolean {
+  const appSecret = process.env.META_APP_SECRET;
+  if (!appSecret) {
+    console.error('[Messenger Webhook] META_APP_SECRET is not set — cannot verify signature');
+    return false;
+  }
   if (!signature) return false;
-  
-  const [algorithm, signatureHash] = signature.split('=');
-  if (algorithm !== 'sha256') return false;
-  
-  const expectedHash = crypto
-    .createHmac('sha256', process.env.META_APP_SECRET!)
-    .update(JSON.stringify(body))
-    .digest('hex');
-  
-  return signatureHash === expectedHash;
+
+  const expected = `sha256=${crypto.createHmac('sha256', appSecret).update(rawBody, 'utf8').digest('hex')}`;
+  const expectedBuf = Buffer.from(expected);
+  const receivedBuf = Buffer.from(signature);
+
+  if (expectedBuf.length !== receivedBuf.length) return false;
+  return crypto.timingSafeEqual(expectedBuf, receivedBuf);
 }
 
 /**
  * Handle POST - Webhook events from Facebook
  */
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  
+  const rawBody = await req.text();
+
   // Verify webhook signature for security
-  if (!verifySignature(req, body)) {
+  if (!verifySignature(rawBody, req.headers.get('x-hub-signature-256'))) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 403 });
   }
-  
+
+  let body: any;
+  try {
+    body = JSON.parse(rawBody);
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+
   // Process page events
   if (body.object === 'page') {
-    for (const entry of body.entry) {
-      for (const messagingEvent of entry.messaging) {
+    for (const entry of body.entry ?? []) {
+      for (const messagingEvent of entry.messaging ?? []) {
         const senderPsid = messagingEvent.sender.id;
         
         if (messagingEvent.postback) {
