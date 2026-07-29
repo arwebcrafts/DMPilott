@@ -2,6 +2,7 @@ import axios from 'axios'
 import { decryptToken } from '@/lib/encryption'
 import { getUserPlanUsage, incrementDmUsage } from '@/lib/planUsage'
 import { getAutomationMessages } from '@/lib/automations/flow'
+import { recordWebhookEvent } from '@/lib/webhookDiagnostics'
 
 const INSTAGRAM_MESSAGING_API_VERSION = 'v25.0'
 const FACEBOOK_MESSAGING_API_VERSION = 'v21.0'
@@ -28,6 +29,8 @@ interface Automation {
   comment_reply_text: string | null
   total_dms_sent: number
   flow_steps: unknown
+  button_text: string | null
+  button_url: string | null
 }
 
 interface DmLogRow {
@@ -178,23 +181,79 @@ async function sendWithHostAndIdFallback(
   throw lastError
 }
 
+export interface DmButton {
+  text: string
+  url: string
+}
+
+/**
+ * Builds the message payload. With a button we send Instagram's generic
+ * template so the recipient sees a tappable CTA instead of a raw URL; without
+ * one it stays a plain text message.
+ */
+export function buildInstagramMessagePayload(
+  message: string,
+  button?: DmButton | null
+): Record<string, unknown> {
+  if (button?.text?.trim() && button?.url?.trim()) {
+    return {
+      attachment: {
+        type: 'template',
+        payload: {
+          template_type: 'generic',
+          elements: [
+            {
+              // Instagram shows title as the card heading and subtitle beneath.
+              title: message.slice(0, 80),
+              subtitle: message.length > 80 ? message.slice(80, 160) : undefined,
+              buttons: [
+                {
+                  type: 'web_url',
+                  url: button.url.trim(),
+                  title: button.text.trim().slice(0, 20),
+                },
+              ],
+            },
+          ],
+        },
+      },
+    }
+  }
+  return { text: message }
+}
+
 export async function sendInstagramDm(params: {
   account: ConnectedAccount
   recipientId: string
   message: string
   commentId?: string | null
+  button?: DmButton | null
 }) {
-  const { account, recipientId, message, commentId } = params
+  const { account, recipientId, message, commentId, button } = params
   const recipient = commentId ? { comment_id: commentId } : { id: recipientId }
 
   console.log('[DM] Sending DM to', recipientId, 'from account', account.username)
-  console.log('[DM] Message:', message?.substring(0, 50) + '...')
+  console.log('[DM] Message:', message?.substring(0, 50) + '...', button ? '(with CTA button)' : '')
 
-  // Send text message (video/website links can be included in the text)
-  await sendWithHostAndIdFallback(account, {
-    recipient,
-    message: { text: message },
-  })
+  try {
+    await sendWithHostAndIdFallback(account, {
+      recipient,
+      message: buildInstagramMessagePayload(message, button),
+    })
+  } catch (err: any) {
+    // If the button template is rejected (older API surface / unsupported
+    // recipient), fall back to plain text with the link appended so the user
+    // still receives the content rather than nothing.
+    if (button?.url) {
+      console.log('[DM] Button template failed, falling back to text + link')
+      await sendWithHostAndIdFallback(account, {
+        recipient,
+        message: { text: `${message}\n\n${button.text}: ${button.url}` },
+      })
+    } else {
+      throw err
+    }
+  }
   console.log('[DM] ✓ DM sent successfully')
 }
 
@@ -398,7 +457,7 @@ export async function processQueuedInstagramDmsForAccount(
     if (!automationCache.has(log.automation_id)) {
       const { data: automation } = await supabase
         .from('automations')
-        .select('id, is_active, dm_message, dm_video_url, comment_reply_enabled, comment_reply_text, total_dms_sent, flow_steps')
+        .select('id, is_active, dm_message, dm_video_url, comment_reply_enabled, comment_reply_text, total_dms_sent, flow_steps, button_text, button_url')
         .eq('id', log.automation_id)
         .single()
       automationCache.set(log.automation_id, (automation as Automation) || null)
@@ -454,6 +513,9 @@ export async function processQueuedInstagramDmsForAccount(
           recipientId: log.commenter_platform_id,
           commentId: log.comment_id,
           message: messageToSend,
+          button: automation.button_text && automation.button_url
+            ? { text: automation.button_text, url: automation.button_url }
+            : null,
         })
         dmSent = true
       }
@@ -553,6 +615,16 @@ export async function processQueuedInstagramDmsForAccount(
           error_message: `${errorCode}: ${errorMessage}`,
         })
         .eq('id', log.id)
+
+      // Surface Meta's exact error in the dashboard — this is what turns
+      // "no DM arrived" into an actionable message.
+      await recordWebhookEvent({
+        outcome: 'send_failed',
+        eventKind: 'comment',
+        accountId: resolvedAccount.id,
+        userId: resolvedAccount.user_id,
+        detail: `Meta rejected the send — ${errorCode ?? 'error'}: ${errorMessage}`,
+      })
     }
   }
 

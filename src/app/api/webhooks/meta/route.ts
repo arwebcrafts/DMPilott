@@ -11,6 +11,7 @@ import { generateAiReply } from '@/lib/ai/generateReply'
 import { getUserPlanUsage, incrementDmUsage } from '@/lib/planUsage'
 import { canUseAI } from '@/lib/planGating'
 import { getAutomationMessages } from '@/lib/automations/flow'
+import { recordWebhookEvent } from '@/lib/webhookDiagnostics'
 
 console.log('[INIT] Webhook route module loaded')
 
@@ -21,29 +22,53 @@ export const maxDuration = 60
 // Verify Meta webhook signature. The HMAC must be computed over the exact raw
 // request bytes — re-serialising the parsed JSON produces different bytes and
 // would never match.
-function verifySignature(rawBody: string, signature: string): boolean {
-  const appSecret = process.env.META_APP_SECRET
-  if (!appSecret) {
-    console.error('[SIG] META_APP_SECRET is not set — cannot verify webhook signature')
-    return false
-  }
-  if (!signature) {
-    console.log('[SIG] No x-hub-signature-256 header on request')
-    return false
-  }
-
-  const expected = `sha256=${crypto.createHmac('sha256', appSecret).update(rawBody, 'utf8').digest('hex')}`
+function matchesSecret(rawBody: string, signature: string, secret: string): boolean {
+  const expected = `sha256=${crypto.createHmac('sha256', secret).update(rawBody, 'utf8').digest('hex')}`
   const expectedBuf = Buffer.from(expected)
   const receivedBuf = Buffer.from(signature)
+  if (expectedBuf.length !== receivedBuf.length) return false
+  return crypto.timingSafeEqual(expectedBuf, receivedBuf)
+}
 
-  if (expectedBuf.length !== receivedBuf.length) {
-    console.log('[SIG] Signature length mismatch')
-    return false
+/**
+ * Verifies Meta's x-hub-signature-256.
+ *
+ * A Meta app can sign with either the Meta app secret or the Instagram app
+ * secret depending on which product sent the event (Instagram Login for
+ * Business signs with the Instagram secret). Checking only one silently
+ * rejects every delivery and no DM is ever sent, so try each configured
+ * secret and report precisely which situation we are in.
+ */
+function verifySignature(
+  rawBody: string,
+  signature: string
+): { ok: boolean; reason: string } {
+  const secrets: Array<[string, string | undefined]> = [
+    ['META_APP_SECRET', process.env.META_APP_SECRET],
+    ['INSTAGRAM_APP_SECRET', process.env.INSTAGRAM_APP_SECRET],
+  ]
+  const configured = secrets.filter(([, v]) => Boolean(v)) as Array<[string, string]>
+
+  if (configured.length === 0) {
+    return { ok: false, reason: 'no_app_secret_configured' }
+  }
+  if (!signature) {
+    return { ok: false, reason: 'missing_signature_header' }
   }
 
-  const result = crypto.timingSafeEqual(expectedBuf, receivedBuf)
-  console.log('[SIG] Signature match:', result)
-  return result
+  for (const [name, secret] of configured) {
+    if (matchesSecret(rawBody, signature, secret)) {
+      console.log('[SIG] ✓ Signature verified using', name)
+      return { ok: true, reason: name }
+    }
+  }
+
+  console.error(
+    '[SIG] ✗ Signature did not match any configured secret. Checked:',
+    configured.map(([n]) => n).join(', '),
+    '— the app secret in your environment does not match the app that sent this webhook.'
+  )
+  return { ok: false, reason: 'signature_mismatch' }
 }
 
 // Postgres unique-violation. Raised by idx_dm_logs_comment_id_unique when two
@@ -184,14 +209,23 @@ export async function POST(request: Request) {
   // Signature verification can only be skipped outside production, and only
   // when explicitly opted in. Without it, anyone who knows the webhook URL can
   // make the app send DMs from any connected account.
-  const skipSignatureEnv =
-    process.env.SKIP_WEBHOOK_SIGNATURE === 'true' && process.env.NODE_ENV !== 'production'
+  const skipSignatureEnv = process.env.SKIP_WEBHOOK_SIGNATURE === 'true'
 
   if (skipSignatureEnv) {
-    console.log('[POST] ⚠️ SKIPPING SIGNATURE VERIFICATION (non-production only)')
-  } else if (!verifySignature(rawBody, signature)) {
-    console.log('[POST] ✗ Invalid signature — rejecting webhook')
-    return new NextResponse('Invalid signature', { status: 401 })
+    console.log('[POST] ⚠️ SKIPPING SIGNATURE VERIFICATION (SKIP_WEBHOOK_SIGNATURE=true)')
+  } else {
+    const sig = verifySignature(rawBody, signature)
+    if (!sig.ok) {
+      // Record the rejection so it is visible in the dashboard instead of
+      // disappearing into the logs as "no DMs are arriving".
+      await recordWebhookEvent({
+        outcome: 'rejected_signature',
+        detail: sig.reason,
+        payloadPreview: rawBody.slice(0, 300),
+      })
+      console.error('[POST] ✗ Rejecting webhook —', sig.reason)
+      return new NextResponse(`Invalid signature (${sig.reason})`, { status: 401 })
+    }
   }
 
   // Parse payload
@@ -581,6 +615,9 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
       account,
       recipientId: senderId,
       message: autoReply,
+      button: automation.button_text && automation.button_url
+        ? { text: automation.button_text, url: automation.button_url }
+        : null,
     })
 
     // Mark as sent in dm_logs so queue processor never resends
@@ -704,7 +741,12 @@ async function handleInstagramStory(params: {
   }
 
   try {
-    await sendInstagramDm({ account, recipientId: senderId, message: reply })
+    await sendInstagramDm({
+      account, recipientId: senderId, message: reply,
+      button: automation.button_text && automation.button_url
+        ? { text: automation.button_text, url: automation.button_url }
+        : null,
+    })
     await supabase.from('dm_logs').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('id', inserted.id)
     await incrementDmUsage(supabase, account.user_id)
     await supabase.from('automations').update({ total_dms_sent: (automation.total_dms_sent || 0) + 1 }).eq('id', automation.id)
@@ -735,6 +777,10 @@ async function handleInstagramComment(igAccountId: string, value: any, supabase:
   const account = await findIgAccount(igAccountId, supabase)
   if (!account) {
     console.log('[Comment] ❌ No matching IG account found for:', igAccountId)
+    await recordWebhookEvent({
+      outcome: 'no_account', eventKind: 'comment', igAccountId,
+      detail: `No connected account matches Instagram id ${igAccountId}`,
+    })
     return
   }
 
@@ -832,6 +878,14 @@ async function handleInstagramComment(igAccountId: string, value: any, supabase:
 
   if (!matchedAutomation) {
     console.log('[Comment] No matching automation found')
+    await recordWebhookEvent({
+      outcome: (automations && automations.length > 0) ? 'no_keyword_match' : 'no_automation',
+      eventKind: 'comment', igAccountId,
+      accountId: account.id, userId: account.user_id,
+      detail: (automations && automations.length > 0)
+        ? `Comment "${(commentText || '').slice(0, 80)}" did not match any keyword on ${automations.length} active automation(s)`
+        : 'No active automation for this account',
+    })
     return
   }
 
@@ -884,6 +938,14 @@ async function handleInstagramComment(igAccountId: string, value: any, supabase:
 
   const queueResult = await processQueuedInstagramDmsForAccount(supabase, account.id)
   console.log('[Comment] Queue processor result:', queueResult)
+  await recordWebhookEvent({
+    outcome: queueResult.processed > 0 ? 'sent' : 'queued',
+    eventKind: 'comment', igAccountId,
+    accountId: account.id, userId: account.user_id,
+    detail: queueResult.processed > 0
+      ? `Sent DM to @${commenterUsername || 'user'} (keyword: ${matchedKeyword || 'any comment'})`
+      : `Queued for @${commenterUsername || 'user'} — check Meta permissions / rate limit if it stays queued`,
+  })
 }
 
 async function findIgAccount(igAccountId: string, supabase: any) {
