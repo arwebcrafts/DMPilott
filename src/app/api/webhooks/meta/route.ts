@@ -8,6 +8,8 @@ import { handleFollowButton, handleLikeStatusCheck, handleInstagramFollowButton,
 import { getUserInteraction } from '@/lib/db/userInteractions'
 import { getPageConfiguration, getInstagramGiftOffer, getInstagramUserInteraction, updateInstagramUserInteraction } from '@/lib/db/pageConfigurations'
 import { generateAiReply } from '@/lib/ai/generateReply'
+import { getUserPlanUsage, incrementDmUsage } from '@/lib/planUsage'
+import { canUseAI } from '@/lib/planGating'
 
 console.log('[INIT] Webhook route module loaded')
 
@@ -468,15 +470,22 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
     console.log('[Message] Could not fetch sender username:', err?.response?.data?.error?.message || err?.message)
   }
 
+  // Monthly plan limit — stop replying once the subscription budget is spent.
+  const igPlan = await getUserPlanUsage(supabase, account.user_id)
+  if (igPlan && igPlan.remaining <= 0) {
+    console.log('[Message] Monthly DM limit reached for plan:', igPlan.plan, '- skipping auto-reply')
+    return
+  }
+
   // Personalize message with variables
   const baseMessage = (automation.dm_message || "Thanks for your message! We'll get back to you soon. 👋")
     .replace(/{name}/g, senderUsername || 'there')
     .replace(/{username}/g, senderUsername ? `@${senderUsername}` : 'user')
 
-  // AI reply (opt-in per automation, and only when an API key is configured).
-  // Falls back to the static message on any failure.
+  // AI reply — opt-in per automation, gated to plans that include AI, and only
+  // when an API key is configured. Falls back to the static message otherwise.
   let autoReply = baseMessage
-  if (automation.ai_replies_enabled) {
+  if (automation.ai_replies_enabled && igPlan && canUseAI(igPlan.plan)) {
     autoReply = await generateAiReply({
       instruction: automation.dm_message || '',
       incomingText: messageText || '',
@@ -539,6 +548,9 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
       .from('dm_logs')
       .update({ status: 'sent', sent_at: new Date().toISOString() })
       .eq('id', insertedLog.id)
+
+    // Count against the user's monthly plan budget
+    await incrementDmUsage(supabase, account.user_id)
 
     // Increment DM counter
     await supabase
@@ -1101,14 +1113,21 @@ async function handleFacebookMessage(pageId: string, messaging: any, supabase: a
     console.log('[Facebook Message] Using fallback name:', senderName)
   }
 
+  // Monthly plan limit
+  const fbPlan = await getUserPlanUsage(supabase, account.user_id)
+  if (fbPlan && fbPlan.remaining <= 0) {
+    console.log('[Facebook Message] Monthly DM limit reached for plan:', fbPlan.plan, '- skipping auto-reply')
+    return
+  }
+
   // Personalize message with variables
   const fbBaseMessage = (automation.dm_message || "Thanks for your message! We'll get back to you soon. 👋")
     .replace(/{name}/g, senderName || 'there')
     .replace(/{username}/g, senderName || 'there')
 
-  // AI reply (opt-in per automation, key-gated). Falls back to static message.
+  // AI reply — opt-in per automation, plan-gated, key-gated. Falls back to static.
   let autoReply = fbBaseMessage
-  if (automation.ai_replies_enabled) {
+  if (automation.ai_replies_enabled && fbPlan && canUseAI(fbPlan.plan)) {
     autoReply = await generateAiReply({
       instruction: automation.dm_message || '',
       incomingText: messageText || '',
@@ -1168,6 +1187,9 @@ async function handleFacebookMessage(pageId: string, messaging: any, supabase: a
         .from('dm_logs')
         .update({ status: 'sent', sent_at: new Date().toISOString() })
         .eq('id', insertedFbLog.id)
+
+      // Count against the user's monthly plan budget
+      await incrementDmUsage(supabase, account.user_id)
 
       // Increment DM counter
       await supabase

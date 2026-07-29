@@ -26,6 +26,7 @@ export function Footer() {
             <h4 className="font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Product</h4>
             <ul className="space-y-2">
               <li><Link href="/features" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Features</Link></li>
+              <li><Link href="/pricing" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Pricing</Link></li>
               <li><Link href="/services" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Services</Link></li>
               <li><Link href="/#link-in-bio" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Link in Bio</Link></li>
               <li><Link href="/#roadmap" className="text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Roadmap</Link></li>

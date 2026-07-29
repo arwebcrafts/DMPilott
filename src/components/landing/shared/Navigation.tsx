@@ -10,9 +10,9 @@ import { DarkModeToggle } from './DarkModeToggle';
 
 const navLinks = [
   { name: 'Features', href: '/features' },
+  { name: 'Pricing', href: '/pricing' },
   { name: 'Services', href: '/services' },
   { name: 'Bio', href: '/#link-in-bio' },
-  { name: 'Roadmap', href: '/#roadmap' },
   { name: 'FAQ', href: '/#faq' },
 ];
 

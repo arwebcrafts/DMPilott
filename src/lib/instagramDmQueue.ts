@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { decryptToken } from '@/lib/encryption'
+import { getUserPlanUsage, incrementDmUsage } from '@/lib/planUsage'
 
 const INSTAGRAM_MESSAGING_API_VERSION = 'v25.0'
 const FACEBOOK_MESSAGING_API_VERSION = 'v21.0'
@@ -337,6 +338,15 @@ export async function processQueuedInstagramDmsForAccount(
     return { processed: 0, remainingQuota: 0 }
   }
 
+  // ── Monthly plan limit ──────────────────────────────────────────────────
+  // Separate from the per-hour Meta limit above: this is the subscription cap.
+  const planUsage = await getUserPlanUsage(supabase, resolvedAccount.user_id)
+  let monthlyRemaining = planUsage ? planUsage.remaining : Number.POSITIVE_INFINITY
+  if (planUsage && monthlyRemaining <= 0) {
+    console.log('[Queue] Monthly DM limit reached for plan:', planUsage.plan)
+    return { processed: 0, remainingQuota }
+  }
+
   const { data: queuedLogs } = await supabase
     .from('dm_logs')
     .select('id, automation_id, commenter_platform_id, commenter_username, dm_message_sent, comment_id, retry_count')
@@ -354,6 +364,12 @@ export async function processQueuedInstagramDmsForAccount(
   for (const rawLog of (queuedLogs || [])) {
     const log = rawLog as DmLogRow
     console.log('[Queue] Processing log:', log.id, 'for commenter:', log.commenter_username)
+
+    // Stop once the plan's monthly budget is exhausted; leave the rest queued.
+    if (monthlyRemaining <= 0) {
+      console.log('[Queue] Monthly DM budget exhausted mid-run; leaving remainder queued')
+      break
+    }
 
     const { data: claimed } = await supabase
       .from('dm_logs')
@@ -479,6 +495,12 @@ export async function processQueuedInstagramDmsForAccount(
             // Public comment reply is best effort and should not fail DM delivery.
             console.log('[Queue] Comment reply failed:', replyErr.response?.data?.error?.message || replyErr.message)
           }
+        }
+
+        // Count this send against the user's monthly plan budget.
+        if (planUsage) {
+          monthlyRemaining -= 1
+          await incrementDmUsage(supabase, resolvedAccount.user_id)
         }
 
         processed++

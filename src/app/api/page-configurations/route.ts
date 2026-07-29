@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { createPageConfiguration, getPageConfigurationByUserId } from '@/lib/db/pageConfigurations';
 import { decryptToken } from '@/lib/encryption';
+import { getAuthenticatedUserPlan } from '@/lib/bio/planChecks';
+import { canUseFollowGate } from '@/lib/planGating';
 
 /**
  * Whitelist domain for Messenger Extensions
@@ -77,7 +79,16 @@ export async function POST(req: NextRequest) {
       console.error('[Page Config] Auth error:', userError);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
+
+    // Facebook follow-to-unlock (gift offer) is a Pro feature.
+    const auth = await getAuthenticatedUserPlan();
+    if (!canUseFollowGate(auth?.plan || 'free')) {
+      return NextResponse.json(
+        { error: 'Follow-to-unlock is available on the Pro plan. Upgrade to enable it.', code: 'plan_limit' },
+        { status: 403 }
+      );
+    }
+
     console.log('[Page Config] User:', user.id, 'Body:', body);
     
     // Use service client for database operations (bypasses RLS)

@@ -5,6 +5,8 @@ import {
   VALID_PLATFORMS,
   VALID_TRIGGER_TYPES,
 } from '@/lib/automations/updateFields'
+import { getAuthenticatedUserPlan } from '@/lib/bio/planChecks'
+import { canUseAI, canUsePerPostTargeting } from '@/lib/planGating'
 
 // PATCH /api/automations/[id] - update automation
 export async function PATCH(
@@ -27,6 +29,7 @@ export async function PATCH(
   }
 
   const updates = mapUpdatableFields(body)
+  const { plan } = (await getAuthenticatedUserPlan()) || { plan: 'free' as const }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
@@ -58,6 +61,20 @@ export async function PATCH(
 
   if (updates.dm_message !== undefined && !String(updates.dm_message).trim()) {
     return NextResponse.json({ error: 'DM message cannot be empty' }, { status: 400 })
+  }
+
+  // Plan gating on feature toggles.
+  if (updates.ai_replies_enabled === true && !canUseAI(plan)) {
+    return NextResponse.json(
+      { error: 'AI replies are available on the Pro plan. Upgrade to enable AI.', code: 'plan_limit' },
+      { status: 403 }
+    )
+  }
+  if (updates.media_id && !canUsePerPostTargeting(plan)) {
+    return NextResponse.json(
+      { error: 'Targeting a specific post requires the Creator plan or higher.', code: 'plan_limit' },
+      { status: 403 }
+    )
   }
 
   // Never let a user re-point an automation at an account they do not own.

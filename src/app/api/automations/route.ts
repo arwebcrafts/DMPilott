@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getAuthenticatedUserPlan } from '@/lib/bio/planChecks'
+import { PLAN_LIMITS, canCreateAutomation, canUseAI, canUsePerPostTargeting } from '@/lib/planGating'
 
 // GET /api/automations - list user's automations
 export async function GET() {
@@ -73,6 +75,40 @@ export async function POST(request: Request) {
   if (!validTriggerTypes.includes(triggerType)) {
     console.log('[Automation] ❌ Invalid trigger type:', triggerType)
     return NextResponse.json({ error: 'Invalid trigger type' }, { status: 400 })
+  }
+
+  // ── Plan gating ──────────────────────────────────────────────────────────
+  const auth = await getAuthenticatedUserPlan()
+  const plan = auth?.plan || 'free'
+  const limits = PLAN_LIMITS[plan]
+
+  const { count: automationCount } = await supabase
+    .from('automations')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+
+  if (!canCreateAutomation(plan, automationCount || 0)) {
+    return NextResponse.json(
+      {
+        error: `Your ${plan} plan allows up to ${limits.maxAutomations} automation${limits.maxAutomations === 1 ? '' : 's'}. Upgrade to add more.`,
+        code: 'plan_limit',
+      },
+      { status: 403 }
+    )
+  }
+
+  if (aiRepliesEnabled && !canUseAI(plan)) {
+    return NextResponse.json(
+      { error: 'AI replies are available on the Pro plan. Upgrade to enable AI.', code: 'plan_limit' },
+      { status: 403 }
+    )
+  }
+
+  if (mediaId && !canUsePerPostTargeting(plan)) {
+    return NextResponse.json(
+      { error: 'Targeting a specific post requires the Creator plan or higher.', code: 'plan_limit' },
+      { status: 403 }
+    )
   }
 
   if (triggerType === 'comment_keyword' && (!keywords || keywords.length === 0)) {
