@@ -32,7 +32,8 @@ alter table public.automations
   add column if not exists button_url text;          -- CTA button link
 
 alter table public.connected_accounts
-  add column if not exists ig_business_account_id text;
+  add column if not exists ig_business_account_id text,
+  add column if not exists granted_scopes text[];  -- permissions Meta actually gave us
 
 
 -- ── 2. Allowed values ───────────────────────────────────────────────────────
@@ -180,6 +181,11 @@ union all
 select 'connected_accounts.ig_business_account_id',
   case when exists (select 1 from information_schema.columns
     where table_schema='public' and table_name='connected_accounts' and column_name='ig_business_account_id')
+  then 'OK' else 'MISSING' end
+union all
+select 'connected_accounts.granted_scopes',
+  case when exists (select 1 from information_schema.columns
+    where table_schema='public' and table_name='connected_accounts' and column_name='granted_scopes')
   then 'OK' else 'MISSING' end
 union all
 select 'webhook_events table (Diagnostics page)',
