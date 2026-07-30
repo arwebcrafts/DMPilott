@@ -114,12 +114,59 @@ a reviewer than an edit.
 
 ---
 
+---
+
+## Prepare the reviewer's test account (do this first)
+
+Meta reviewers log in and try to reproduce the video themselves. On the **free
+plan** they will hit an upgrade wall partway through and report that they could
+not reproduce it:
+
+| Free plan limit | What the reviewer hits |
+|---|---|
+| 1 connected account | Cannot connect their own Instagram — "Upgrade to add more" |
+| 1 automation | Cannot create the automation shown in the video |
+| Per-post targeting off | The post picker in the video is unavailable |
+
+Put the reviewer's account on the Business plan so nothing blocks them. In
+Supabase → SQL Editor, replacing the email with the account you give Meta:
+
+```sql
+update public.users
+set plan = 'business', dms_used_this_month = 0
+where email = 'REVIEWER_ACCOUNT_EMAIL_HERE';
+```
+
+## Where the video goes
+
+**Upload it inside the App Review submission form** — there is a Screencast
+field on the permission request. Do **not** email it; emailed videos are not
+attached to the submission and reviewers never see them.
+
+If the file is too large to upload, put it on Google Drive or as an **unlisted
+YouTube** video and paste the link in the same field. Set Drive sharing to
+"Anyone with the link" — a permission-locked link counts as no video at all and
+is rejected without review.
+
+## Credentials to provide
+
+In the same form there is a section for test credentials. Provide:
+
+- **DMPilot login** — email and password of the Business-plan account above
+- **Instagram login** — a Business/Creator Instagram account the reviewer can
+  connect. Use a dedicated account and change its password once review finishes.
+- **A short note**: "Sign in at https://dmpilott.vercel.app/login, go to
+  Accounts → Connect Instagram, then Automations → New Automation."
+
+Reviewers do log in. An account they cannot use is the second most common
+rejection after the screencast.
+
 ## Checklist before you submit
 
-- [ ] Instagram Tester invite for `armantesting14` **accepted** (Instagram app →
-      Settings → Apps and Websites → Tester Invites)
+- [ ] Reviewer's DMPilot account set to `business` plan (SQL above)
 - [ ] Instagram **disconnected** in DMPilot before recording, so the consent
       screen appears in the video
+- [ ] App left **Published** — unpublishing stops webhooks entirely
 - [ ] Data deletion URL in App Settings → Basic changed from `facebook.com` to
       `https://dmpilott.vercel.app/data-deletion`
 - [ ] Reviewer **test credentials** provided (email + password for a working
