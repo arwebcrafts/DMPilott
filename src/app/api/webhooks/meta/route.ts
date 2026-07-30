@@ -1078,6 +1078,13 @@ async function handleFacebookComment(pageId: string, value: any, supabase: any) 
 
   if (!account) {
     console.log('[Facebook Comment] No matching Facebook account found for:', pageId)
+    await recordWebhookEvent({
+      outcome: 'no_account',
+      objectType: 'page',
+      eventKind: 'comment',
+      igAccountId: pageId,
+      detail: `No connected Facebook Page matches ${pageId}.`,
+    })
     return
   }
 
@@ -1134,6 +1141,17 @@ async function handleFacebookComment(pageId: string, value: any, supabase: any) 
 
   if (!matchedAutomation) {
     console.log('[Facebook Comment] No matching automation found')
+    await recordWebhookEvent({
+      outcome: (automations || []).length === 0 ? 'no_automation' : 'no_keyword_match',
+      objectType: 'page',
+      eventKind: 'comment',
+      igAccountId: pageId,
+      accountId: account.id,
+      userId: account.user_id,
+      detail: (automations || []).length === 0
+        ? `No active automation for Page @${account.username}.`
+        : `Comment "${commentText.slice(0, 80)}" matched no keyword on @${account.username}.`,
+    })
     return
   }
 
@@ -1183,6 +1201,16 @@ async function handleFacebookComment(pageId: string, value: any, supabase: any) 
     }
     return
   }
+
+  await recordWebhookEvent({
+    outcome: 'queued',
+    objectType: 'page',
+    eventKind: 'comment',
+    igAccountId: pageId,
+    accountId: account.id,
+    userId: account.user_id,
+    detail: `Matched "${matchedAutomation.name}" for @${commenterName || 'commenter'}.`,
+  })
 
   const queueResult = await processQueuedInstagramDmsForAccount(supabase, account.id)
   console.log('[Facebook Comment] Queue processor result:', queueResult)

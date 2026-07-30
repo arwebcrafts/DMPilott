@@ -261,30 +261,47 @@ export async function sendFacebookDm(params: {
   account: ConnectedAccount
   recipientId: string
   message: string
+  button?: { text: string; url: string } | null
 }): Promise<{ success: boolean; error?: string }> {
-  const { account, recipientId, message } = params
+  const { account, recipientId, message, button } = params
   const accessToken = decryptToken(account.access_token_encrypted)
 
-  const requestBody: any = {
-    recipient: { id: recipientId },
-    message: { text: message },
-    messaging_type: 'RESPONSE',
-  }
-
-  try {
-    await axios.post(
-      `https://graph.facebook.com/${FACEBOOK_MESSAGING_API_VERSION}/me/messages`,
-      requestBody,
+  const url = `https://graph.facebook.com/${FACEBOOK_MESSAGING_API_VERSION}/me/messages`
+  const send = (payload: any) =>
+    axios.post(
+      url,
+      { recipient: { id: recipientId }, message: payload, messaging_type: 'RESPONSE' },
       {
         params: { access_token: accessToken },
         headers: { 'Content-Type': 'application/json' },
         timeout: 10000,
       }
     )
+
+  try {
+    // Messenger uses the same generic-template shape as Instagram, so a CTA
+    // button configured on an automation renders identically on both platforms.
+    await send(buildInstagramMessagePayload(message, button))
     return { success: true }
   } catch (err: any) {
     const errorCode = err?.response?.data?.error?.code
     const errorMessage = err?.response?.data?.error?.message || err.message
+
+    // If the template was rejected, the message itself still matters more than
+    // the button — fall back to text with the link appended.
+    if (button?.url) {
+      console.log('[Facebook DM] Template rejected, retrying as text:', errorCode, errorMessage)
+      try {
+        await send({ text: `${message}\n\n${button.url}` })
+        return { success: true }
+      } catch (fallbackErr: any) {
+        const fbCode = fallbackErr?.response?.data?.error?.code
+        const fbMessage = fallbackErr?.response?.data?.error?.message || fallbackErr.message
+        console.log('[Facebook DM] Fallback also failed:', fbCode, fbMessage)
+        return { success: false, error: `${fbCode}: ${fbMessage}` }
+      }
+    }
+
     console.log('[Facebook DM] Error:', errorCode, errorMessage)
     return { success: false, error: `${errorCode}: ${errorMessage}` }
   }
@@ -481,6 +498,9 @@ export async function processQueuedInstagramDmsForAccount(
           account: resolvedAccount,
           recipientId: log.commenter_platform_id,
           message: messageToSend,
+          button: automation.button_text && automation.button_url
+            ? { text: automation.button_text, url: automation.button_url }
+            : null,
         })
         if (!result.success) {
           // Facebook error 551: User cannot be messaged (hasn't messaged page first)
