@@ -12,6 +12,7 @@ import { getUserPlanUsage, incrementDmUsage } from '@/lib/planUsage'
 import { canUseAI } from '@/lib/planGating'
 import { getAutomationMessages } from '@/lib/automations/flow'
 import { recordWebhookEvent } from '@/lib/webhookDiagnostics'
+import { isSelfAuthoredComment } from '@/lib/automations/selfComment'
 
 console.log('[INIT] Webhook route module loaded')
 
@@ -432,16 +433,38 @@ async function handleInstagramMessage(igAccountId: string, messaging: any, supab
   // DM with message.reply_to.story; a story mention is a DM whose attachments
   // include a story_mention. Route them to the story trigger types, which
   // otherwise never fired at all.
+  const attachmentTypes: string[] = Array.isArray(message?.attachments)
+    ? message.attachments.map((a: any) => String(a?.type || 'unknown'))
+    : []
   const storyReply = message?.reply_to?.story
-  const storyMention = Array.isArray(message?.attachments)
-    && message.attachments.some((a: any) => a?.type === 'story_mention')
+  const storyMention = attachmentTypes.includes('story_mention')
+
+  if (attachmentTypes.length > 0) {
+    console.log('[Message] Attachment types received:', attachmentTypes.join(', '))
+  }
 
   if (storyReply || storyMention) {
     const triggerType = storyMention ? 'story_mention' : 'story_reply'
     await handleInstagramStory({
       account, senderId, messageText, messageId: messaging.message?.mid, triggerType, supabase,
+      attachmentTypes,
     })
     return
+  }
+
+  // A media attachment that we did not recognise as a story is worth surfacing:
+  // if story automations "do nothing", this is the row that shows what Meta
+  // actually sent, rather than leaving it to guesswork.
+  if (attachmentTypes.length > 0) {
+    await recordWebhookEvent({
+      outcome: 'no_keyword_match',
+      eventKind: 'message',
+      igAccountId,
+      accountId: account.id,
+      userId: account.user_id,
+      detail: `Message with attachments [${attachmentTypes.join(', ')}] was not recognised as a story reply or mention.`,
+      payloadPreview: JSON.stringify(message).slice(0, 500),
+    })
   }
 
   // Check for Instagram gift offer
@@ -658,12 +681,20 @@ async function handleInstagramStory(params: {
   messageId: string | undefined
   triggerType: 'story_reply' | 'story_mention'
   supabase: any
+  attachmentTypes?: string[]
 }) {
-  const { account, senderId, messageText, messageId, triggerType, supabase } = params
+  const { account, senderId, messageText, messageId, triggerType, supabase, attachmentTypes } = params
   console.log(`[Story] ${triggerType} from`, senderId, 'on account', account.username)
 
   if (!messageId) {
     console.log('[Story] No message mid — skipping to prevent duplicates')
+    await recordWebhookEvent({
+      outcome: 'no_keyword_match',
+      eventKind: 'story',
+      accountId: account.id,
+      userId: account.user_id,
+      detail: `${triggerType} arrived without a message id, so it could not be de-duplicated safely.`,
+    })
     return
   }
 
@@ -678,6 +709,15 @@ async function handleInstagramStory(params: {
 
   if (!automations || automations.length === 0) {
     console.log('[Story] No', triggerType, 'automation for this account')
+    await recordWebhookEvent({
+      outcome: 'no_automation',
+      eventKind: 'story',
+      accountId: account.id,
+      userId: account.user_id,
+      detail: `Instagram delivered a ${triggerType.replace('_', ' ')}${
+        attachmentTypes?.length ? ` (attachments: ${attachmentTypes.join(', ')})` : ''
+      }, but @${account.username} has no active automation with that trigger type.`,
+    })
     return
   }
   const automation = automations[0]
@@ -751,9 +791,23 @@ async function handleInstagramStory(params: {
     await incrementDmUsage(supabase, account.user_id)
     await supabase.from('automations').update({ total_dms_sent: (automation.total_dms_sent || 0) + 1 }).eq('id', automation.id)
     console.log('[Story] ✓ DM sent for', triggerType)
+    await recordWebhookEvent({
+      outcome: 'sent',
+      eventKind: 'story',
+      accountId: account.id,
+      userId: account.user_id,
+      detail: `Sent ${triggerType.replace('_', ' ')} DM to @${senderUsername || senderId}.`,
+    })
   } catch (err: any) {
     console.log('[Story] ❌ Send failed:', err?.message || err)
     await supabase.from('dm_logs').update({ status: 'failed', error_message: err?.message || 'Send failed' }).eq('id', inserted.id)
+    await recordWebhookEvent({
+      outcome: 'send_failed',
+      eventKind: 'story',
+      accountId: account.id,
+      userId: account.user_id,
+      detail: `${triggerType.replace('_', ' ')} DM rejected by Meta: ${err?.message || 'unknown error'}`,
+    })
   }
 }
 
@@ -765,6 +819,16 @@ async function handleInstagramComment(igAccountId: string, value: any, supabase:
   const mediaId = value.media?.id
 
   console.log('[Comment] New comment event:', { commentId, commenterUsername, commentText, mediaId })
+
+  // Never react to our own comments. The public "Check your DMs!" reply is
+  // itself a comment, so Meta delivers a webhook for it — and an "any comment"
+  // automation would match that reply and post another one, forever. The
+  // Facebook handler has always had this guard; Instagram did not, which is
+  // why threads filled up with repeated replies seconds apart.
+  if (commenterId && String(commenterId) === String(igAccountId)) {
+    console.log('[Comment] Skipping comment from the connected account itself (self-reply loop guard)')
+    return
+  }
 
   // Check for duplicate
   if (isProcessed(commentId)) {
@@ -785,6 +849,20 @@ async function handleInstagramComment(igAccountId: string, value: any, supabase:
   }
 
   console.log('[Comment] ✓ Found account:', account.username, 'account ID:', account.id)
+
+  // Second half of the self-reply guard. The webhook's entry id does not always
+  // equal the id Instagram reports as the comment author, so compare against
+  // every identifier we hold for this account once it is resolved.
+  if (isSelfAuthoredComment({
+    commenterId,
+    commenterUsername,
+    webhookAccountId: igAccountId,
+    accountIds: [account.platform_account_id, account.ig_business_account_id],
+    accountUsername: account.username,
+  })) {
+    console.log('[Comment] Skipping own comment by @' + commenterUsername + ' (self-reply loop guard)')
+    return
+  }
 
   // Find matching automations
   console.log('[Comment] Looking for automations for account_id:', account.id)
