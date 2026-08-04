@@ -1034,23 +1034,41 @@ async function findIgAccount(igAccountId: string, supabase: any) {
   //   - platform_account_id: app-scoped ID returned by OAuth /me
   //   - ig_business_account_id: IG Business Account ID sent in webhook entry.id
   // Webhooks arrive keyed by the IG Business Account ID, so match either column.
-  const { data: account, error } = await supabase
+  const { data: candidates, error } = await supabase
     .from('connected_accounts')
     .select('*')
     .or(`platform_account_id.eq.${igAccountId},ig_business_account_id.eq.${igAccountId}`)
     .eq('is_active', true)
     .eq('platform', 'instagram')
     .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
 
   if (error) {
     console.log('[Account] Query error:', error.message)
   }
 
-  if (account) {
-    console.log('[Account] Found account:', account.username, 'created:', account.created_at)
-    return account
+  if (candidates && candidates.length > 0) {
+    if (candidates.length === 1) {
+      console.log('[Account] Found account:', candidates[0].username)
+      return candidates[0]
+    }
+
+    // The same Instagram account can end up stored more than once — for example
+    // when it was first connected under its app-scoped id and later under its
+    // business id, or connected to a second DMPilot account. Picking the newest
+    // row silently strands automations attached to an older one, which looks
+    // like "the automation is active but nothing happens". Prefer whichever row
+    // actually owns active automations.
+    console.log('[Account] Multiple connected rows match', igAccountId, '- choosing the one with automations')
+    const { data: owned } = await supabase
+      .from('automations')
+      .select('account_id')
+      .in('account_id', candidates.map((c: any) => c.id))
+      .eq('is_active', true)
+
+    const withAutomations = new Set((owned || []).map((a: any) => a.account_id))
+    const chosen = candidates.find((c: any) => withAutomations.has(c.id)) || candidates[0]
+    console.log('[Account] Chose account:', chosen.username, chosen.id)
+    return chosen
   }
 
   // Self-healing fallback: the webhook ID was not stored yet for any account.
