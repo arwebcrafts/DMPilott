@@ -52,3 +52,41 @@ describe('isSelfAuthoredComment', () => {
     })).toBe(false)
   })
 })
+
+// Mirrors rankAutomation in the webhook handler: specific beats general.
+function rankAutomation(auto: { media_id?: string | null; trigger_type?: string }): number {
+  const targeted = auto.media_id ? 0 : 2
+  const specific = auto.trigger_type === 'comment_keyword' ? 0 : 1
+  return targeted + specific
+}
+
+describe('comment automation priority', () => {
+  const order = (list: any[]) => [...list].sort((a, b) => rankAutomation(a) - rankAutomation(b))
+
+  it('checks a keyword automation before a catch-all "any comment" one', () => {
+    const [first] = order([
+      { name: 'catch-all', media_id: null, trigger_type: 'any_comment' },
+      { name: 'keyword', media_id: null, trigger_type: 'comment_keyword' },
+    ])
+    expect(first.name).toBe('keyword')
+  })
+
+  it('checks a post-targeted automation before a whole-account one', () => {
+    const [first] = order([
+      { name: 'whole-account keyword', media_id: null, trigger_type: 'comment_keyword' },
+      { name: 'this post', media_id: '123', trigger_type: 'any_comment' },
+    ])
+    expect(first.name).toBe('this post')
+  })
+
+  it('ranks all four combinations most-specific first', () => {
+    expect(order([
+      { name: 'account/any', media_id: null, trigger_type: 'any_comment' },
+      { name: 'post/any', media_id: '1', trigger_type: 'any_comment' },
+      { name: 'account/keyword', media_id: null, trigger_type: 'comment_keyword' },
+      { name: 'post/keyword', media_id: '1', trigger_type: 'comment_keyword' },
+    ]).map(a => a.name)).toEqual([
+      'post/keyword', 'post/any', 'account/keyword', 'account/any',
+    ])
+  })
+})

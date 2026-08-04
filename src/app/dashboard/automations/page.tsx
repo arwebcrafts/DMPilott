@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUserStore } from '@/stores/userStore'
 import { PLAN_LIMITS } from '@/lib/planGating'
+import { STORY_TRIGGERS_ENABLED } from '@/lib/featureFlags'
 import { Plus, Edit2, Trash2, MoreHorizontal, Zap, MessageSquare, ToggleLeft, ToggleRight } from 'lucide-react'
 import { InstagramIcon, FacebookIcon } from '@/components/ui/brand-icons'
 import { motion } from 'framer-motion'
@@ -1032,7 +1033,13 @@ function CreateAutomationModal({
                 { value: 'dm_received', label: 'DM Reply', icon: '📩', desc: 'Someone sends you a DM → they get an auto-reply' },
                 { value: 'story_reply', label: 'Story Reply', icon: '📖', desc: 'Someone replies to your story → they get a DM' },
                 { value: 'story_mention', label: 'Story Mention', icon: '🏷️', desc: 'Someone mentions you in their story → they get a DM' },
-              ].filter(opt => platform === 'instagram' || (opt.value !== 'story_reply' && opt.value !== 'story_mention')).map(opt => (
+              ].filter(opt => {
+                const isStory = opt.value === 'story_reply' || opt.value === 'story_mention'
+                if (!isStory) return true
+                // Story triggers are Instagram-only and hidden until Meta approves
+                // comment management — see src/lib/featureFlags.ts.
+                return platform === 'instagram' && STORY_TRIGGERS_ENABLED
+              }).map(opt => (
                 <button
                   key={opt.value}
                   type="button"

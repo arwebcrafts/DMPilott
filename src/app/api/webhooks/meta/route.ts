@@ -811,6 +811,16 @@ async function handleInstagramStory(params: {
   }
 }
 
+/**
+ * Ordering for comment automations: lower sorts first.
+ * Post-targeted before whole-account, and keyword before "any comment".
+ */
+function rankAutomation(auto: { media_id?: string | null; trigger_type?: string }): number {
+  const targeted = auto.media_id ? 0 : 2
+  const specific = auto.trigger_type === 'comment_keyword' ? 0 : 1
+  return targeted + specific
+}
+
 async function handleInstagramComment(igAccountId: string, value: any, supabase: any) {
   const commentId = value.id
   const commentText = value.text
@@ -915,13 +925,12 @@ async function handleInstagramComment(igAccountId: string, value: any, supabase:
   let matchedAutomation = null
   let matchedKeyword: string | null = null
 
-  // A post-specific automation (media_id set) should win over a whole-account
-  // one, so evaluate the targeted automations first.
-  const candidates = [...(automations || [])].sort((a, b) => {
-    const aTargeted = a.media_id ? 0 : 1
-    const bTargeted = b.media_id ? 0 : 1
-    return aTargeted - bTargeted
-  })
+  // Specific beats general, in two steps:
+  //   1. A post-specific automation (media_id set) wins over a whole-account one.
+  //   2. A keyword automation wins over "any comment", which is the catch-all.
+  // Without step 2 an "any comment" automation swallows every comment and the
+  // user's keyword automation never fires.
+  const candidates = [...(automations || [])].sort((a, b) => rankAutomation(a) - rankAutomation(b))
 
   for (const auto of candidates) {
     // Per-video targeting: skip automations bound to a different post.
@@ -1198,12 +1207,9 @@ async function handleFacebookComment(pageId: string, value: any, supabase: any) 
   let matchedAutomation = null
   let matchedKeyword: string | null = null
 
-  // Post-specific automations take priority over whole-account ones.
-  const candidates = [...(automations || [])].sort((a, b) => {
-    const aTargeted = a.media_id ? 0 : 1
-    const bTargeted = b.media_id ? 0 : 1
-    return aTargeted - bTargeted
-  })
+  // Same ordering as Instagram: post-specific first, then keyword over
+  // "any comment" so the catch-all cannot swallow keyword automations.
+  const candidates = [...(automations || [])].sort((a, b) => rankAutomation(a) - rankAutomation(b))
 
   for (const auto of candidates) {
     // Per-post targeting: skip automations bound to a different post.
