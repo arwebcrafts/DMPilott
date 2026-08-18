@@ -57,6 +57,13 @@ export default function DiagnosticsPage() {
           <p className="text-gray-600 dark:text-gray-300 text-sm">
             Why a DM did or didn&apos;t go out. Comment on your post, then refresh this page.
           </p>
+          {data?.build && (
+            <p className="text-xs text-gray-500 mt-1">
+              Running build <span className="font-mono">{data.build.sha}</span>
+              {data.build.env !== 'production' && ` · ${data.build.env}`}
+              {data.build.message && ` · ${data.build.message}`}
+            </p>
+          )}
         </div>
         <button
           onClick={load}
@@ -85,6 +92,7 @@ export default function DiagnosticsPage() {
               </div>
             </div>
           ))}
+          {loading && !data && <p className="text-sm text-gray-500">Loading…</p>}
           {!loading && !data?.checks?.length && (
             <p className="text-sm text-gray-500">No data.</p>
           )}
@@ -97,7 +105,11 @@ export default function DiagnosticsPage() {
         <p className="text-xs text-gray-600 dark:text-gray-300 mb-4">
           Every event Meta sent and what DMPilot did with it.
         </p>
-        {(data?.events || []).length === 0 ? (
+        {loading && !data ? (
+          // Without this the "no events received" warning flashes on every load,
+          // which reads as a failure when nothing has been fetched yet.
+          <p className="text-sm text-gray-500">Loading…</p>
+        ) : (data?.events || []).length === 0 ? (
           <div className="flex items-start gap-3 rounded-lg p-3" style={{ background: 'var(--surface-1)' }}>
             <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
             <p className="text-sm text-gray-700 dark:text-gray-200">

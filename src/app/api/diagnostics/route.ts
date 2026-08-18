@@ -117,12 +117,24 @@ export async function GET() {
   // events. The subscription happens at connect time and can fail silently, so
   // ask Meta directly what the Page's real state is rather than trusting the
   // webhook_subscribed flag we stored optimistically.
-  const fbAccounts = (accounts || []).filter((a: any) => a.platform === 'facebook' && a.is_active)
+  // Deliberately not filtered by is_active: a Page that exists but is inactive
+  // is exactly the situation where the user expects a row here and sees nothing.
+  const fbAccounts = (accounts || []).filter((a: any) => a.platform === 'facebook')
   const fbChecks: Array<{ label: string; ok: boolean; hint?: string }> = []
 
   for (const fb of fbAccounts) {
     let ok = false
     let reason = ''
+
+    if (!fb.is_active) {
+      fbChecks.push({
+        label: `Facebook Page "${fb.username}" receives comments`,
+        ok: false,
+        hint: 'This Page is marked disconnected in DMPilot. Click Reconnect on the Accounts page.',
+      })
+      continue
+    }
+
     try {
       const { data: row } = await service
         .from('connected_accounts')
@@ -205,6 +217,14 @@ export async function GET() {
   ]
 
   return NextResponse.json({
+    // Which build is actually serving this request. Vercel sets these on every
+    // deployment. Without it there is no way to tell a stale promoted build
+    // from a real bug, which has cost hours of chasing fixes that were never live.
+    build: {
+      sha: (process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 7) || 'local',
+      message: process.env.VERCEL_GIT_COMMIT_MESSAGE?.split('\n')[0] || null,
+      env: process.env.VERCEL_ENV || 'development',
+    },
     checks,
     env,
     accounts: accounts || [],
