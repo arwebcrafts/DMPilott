@@ -113,6 +113,55 @@ export async function GET() {
     }
   }
 
+  // Facebook Pages must be subscribed to this app before Meta sends any comment
+  // events. The subscription happens at connect time and can fail silently, so
+  // ask Meta directly what the Page's real state is rather than trusting the
+  // webhook_subscribed flag we stored optimistically.
+  const fbAccounts = (accounts || []).filter((a: any) => a.platform === 'facebook' && a.is_active)
+  const fbChecks: Array<{ label: string; ok: boolean; hint?: string }> = []
+
+  for (const fb of fbAccounts) {
+    let ok = false
+    let reason = ''
+    try {
+      const { data: row } = await service
+        .from('connected_accounts')
+        .select('access_token_encrypted')
+        .eq('id', fb.id)
+        .single()
+
+      const { decryptToken } = await import('@/lib/encryption')
+      const axios = (await import('axios')).default
+      const token = decryptToken(row!.access_token_encrypted)
+
+      const res = await axios.get(
+        `https://graph.facebook.com/v21.0/${fb.platform_account_id}/subscribed_apps`,
+        { params: { access_token: token }, timeout: 8000 }
+      )
+      const subs = res.data?.data || []
+      const fields: string[] = subs.flatMap((s: any) => s.subscribed_fields || [])
+      ok = fields.includes('feed')
+      reason = ok
+        ? ''
+        : subs.length === 0
+          ? 'This Page is not subscribed to the DMPilot app at all.'
+          : `Subscribed fields are [${fields.join(', ') || 'none'}] — "feed" is missing, and comments arrive on "feed".`
+    } catch (err: any) {
+      const metaError = err?.response?.data?.error
+      reason = metaError
+        ? `Meta says: ${metaError.message}${metaError.code ? ` (code ${metaError.code})` : ''}`
+        : err?.message || 'Could not reach Meta.'
+    }
+
+    fbChecks.push({
+      label: `Facebook Page "${fb.username}" receives comments`,
+      ok,
+      hint: ok
+        ? undefined
+        : `${reason} Two things must both be true: (1) in the Meta dashboard, Webhooks must have a "Page" object subscribed to the "feed" and "messages" fields pointing at ${process.env.NEXT_PUBLIC_APP_URL || 'your app'}/api/webhooks/meta, and (2) the Page itself must be subscribed to the app — click Reconnect on the Accounts page to retry that. Facebook comments cannot work until both are done.`,
+    })
+  }
+
   const checks: Array<{ label: string; ok: boolean; hint?: string }> = [
     {
       label: 'Database is up to date',
@@ -152,6 +201,7 @@ export async function GET() {
       hint: 'If this is empty, Meta is not delivering events. In the Meta dashboard check that the Instagram product is subscribed to the "comments" and "messages" fields, and that the callback URL points to /api/webhooks/meta.',
     },
     ...(scopeCheck ? [scopeCheck] : []),
+    ...fbChecks,
   ]
 
   return NextResponse.json({
