@@ -14,6 +14,7 @@ export default function AccountsPage() {
   const [accounts, setAccounts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [connecting, setConnecting] = useState<'instagram' | 'facebook' | null>(null)
+  const [subscribing, setSubscribing] = useState<string | null>(null)
   const [banner, setBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const searchParams = useSearchParams()
   const { user } = useUserStore()
@@ -79,6 +80,23 @@ export default function AccountsPage() {
 
   function reconnectAccount(platform: 'instagram' | 'facebook') {
     connectAccount(platform)
+  }
+
+  async function retrySubscription(accountId: string) {
+    setSubscribing(accountId)
+    setBanner(null)
+    try {
+      const res = await fetch(`/api/accounts/${accountId}/subscribe`, { method: 'POST' })
+      const body = await res.json()
+      setBanner(res.ok && body.success
+        ? { type: 'success', text: body.message }
+        : { type: 'error', text: body.error || body.message || 'Meta rejected the subscription.' })
+      await fetchAccounts()
+    } catch (err: any) {
+      setBanner({ type: 'error', text: err?.message || 'Could not reach the server.' })
+    } finally {
+      setSubscribing(null)
+    }
   }
 
   const igAccounts = accounts.filter(a => a.platform === 'instagram')
@@ -211,6 +229,20 @@ export default function AccountsPage() {
                 >
                   <RefreshCw className="w-3.5 h-3.5" /> Reconnect
                 </button>
+                {account.platform === 'facebook' && !account.webhook_subscribed && (
+                  <button
+                    type="button"
+                    onClick={() => retrySubscription(account.id)}
+                    disabled={subscribing === account.id}
+                    className="flex items-center gap-1 px-3 py-1.5 border rounded-lg text-sm text-[#F7B928] hover:bg-[#F7B928]/10 transition-colors disabled:opacity-60"
+                    style={{ borderColor: '#F7B928' }}
+                  >
+                    {subscribing === account.id
+                      ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      : <AlertCircle className="w-3.5 h-3.5" />}
+                    Fix setup
+                  </button>
+                )}
                 <button
                   onClick={() => disconnectAccount(account.id)}
                   className="flex items-center gap-1 px-3 py-1.5 border rounded-lg text-sm text-[#FA3E3E] hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
