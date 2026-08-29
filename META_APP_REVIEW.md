@@ -1,7 +1,7 @@
 # Meta App Review — `instagram_business_manage_comments`
 
-This permission has been rejected twice (26 May 2026, 8 Jul 2026). Both times the
-reason was identical, and it was **not** about the product:
+This permission has been rejected three times. Every time the reason was
+identical, and it was **not** about the product:
 
 > **Screencast Not Aligned with Use Case Details** — Developer Policy 1.6
 >
@@ -17,10 +17,6 @@ next submission contains all four.
 
 ---
 
-## What the video must show
-
-| # | Meta's requirement | What that means in practice |
-|---|---|---|
 ## THE THING THAT KEEPS FAILING — read this first
 
 Rejected three times, same reason each time. It is not the product. It is one
@@ -145,8 +141,6 @@ a reviewer than an edit.
 > Instagram Business account and granting permissions, creating a keyword
 > automation, a follower commenting the keyword from a separate account, and the
 > resulting direct message arriving.
-
----
 
 ---
 
