@@ -21,17 +21,48 @@ next submission contains all four.
 
 | # | Meta's requirement | What that means in practice |
 |---|---|---|
-| 1 | The complete Meta login flow | The Instagram OAuth screen, on camera, in real time |
-| 2 | A user granting app access to the permission | The consent screen listing the permissions, and the tap on **Allow** |
+## THE THING THAT KEEPS FAILING — read this first
+
+Rejected three times, same reason each time. It is not the product. It is one
+missing screen in the video.
+
+**There are two different logins. Meta only wants one of them.**
+
+| Login | What it looks like | Meta wants it? |
+|---|---|---|
+| DMPilot login | Email + password on dmpilott.vercel.app | No |
+| **Instagram login** | The **Instagram** page listing permissions, with an **Allow** button | **Yes** |
+
+When the rejection says *"the complete Meta login flow"* and *"a user granting
+app access to the permission"*, it means the Instagram permission screen — the
+one that appears after clicking **Connect Instagram**, that lists what the app
+may access, with **Allow** at the bottom.
+
+That screen only appears when the Instagram account is **not already connected**.
+If it was connected before recording started, the screen never appeared and the
+reviewer never saw permission being granted.
+
+**So before you press record: Dashboard → Accounts → Disconnect Instagram.**
+
+Do that one thing and the most likely cause of all three rejections is gone.
+
+### Voice is not enough
+
+The rejection asks for "captions and tool-tips". Narrating with your voice is
+good, but Meta asks in writing for **text on the screen** as well. Reviewers
+often watch muted. Put a short line of text on screen at the start of each
+section — the six captions are written into the script below.
+
+---
+
+## What the video must show
+
+| # | Meta's requirement | What that means in practice |
+|---|---|---|
+| 1 | The complete Meta login flow | The Instagram permission screen, on camera, in real time |
+| 2 | A user granting app access to the permission | That screen's permission list, and the tap on **Allow** |
 | 3 | The end-to-end experience of the use case | Comment → DM arrives, unbroken |
-| 4 | Screen Recording Guide best practices | English UI, captions, explain every button |
-
-**The most likely reason both previous submissions failed is #2.** If the Instagram
-account was already connected when recording started, the consent screen never
-appears — and that screen is the single most important frame in the whole video.
-
-Before recording: **disconnect Instagram in DMPilot** (Dashboard → Accounts →
-Disconnect). The reviewer has to watch the permission being granted from scratch.
+| 4 | Screen Recording Guide best practices | English UI, on-screen captions, explain every button |
 
 ---
 
@@ -45,16 +76,19 @@ Record in English, at normal speed, with **no cuts and no jump edits**. Roughly
 - Open `https://dmpilott.vercel.app`, sign in with the reviewer test account.
 - Land on the dashboard. Say aloud what the app does in one sentence.
 
-### Part 2 — Connect Instagram, showing consent (0:30–1:30) ← **critical**
+### Part 2 — Connect Instagram, showing consent (0:30–1:30) ← **THE PART THAT KEEPS FAILING**
 - Caption: *"Connecting an Instagram Business account"*
-- Dashboard → **Accounts** → **Connect Instagram**.
-- **Let the Instagram login page load fully and stay on screen.** Do not cut.
-- On the permission screen, **read the permissions out loud as they appear**,
-  including the one covering comment management. Point at them with the cursor.
-- Tap **Allow**. Show the redirect back to DMPilot and the account now listed.
+- Start on the Accounts page with **no Instagram connected**.
+- Click **Connect Instagram**.
+- The browser goes to **instagram.com**. Stop moving. Let that page sit on
+  screen for a few seconds so it is unmistakably in the recording.
+- The permission list appears — basic info, messages, **comments**. Move the
+  cursor down the list and read each one aloud.
+- Click **Allow**.
+- Show the return to DMPilot and the account now appearing in the list.
 
-If this part is not in the video, the submission is rejected again regardless of
-everything else.
+Nothing else in the video matters if this is missing. This screen is what the
+reviewer is looking for, and it is the reason for all three rejections.
 
 ### Part 3 — Build the automation (1:30–2:30)
 - Caption: *"Creating a keyword automation"*
