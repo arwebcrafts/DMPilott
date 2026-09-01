@@ -42,12 +42,40 @@ reviewer never saw permission being granted.
 
 Do that one thing and the most likely cause of all three rejections is gone.
 
-### Voice is not enough
+### Captions are not optional — this has now been confirmed as a gap
 
-The rejection asks for "captions and tool-tips". Narrating with your voice is
-good, but Meta asks in writing for **text on the screen** as well. Reviewers
-often watch muted. Put a short line of text on screen at the start of each
-section — the six captions are written into the script below.
+The 26 Jul 2026 attempt did show the consent screen and the Allow tap on
+camera, and was rejected again with identical text. That rules out requirement
+#1/#2 as the cause this time. What's confirmed still missing: **on-screen
+captions.** Every rejection has asked for them, in writing, every time:
+
+> "provide captions and tool-tips, and explain the meaning of buttons and
+> other UI elements"
+
+Voice narration does not satisfy this. Reviewers routinely watch muted, and a
+requirement stated in five consecutive rejections is not a suggestion.
+
+**What to add, concretely:** a text overlay burned into the video (not
+YouTube's auto-captions of your speech — literal text boxes describing each
+UI element), present for at least 2 seconds each, before/during the action it
+describes. Any basic video editor does this (CapCut, Awesome Screenshot's
+annotate tool, iMovie). The captions below are written to double as button
+labels — e.g. when you click Connect Instagram, a caption reading *"Connect
+Instagram button"* pointing at it satisfies "explain the meaning of buttons."
+
+### Make the end-to-end proof unmistakable
+
+A reviewer has never used DMPilot and does not know your account is different
+from the account you comment from. Don't assume it's obvious — caption it:
+
+- Before switching accounts: *"Switching to a different Instagram account —
+  the follower who will comment"*
+- Before showing the DM: *"This is the follower's own inbox on a separate
+  Instagram account, receiving the automated DM"*
+
+If both accounts are visible in the same shot (business account phone next to
+follower account phone, or two browser windows), do that — it removes any
+doubt that this is staged with one account.
 
 ---
 
@@ -65,10 +93,11 @@ section — the six captions are written into the script below.
 ## Shot-by-shot script
 
 Record in English, at normal speed, with **no cuts and no jump edits**. Roughly
-3–5 minutes. Add on-screen captions before each section.
+3–5 minutes. Every caption below must appear as **burned-in on-screen text**,
+not only spoken — that is the specific gap in the last rejected attempt.
 
 ### Part 1 — Sign in (0:00–0:30)
-- Caption: *"DMPilot — Instagram comment automation for creators"*
+- Caption on screen: *"DMPilot — Instagram comment automation for creators"*
 - Open `https://dmpilott.vercel.app`, sign in with the reviewer test account.
 - Land on the dashboard. Say aloud what the app does in one sentence.
 
